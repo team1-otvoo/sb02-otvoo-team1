@@ -13,18 +13,72 @@ java {
     }
 }
 
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
+    // Spring Boot Core
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.projectlombok:lombok'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // WebSocket & SSE
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.security:spring-security-messaging'
+
+    // Database
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Swagger (SpringDoc)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Mapstruct
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+
+    // QueryDSL
+    implementation 'io.github.openfeign.querydsl:querydsl-jpa:6.11'
+    annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:6.11:jpa'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'com.h2database:h2'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Querydsl QClass 파일 생성 위치 지정
+def generatedDir = 'build/generated/querydsl'
+tasks.withType(JavaCompile) {
+    options.getGeneratedSourceOutputDirectory().set(file(generatedDir))
+}
+
+// java source set에 querydsl QClass 위치 추가
+sourceSets {
+    main.java.srcDirs += [generatedDir]
+}
+
+// gradle clean 시 QClass 디렉토리 삭제
+clean {
+    delete file(generatedDir)
 }
