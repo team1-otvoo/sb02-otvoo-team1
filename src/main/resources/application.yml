@@ -1,1 +1,25 @@
-spring.application.name=otvoo
+spring:
+  application:
+    name: otvoo
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/otvoo_db
+    username: otvoo_user
+    password: otvoo_pass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  profiles:
+    active:
+      - dev
+
+  config:
+    import: optional:file:.env[.properties]
+
+logging:
+  level:
+    root: info
