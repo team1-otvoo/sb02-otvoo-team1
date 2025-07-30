@@ -17,12 +17,10 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception e) {
     log.error("예상치 못한 서버 내부 오류 처리: {} ", e.getMessage(), e);
     ErrorResponse errorResponse = new ErrorResponse(
-        LocalDateTime.now(),
-        ErrorCode.INTERNAL_SERVER_ERROR.getStatus().value(),
+
+        ErrorCode.INTERNAL_SERVER_ERROR.toString(),
         "예상치 못한 서버 내부 오류가 발생했습니다.",
-        Map.of(),
-        e.getClass().getSimpleName(),
-        ErrorCode.INTERNAL_SERVER_ERROR.getStatus().name()
+        Map.of()
     );
     return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus()).body(errorResponse);
   }
@@ -47,12 +45,9 @@ public class GlobalExceptionHandler {
         ));
 
     ErrorResponse errorResponse = new ErrorResponse(
-        LocalDateTime.now(),
-        ErrorCode.VALIDATION_ERROR.getStatus().value(),
+        ErrorCode.VALIDATION_ERROR.toString(),
         "입력값이 유효하지 않습니다.",
-        errors,
-        e.getClass().getSimpleName(),
-        ErrorCode.VALIDATION_ERROR.getStatus().name()
+        errors
     );
     return ResponseEntity.badRequest().body(errorResponse);
   }
