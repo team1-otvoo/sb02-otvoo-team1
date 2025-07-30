@@ -4,21 +4,15 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record ErrorResponse(
-    LocalDateTime timestamp,
-    int status,
+    String exceptionName,
     String message,
-    Map<String, Object> details,
-    String exceptionType,
-    String code
+    Map<String, Object> details
 ) {
   public ErrorResponse(RestException e) {
     this(
-        LocalDateTime.now(),
-        e.getErrorCode().getStatus().value(),
+        e.getErrorCode().name(),
         e.getMessage(),
-        e.getDetails(),
-        e.getClass().getSimpleName(),
-        e.getErrorCode().name()
+        e.getDetails()
     );
   }
 }
