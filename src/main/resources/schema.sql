@@ -16,7 +16,8 @@ CREATE TABLE users (
                        role VARCHAR(50) NOT NULL,
                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                        follower_count BIGINT NOT NULL DEFAULT 0,
-                       following_count BIGINT NOT NULL DEFAULT 0
+                       following_count BIGINT NOT NULL DEFAULT 0,
+                       locked BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- clothes_attribute_definitions 테이블
