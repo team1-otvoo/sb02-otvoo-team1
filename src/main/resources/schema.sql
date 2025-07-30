@@ -63,7 +63,7 @@ CREATE TABLE weather_temperatures (
 CREATE TABLE weather_precipitations (
                                         forecast_id UUID PRIMARY KEY,
                                         type VARCHAR(20) NOT NULL,
-                                        amount DOUBLE PRECISION NOT NULL,
+                                        amount DOUBLE PRECISION,
                                         probability DOUBLE PRECISION NOT NULL,
                                         CONSTRAINT fk_weather_precipitations_forecast FOREIGN KEY (forecast_id)
                                             REFERENCES weather_forecasts(id) ON DELETE CASCADE
