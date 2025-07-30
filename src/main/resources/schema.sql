@@ -5,7 +5,10 @@ CREATE TABLE weather_forecasts (
                                    forecast_at TIMESTAMP NOT NULL,
                                    sky_status VARCHAR(30) NOT NULL,
                                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                                   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                                   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                                   follower_count BIGINT NOT NULL DEFAULT 0,
+                                   following_count BIGINT NOT NULL DEFAULT 0,
+                                   locked BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- users 테이블
