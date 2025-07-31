@@ -30,7 +30,7 @@ CREATE TABLE profile_images (
                                 size BIGINT,
                                 width INT,
                                 height INT,
-                                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+                                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- profiles 테이블
