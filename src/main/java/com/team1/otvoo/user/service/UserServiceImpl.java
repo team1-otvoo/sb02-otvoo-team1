@@ -2,6 +2,7 @@ package com.team1.otvoo.user.service;
 
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.entity.Profile;
@@ -9,6 +10,7 @@ import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -47,5 +49,17 @@ public class UserServiceImpl implements UserService {
     );
 
     return userDto;
+  }
+
+  @Override
+  public void changePassword(UUID userId, ChangePasswordRequest request) {
+    User user = userRepository.findById(userId).orElseThrow(
+        () -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", userId))
+    );
+
+    String newRawPassword = request.password();
+    String newEncodedPassword = passwordEncoder.encode(newRawPassword);
+
+    user.changePassword(newEncodedPassword);
   }
 }
