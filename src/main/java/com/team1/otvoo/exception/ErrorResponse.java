@@ -1,6 +1,5 @@
 package com.team1.otvoo.exception;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 
 public record ErrorResponse(
@@ -11,7 +10,7 @@ public record ErrorResponse(
   public ErrorResponse(RestException e) {
     this(
         e.getErrorCode().name(),
-        e.getMessage(),
+        e.getErrorCode().getMessage(),
         e.getDetails()
     );
   }
