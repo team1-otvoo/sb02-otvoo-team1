@@ -172,6 +172,7 @@ CREATE TABLE feeds (
                        forecast_id UUID,
                        content TEXT,
                        like_count BIGINT NOT NULL DEFAULT 0,
+                       comment_count BIGINT NOT NULL DEFAULT 0,
                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                        updated_at TIMESTAMPTZ,
                        is_deleted BOOLEAN DEFAULT FALSE,
