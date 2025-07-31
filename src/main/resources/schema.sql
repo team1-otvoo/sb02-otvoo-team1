@@ -8,6 +8,47 @@ CREATE TABLE weather_forecasts (
                                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- weather_locations 테이블
+CREATE TABLE weather_locations (
+                                   id UUID PRIMARY KEY,
+                                   forecast_id UUID NOT NULL,
+                                   latitude DOUBLE PRECISION NOT NULL,
+                                   longitude DOUBLE PRECISION NOT NULL,
+                                   x INT NOT NULL,
+                                   y INT NOT NULL,
+                                   location_names TEXT,
+                                   CONSTRAINT fk_weather_locations_forecast FOREIGN KEY (forecast_id)
+                                       REFERENCES weather_forecasts(id) ON DELETE CASCADE
+);
+
+-- profile_images 테이블
+CREATE TABLE profile_images (
+                                id UUID PRIMARY KEY,
+                                image_url TEXT,
+                                original_filename VARCHAR(255),
+                                content_type VARCHAR(50),
+                                size BIGINT,
+                                width INT,
+                                height INT,
+                                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- profiles 테이블
+CREATE TABLE profiles (
+                          id UUID PRIMARY KEY,
+                          name VARCHAR(50) NOT NULL,
+                          gender VARCHAR(10),
+                          birth DATE,
+                          temperature_sensitivity INT,
+                          weather_location_id UUID NOT NULL,
+                          profile_image_id UUID NOT NULL UNIQUE,
+
+                          CONSTRAINT fk_profiles_weather_locations FOREIGN KEY (weather_location_id)
+                              REFERENCES weather_locations(id) ON DELETE SET NULL ,
+                          CONSTRAINT fk_profiles_profile_images FOREIGN KEY (profile_image_id)
+                              REFERENCES profile_images(id) ON DELETE SET NULL
+);
+
 -- users 테이블
 CREATE TABLE users (
                        id UUID PRIMARY KEY,
@@ -17,7 +58,11 @@ CREATE TABLE users (
                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                        follower_count BIGINT NOT NULL DEFAULT 0,
                        following_count BIGINT NOT NULL DEFAULT 0,
-                       locked BOOLEAN NOT NULL DEFAULT FALSE
+                       locked BOOLEAN NOT NULL DEFAULT FALSE,
+                       profile_id UUID NOT NULL UNIQUE,
+
+                       CONSTRAINT fk_users_profile FOREIGN KEY (profile_id)
+                           REFERENCES profiles(id) ON DELETE CASCADE
 );
 
 -- clothes_attribute_definitions 테이블
@@ -33,19 +78,6 @@ CREATE TABLE clothes_attribute_values (
                                           value VARCHAR(255) NOT NULL,
                                           CONSTRAINT fk_clothes_attribute_definition FOREIGN KEY (definition_id)
                                               REFERENCES clothes_attribute_definitions(id) ON DELETE CASCADE
-);
-
--- weather_locations 테이블
-CREATE TABLE weather_locations (
-                                   id UUID PRIMARY KEY,
-                                   forecast_id UUID NOT NULL,
-                                   latitude DOUBLE PRECISION NOT NULL,
-                                   longitude DOUBLE PRECISION NOT NULL,
-                                   x INT NOT NULL,
-                                   y INT NOT NULL,
-                                   location_names TEXT,
-                                   CONSTRAINT fk_weather_locations_forecast FOREIGN KEY (forecast_id)
-                                       REFERENCES weather_forecasts(id) ON DELETE CASCADE
 );
 
 -- weather_temperatures 테이블
@@ -85,36 +117,6 @@ CREATE TABLE weather_wind_speeds (
                                      as_word VARCHAR(20) NOT NULL,
                                      CONSTRAINT fk_weather_wind_speeds_forecast FOREIGN KEY (forecast_id)
                                          REFERENCES weather_forecasts(id) ON DELETE CASCADE
-);
-
--- profiles 테이블
-CREATE TABLE profiles (
-                          id UUID PRIMARY KEY,
-                          name VARCHAR(50) NOT NULL,
-                          gender VARCHAR(10),
-                          birth DATE,
-                          temperature_sensitivity INT,
-                          user_id UUID NOT NULL UNIQUE,
-                          weather_location_id UUID NOT NULL,
-                          CONSTRAINT fk_profiles_user FOREIGN KEY (user_id)
-                              REFERENCES users(id) ON DELETE CASCADE,
-                          CONSTRAINT fk_profiles_weather_locations FOREIGN KEY (weather_location_id)
-                              REFERENCES weather_locations(id) ON DELETE CASCADE
-);
-
--- profile_images 테이블
-CREATE TABLE profile_images (
-                                id UUID PRIMARY KEY,
-                                image_url TEXT,
-                                original_filename VARCHAR(255),
-                                content_type VARCHAR(50),
-                                size BIGINT,
-                                width INT,
-                                height INT,
-                                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-                                profile_id UUID NOT NULL UNIQUE,
-                                CONSTRAINT fk_profile_images_profile FOREIGN KEY (profile_id)
-                                    REFERENCES profiles(id) ON DELETE CASCADE
 );
 
 -- clothes 테이블
