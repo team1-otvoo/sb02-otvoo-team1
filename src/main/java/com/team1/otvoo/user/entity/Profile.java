@@ -27,10 +27,10 @@ public class Profile{
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
+  @Enumerated(EnumType.STRING)
   @Column(length = 10)
   private Gender gender;
 
-  @Enumerated(EnumType.STRING)
   @Column(length = 50)
   private String name;
 
