@@ -6,7 +6,7 @@ import java.util.UUID;
 public record RecommendationDto(
     UUID weatherId,
     UUID userId,
-    List<RecommendedClothesDto> clothes
+    List<OotdDto> clothes
 ) {
 
 }
