@@ -3,6 +3,7 @@ package com.team1.otvoo.user.controller;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +19,7 @@ public class UserController {
   private final UserService userService;
 
   @PostMapping
-  ResponseEntity<UserDto> createUser(@RequestBody UserCreateRequest userCreateRequest) {
+  ResponseEntity<UserDto> createUser(@Valid @RequestBody UserCreateRequest userCreateRequest) {
 
     UserDto userDto = userService.createUser(userCreateRequest);
     return ResponseEntity.status(201).body(userDto);
