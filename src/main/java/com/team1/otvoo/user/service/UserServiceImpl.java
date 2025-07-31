@@ -8,7 +8,7 @@ import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
-import java.util.List;
+import com.team1.otvoo.user.util.UserMapper;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +23,7 @@ public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final UserMapper userMapper;
 
   @Override
   public UserDto createUser(UserCreateRequest userCreateRequest) {
@@ -40,15 +41,7 @@ public class UserServiceImpl implements UserService {
     User user = new User(email, encodedPassword, profile);
     User savedUser = userRepository.save(user);
 
-    UserDto userDto = new UserDto(
-        savedUser.getId(),
-        savedUser.getCreatedAt(),
-        email,
-        name,
-        savedUser.getRole(),
-        List.of(),
-        savedUser.isLocked()
-    );
+    UserDto userDto = userMapper.toUserDto(savedUser);
 
     return userDto;
   }
