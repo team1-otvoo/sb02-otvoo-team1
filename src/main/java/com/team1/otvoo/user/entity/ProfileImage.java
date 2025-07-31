@@ -5,8 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -44,8 +42,21 @@ public class ProfileImage{
   @Column(name = "uploaded_at")
   private Instant uploadedAt;
 
-  @OneToOne
-  @JoinColumn(name = "profile_id", unique = true)
-  private Profile profile;
+  public ProfileImage(
+      String imageUrl,
+      String originalFilename,
+      String contentType,
+      Long size,
+      Integer width,
+      Integer height
+  ) {
+    this.imageUrl = imageUrl;
+    this.originalFilename = originalFilename;
+    this.contentType = contentType;
+    this.size = size;
+    this.width = width;
+    this.height = height;
+    this.uploadedAt = Instant.now();
+  }
 
 }
