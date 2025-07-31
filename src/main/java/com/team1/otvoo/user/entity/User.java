@@ -1,5 +1,7 @@
 package com.team1.otvoo.user.entity;
 
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -65,6 +67,14 @@ public class User{
     this.followerCount = 0L;
     this.followingCount = 0L;
     this.locked = false;
+  }
+
+  public void changePassword(String password) {
+    if (password.equals(this.password)) {
+      throw new RestException(ErrorCode.SAME_AS_OLD_PASSWORD);
+    }
+
+    this.password = password;
   }
 }
 
