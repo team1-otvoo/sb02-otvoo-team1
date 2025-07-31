@@ -1,6 +1,5 @@
 package com.team1.otvoo.exception;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +18,7 @@ public class GlobalExceptionHandler {
     ErrorResponse errorResponse = new ErrorResponse(
 
         ErrorCode.INTERNAL_SERVER_ERROR.toString(),
-        "예상치 못한 서버 내부 오류가 발생했습니다.",
+        ErrorCode.INTERNAL_SERVER_ERROR.getMessage(),
         Map.of()
     );
     return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus()).body(errorResponse);
@@ -46,7 +45,7 @@ public class GlobalExceptionHandler {
 
     ErrorResponse errorResponse = new ErrorResponse(
         ErrorCode.VALIDATION_ERROR.toString(),
-        "입력값이 유효하지 않습니다.",
+        ErrorCode.VALIDATION_ERROR.getMessage(),
         errors
     );
     return ResponseEntity.badRequest().body(errorResponse);
