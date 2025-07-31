@@ -17,6 +17,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "profiles")
@@ -42,6 +43,7 @@ public class Profile{
 
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "profile_image_id", unique = true)
+  @Setter
   private ProfileImage profileImage;
 
   @OneToOne
