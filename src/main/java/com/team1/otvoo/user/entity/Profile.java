@@ -43,7 +43,6 @@ public class Profile{
 
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "profile_image_id", unique = true)
-  @Setter
   private ProfileImage profileImage;
 
   @OneToOne
@@ -52,5 +51,9 @@ public class Profile{
 
   public Profile (String name) {
     this.name = name;
+  }
+
+  public void updateProfileImage(ProfileImage profileImage) {
+    this.profileImage = profileImage;
   }
 }
