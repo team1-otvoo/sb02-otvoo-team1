@@ -1,11 +1,15 @@
 package com.team1.otvoo.user.entity;
 
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
@@ -23,6 +27,7 @@ import lombok.NoArgsConstructor;
 @Getter
 public class User{
   @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
   @Column(nullable = false, unique = true, length = 100)
@@ -62,6 +67,14 @@ public class User{
     this.followerCount = 0L;
     this.followingCount = 0L;
     this.locked = false;
+  }
+
+  public void changePassword(String password) {
+    if (password.equals(this.password)) {
+      throw new RestException(ErrorCode.SAME_AS_OLD_PASSWORD);
+    }
+
+    this.password = password;
   }
 }
 

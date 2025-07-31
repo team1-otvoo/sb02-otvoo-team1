@@ -2,12 +2,15 @@ package com.team1.otvoo.user.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.entity.Role;
@@ -109,4 +112,52 @@ class UserControllerTest {
         .andExpect(jsonPath("$.message").value("이미 존재하는 리소스입니다."))
         .andExpect(jsonPath("$.details.email").value("test@example.com"));
   }
+
+  @Test
+  @DisplayName("비밀번호 변경 성공 시 204 반환")
+  void changePassword_success_shouldReturnNoContent() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    String newPassword = "newStrongPassword123!";
+
+    // 비즈니스 로직은 void이므로 별도 given/stubbing은 필요 없음
+    Mockito.doNothing()
+        .when(userService)
+        .changePassword(Mockito.eq(userId), any(ChangePasswordRequest.class));
+
+    // when & then
+    mockMvc.perform(patch("/api/users/{userId}/password", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+              {
+                  "password": "newStrongPassword123!"
+              }
+          """))
+        .andExpect(status().isNoContent()); // 204 응답 확인
+  }
+
+  @Test
+  @DisplayName("기존과 동일한 비밀번호로 변경 시 400 반환")
+  void changePassword_samePassword_shouldReturnBadRequest() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    String samePassword = "password123!";
+
+    Mockito.doThrow(new RestException(
+        ErrorCode.SAME_AS_OLD_PASSWORD
+    )).when(userService).changePassword(Mockito.eq(userId), any(ChangePasswordRequest.class));
+
+    // when & then
+    mockMvc.perform(patch("/api/users/{userId}/password", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+              {
+                  "password": "password123!"
+              }
+          """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.exceptionName").value("SAME_AS_OLD_PASSWORD"))
+        .andExpect(jsonPath("$.message").value("기존 비밀번호와 동일한 비밀번호는 사용할 수 없습니다."));
+  }
+
 }
