@@ -8,9 +8,14 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "profile_images")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
 public class ProfileImage{
   @Id
   private UUID id;
