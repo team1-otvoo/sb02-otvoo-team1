@@ -1,7 +1,7 @@
 package com.team1.otvoo.user.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,8 +16,12 @@ import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
+import com.team1.otvoo.user.util.UserMapper;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +44,9 @@ class UserServiceImplTest {
 
   @Mock
   private PasswordEncoder passwordEncoder;
+
+  @Mock
+  private UserMapper userMapper;
 
   private UserCreateRequest request;
 
@@ -67,10 +74,20 @@ class UserServiceImplTest {
     given(passwordEncoder.encode(anyString())).willReturn("encodedPassword1234!");
     given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 
+    UserDto expectedDto = new UserDto(
+        UUID.randomUUID(),
+        Instant.now(),
+        "testuser1@email.com",
+        "testUser1",
+        Role.USER,
+        List.of(),
+        false
+    );
+    given(userMapper.toUserDto(any(User.class))).willReturn(expectedDto);
+
     UserDto result = userService.createUser(request);
 
-    assertEquals("testUser1", result.name());
-    assertEquals("testuser1@email.com", result.email());
+    assertThat(result).isEqualTo(expectedDto);
   }
 
   @Test
