@@ -182,15 +182,15 @@ CREATE TABLE feeds (
                            REFERENCES weather_forecasts(id) ON DELETE SET NULL
 );
 
--- feed_recommendations 테이블
-CREATE TABLE feed_recommendations (
+-- feed_clothes 테이블
+CREATE TABLE feed_clothes (
                                       id UUID PRIMARY KEY,
                                       feed_id UUID NOT NULL,
-                                      recommendation_id UUID NOT NULL,
-                                      CONSTRAINT fk_feed_recommendation_feed FOREIGN KEY (feed_id)
+                                      clothes_id UUID NOT NULL,
+                                      CONSTRAINT fk_feed_clothes_feed FOREIGN KEY (feed_id)
                                           REFERENCES feeds(id) ON DELETE CASCADE,
-                                      CONSTRAINT fk_feed_recommendation_recommendation FOREIGN KEY (recommendation_id)
-                                          REFERENCES recommendations(id) ON DELETE CASCADE
+                                      CONSTRAINT fk_feed_clothes_recommendation FOREIGN KEY (clothes_id)
+                                          REFERENCES clothes(id) ON DELETE CASCADE
 );
 
 -- feed_comments 테이블
