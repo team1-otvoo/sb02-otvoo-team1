@@ -158,9 +158,11 @@ CREATE TABLE recommendations (
 
 -- recommendation_clothes 테이블
 CREATE TABLE recommendation_clothes (
+                                        id                UUID PRIMARY KEY,
                                         recommendation_id UUID NOT NULL,
-                                        clothes_id UUID NOT NULL,
-                                        PRIMARY KEY (recommendation_id, clothes_id),
+                                        clothes_id        UUID NOT NULL,
+                                        clothes_order     INT  NOT NULL,
+
                                         CONSTRAINT fk_recommendation FOREIGN KEY (recommendation_id)
                                             REFERENCES recommendations(id) ON DELETE CASCADE,
                                         CONSTRAINT fk_clothes FOREIGN KEY (clothes_id)
