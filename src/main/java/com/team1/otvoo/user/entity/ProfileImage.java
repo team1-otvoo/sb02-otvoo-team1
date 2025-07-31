@@ -2,6 +2,8 @@ package com.team1.otvoo.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
@@ -18,6 +20,7 @@ import lombok.NoArgsConstructor;
 @Getter
 public class ProfileImage{
   @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
   @Column(name = "image_url")
@@ -44,4 +47,5 @@ public class ProfileImage{
   @OneToOne
   @JoinColumn(name = "profile_id", unique = true)
   private Profile profile;
+
 }
