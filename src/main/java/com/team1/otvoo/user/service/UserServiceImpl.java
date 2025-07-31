@@ -12,10 +12,12 @@ import com.team1.otvoo.user.util.UserMapper;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 @Transactional
@@ -34,6 +36,7 @@ public class UserServiceImpl implements UserService {
     String encodedPassword = passwordEncoder.encode(rawPassword);
 
     if (userRepository.existsByEmail(email)) {
+      log.warn("중복된 이메일로 회원 생성 시도: {}", email);
       throw new RestException(ErrorCode.CONFLICT, Map.of("email", email));
     }
 
@@ -49,7 +52,10 @@ public class UserServiceImpl implements UserService {
   @Override
   public void changePassword(UUID userId, ChangePasswordRequest request) {
     User user = userRepository.findById(userId).orElseThrow(
-        () -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", userId))
+        () -> {
+          log.warn("비밀번호 변경 실패 - 유저 없음: userId={}", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("id", userId));
+        }
     );
 
     String newRawPassword = request.password();
