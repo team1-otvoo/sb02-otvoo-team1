@@ -32,7 +32,8 @@ CREATE TABLE clothes_attribute_values (
                                           definition_id UUID NOT NULL,
                                           value VARCHAR(255) NOT NULL,
                                           CONSTRAINT fk_clothes_attribute_definition FOREIGN KEY (definition_id)
-                                              REFERENCES clothes_attribute_definitions(id) ON DELETE CASCADE
+                                              REFERENCES clothes_attribute_definitions(id) ON DELETE CASCADE,
+                                          CONSTRAINT uq_definition_value UNIQUE (definition_id, value)
 );
 
 -- weather_locations 테이블
