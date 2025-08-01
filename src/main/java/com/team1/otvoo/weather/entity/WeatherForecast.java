@@ -36,10 +36,10 @@ public class WeatherForecast {
   private SkyStatus skyStatus;
 
   @Column(name = "created_at", nullable = false)
-  private Instant createdAt = Instant.now();
+  private Instant createdAt;
 
   @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt = Instant.now();
+  private Instant updatedAt;
 
   @OneToOne(mappedBy = "forecast", cascade = CascadeType.ALL)
   private WeatherLocation location;
