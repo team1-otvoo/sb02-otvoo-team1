@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,4 +30,15 @@ public class ClothesAttributeDefinition {
   @OneToMany(mappedBy = "definition", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<ClothesAttributeValue> values = new ArrayList<>();
 
+  public ClothesAttributeDefinition(String name, List<ClothesAttributeValue> values) {
+    this.name = name;
+    for (ClothesAttributeValue value : values) {
+      addValue(value);
+    }
+  }
+
+  public void addValue(ClothesAttributeValue value) {
+    values.add(value);
+    value.setDefinition(this);
+  }
 }

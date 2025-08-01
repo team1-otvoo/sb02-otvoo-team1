@@ -33,4 +33,17 @@ public class ClothesAttributeValue {
 
   @Column(nullable = false)
   private String value;
+
+  public ClothesAttributeValue(String value) {
+    this.value = value;
+  }
+
+  protected void setDefinition(ClothesAttributeDefinition definition) {
+    this.definition = definition;
+  }
+
+  @Override
+  public String toString() {
+    return value;
+  }
 }
