@@ -48,7 +48,10 @@ public enum ErrorCode implements Code{
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
   UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "예기치 못한 오류가 발생했습니다."),
   IO_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "입출력 처리 중 오류가 발생했습니다."),
-  DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "데이터베이스 처리 중 오류가 발생했습니다.");
+  DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "데이터베이스 처리 중 오류가 발생했습니다."),
+
+  // --- Clothes 관련 ErrorCode ---
+  ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다.");
 
   private final HttpStatus status;
   private final String message;
