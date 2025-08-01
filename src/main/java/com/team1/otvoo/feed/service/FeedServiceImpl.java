@@ -44,7 +44,7 @@ public class FeedServiceImpl implements FeedService {
 
     WeatherForecast weather = weatherForecastRepository.findById(request.weatherId()).orElseThrow(
         () -> {
-          log.warn("해당 날씨 데이터가 존재하지 않습니다. - weathId: {}", request.weatherId());
+          log.warn("해당 날씨 데이터가 존재하지 않습니다. - weatherId: {}", request.weatherId());
           return new RestException(ErrorCode.NOT_FOUND,
           Map.of("weatherId", request.weatherId(), "detail", "WeatherForecast not found"));
         });
@@ -62,7 +62,8 @@ public class FeedServiceImpl implements FeedService {
         .toList();
 
     createdFeed.updateFeedClothes(feedClothesList);
+    feedRepository.save(createdFeed);
 
-    return feedMapper.toDto(feedRepository.save(createdFeed), false);
+    return feedMapper.toDto(createdFeed, false);
   }
 }

@@ -3,6 +3,7 @@ package com.team1.otvoo.feed.controller;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
 import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.service.FeedService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -20,7 +21,7 @@ public class FeedController {
   private final FeedService feedService;
 
   @PostMapping
-  public ResponseEntity<FeedDto> create(@RequestBody FeedCreateRequest request) {
+  public ResponseEntity<FeedDto> create(@RequestBody @Valid  FeedCreateRequest request) {
     log.info("피드 생성 요청 - authorId: {}", request.authorId());
 
     FeedDto feedDto = feedService.create(request);
