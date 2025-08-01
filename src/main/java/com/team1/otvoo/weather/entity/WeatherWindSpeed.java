@@ -10,6 +10,8 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -17,7 +19,10 @@ import lombok.NoArgsConstructor;
 @Table(name = "weather_wind_speeds")
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WeatherWindSpeed {
+
   @Id
   @Column(name = "forecast_id")
   private UUID forecastId;
