@@ -43,6 +43,9 @@ dependencies {
     // Database
     runtimeOnly 'org.postgresql:postgresql'
 
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     // Swagger (SpringDoc)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
