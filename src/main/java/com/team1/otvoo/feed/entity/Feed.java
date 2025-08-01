@@ -14,8 +14,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -34,11 +36,11 @@ public class Feed {
   private User user;
 
   @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<FeedRecommendation> feedRecommendations;
+  private List<FeedClothes> feedClothes;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "forecast_id")
-  private WeatherForecast forecast;
+  private WeatherForecast weather;
 
   @Column(name = "content")
   private String content;
@@ -58,13 +60,17 @@ public class Feed {
   @Column(name = "is_deleted")
   private boolean isDeleted;
 
-  public Feed(User user, List<FeedRecommendation> feedRecommendationList, WeatherForecast weatherForecast, String content) {
+  @Builder
+  public Feed(User user, WeatherForecast weatherForecast, String content) {
     this.user = user;
-    this.feedRecommendations = feedRecommendationList;
-    this.forecast = weatherForecast;
+    this.weather = weatherForecast;
     this.content = content;
     this.likeCount = 0L;
     this.createdAt = Instant.now();
     this.isDeleted = false;
+  }
+
+  public void updateFeedClothes(List<FeedClothes> feedClothesList) {
+    this.feedClothes = feedClothesList;
   }
 }

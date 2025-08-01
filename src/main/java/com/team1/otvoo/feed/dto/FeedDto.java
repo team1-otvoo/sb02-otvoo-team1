@@ -1,6 +1,6 @@
 package com.team1.otvoo.feed.dto;
 
-import com.team1.otvoo.recommendation.dto.OotdDto;
+import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.weather.dto.WeatherSummaryDto;
 import java.time.Instant;
@@ -21,5 +21,4 @@ public record FeedDto(
     long commentCount,
     boolean likedByMe
 ) {
-
 }
