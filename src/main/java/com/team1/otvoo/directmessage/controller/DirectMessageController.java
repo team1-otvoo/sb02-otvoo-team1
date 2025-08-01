@@ -25,7 +25,7 @@ public class DirectMessageController {
       @RequestParam UUID userId,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) String idAfter,
-      @RequestParam int limit) {
+      @RequestParam(required = false, defaultValue = "10") int limit) {
 
     log.info("✅ DM API 요청: userId={}, cursor={}, idAfter={}, limit={}", userId, cursor, idAfter, limit);
 
