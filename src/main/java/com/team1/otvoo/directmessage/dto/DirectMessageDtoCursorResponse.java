@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 public record DirectMessageDtoCursorResponse(
-
     List<DirectMessageDto> data,
     String nextCursor,
     UUID nextIdAfter,
@@ -13,4 +12,5 @@ public record DirectMessageDtoCursorResponse(
     String sortBy,
     String sortDirection
 ) {
+
 }
