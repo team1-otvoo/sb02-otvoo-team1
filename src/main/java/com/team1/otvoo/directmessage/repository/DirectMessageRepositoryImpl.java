@@ -17,7 +17,6 @@ public class DirectMessageRepositoryImpl implements DirectMessageRepositoryCusto
 
   private final JPAQueryFactory queryFactory;
 
-
   @Override
   public List<DirectMessage> findDirectMessagesWithCursor(UUID userId, Instant cursor, UUID idAfter, int limit) {
     QDirectMessage dm = QDirectMessage.directMessage;
@@ -51,4 +50,3 @@ public class DirectMessageRepositoryImpl implements DirectMessageRepositoryCusto
     return Optional.ofNullable(count).orElse(0L);
   }
 }
-

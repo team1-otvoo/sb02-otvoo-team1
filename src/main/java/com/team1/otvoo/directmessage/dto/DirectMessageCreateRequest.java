@@ -7,4 +7,5 @@ public record DirectMessageCreateRequest(
     UUID receiverId,
     String content
 ) {
+
 }

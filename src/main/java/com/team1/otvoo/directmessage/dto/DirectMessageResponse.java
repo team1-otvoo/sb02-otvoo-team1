@@ -9,4 +9,5 @@ public record DirectMessageResponse(
     String content,
     Instant createdAt
 ) {
+
 }

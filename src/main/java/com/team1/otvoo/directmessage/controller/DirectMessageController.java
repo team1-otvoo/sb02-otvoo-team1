@@ -35,5 +35,4 @@ public class DirectMessageController {
 
     return ResponseEntity.ok(response);
   }
-
 }

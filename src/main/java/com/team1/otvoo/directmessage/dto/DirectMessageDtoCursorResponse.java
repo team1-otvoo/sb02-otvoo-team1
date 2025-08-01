@@ -12,4 +12,5 @@ public record DirectMessageDtoCursorResponse(
     String sortBy,
     String sortDirection
 ) {
+
 }

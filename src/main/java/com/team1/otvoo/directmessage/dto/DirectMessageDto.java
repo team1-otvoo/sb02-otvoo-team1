@@ -12,4 +12,5 @@ public record DirectMessageDto(
     UserSummary receiver,
     String content
 ) {
+
 }
