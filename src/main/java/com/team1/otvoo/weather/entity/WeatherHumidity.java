@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class WeatherHumidity {
+
   @Id
   @Column(name = "forecast_id")
   private UUID forecastId;
@@ -31,4 +32,10 @@ public class WeatherHumidity {
   @Column(name = "compared_to_day_before", nullable = false)
   private double comparedToDayBefore;
 
+  public WeatherHumidity(WeatherForecast forecast, double current, double comparedToDayBefore) {
+    this.forecast = forecast;
+    this.forecastId = forecast.getId();
+    this.current = current;
+    this.comparedToDayBefore = comparedToDayBefore;
+  }
 }

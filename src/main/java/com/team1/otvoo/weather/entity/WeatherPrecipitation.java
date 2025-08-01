@@ -10,6 +10,8 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -18,6 +20,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class WeatherPrecipitation {
+
   @Id
   @Column(name = "forecast_id")
   private UUID forecastId;
@@ -34,5 +37,13 @@ public class WeatherPrecipitation {
 
   @Column(nullable = false)
   private double probability;
+
+  public WeatherPrecipitation(WeatherForecast forecast, PrecipitationType type, Double amount, double probability) {
+    this.forecast = forecast;
+    this.forecastId = forecast.getId();
+    this.type = type;
+    this.amount = amount;
+    this.probability = probability;
+  }
 
 }
