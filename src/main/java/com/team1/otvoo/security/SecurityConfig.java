@@ -16,9 +16,17 @@ public class SecurityConfig {
     http
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .ignoringRequestMatchers(
+                "/api/auth/sign-in",
+                "/api/auth/csrf-token",
+                "/api/users"
+            )
         )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/csrf-token").permitAll()
+            .requestMatchers(
+                "/api/auth/**",
+                "/api/users"
+            ).permitAll()
             .anyRequest().authenticated()
         );
 
