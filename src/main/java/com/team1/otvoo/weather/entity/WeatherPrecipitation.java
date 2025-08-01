@@ -19,8 +19,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "weather_precipitations")
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class WeatherPrecipitation {
 
   @Id
@@ -39,5 +37,13 @@ public class WeatherPrecipitation {
 
   @Column(nullable = false)
   private double probability;
+
+  public WeatherPrecipitation(WeatherForecast forecast, PrecipitationType type, Double amount, double probability) {
+    this.forecast = forecast;
+    this.forecastId = forecast.getId();
+    this.type = type;
+    this.amount = amount;
+    this.probability = probability;
+  }
 
 }

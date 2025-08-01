@@ -19,8 +19,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "weather_wind_speeds")
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class WeatherWindSpeed {
 
   @Id
@@ -39,4 +37,10 @@ public class WeatherWindSpeed {
   @Column(name = "as_word", nullable = false)
   private WindStrength asWord;
 
+  public WeatherWindSpeed(WeatherForecast forecast, double speed, WindStrength asWord) {
+    this.forecast = forecast;
+    this.forecastId = forecast.getId();
+    this.speed = speed;
+    this.asWord = asWord;
+  }
 }

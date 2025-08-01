@@ -8,8 +8,6 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -17,8 +15,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "weather_humidities")
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class WeatherHumidity {
 
   @Id
@@ -36,4 +32,10 @@ public class WeatherHumidity {
   @Column(name = "compared_to_day_before", nullable = false)
   private double comparedToDayBefore;
 
+  public WeatherHumidity(WeatherForecast forecast, double current, double comparedToDayBefore) {
+    this.forecast = forecast;
+    this.forecastId = forecast.getId();
+    this.current = current;
+    this.comparedToDayBefore = comparedToDayBefore;
+  }
 }

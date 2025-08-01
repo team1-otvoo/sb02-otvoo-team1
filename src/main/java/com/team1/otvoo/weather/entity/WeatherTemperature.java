@@ -17,8 +17,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "weather_temperatures")
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class WeatherTemperature {
 
   @Id
@@ -37,4 +35,12 @@ public class WeatherTemperature {
   @Column(name = "compared_to_day_before", nullable = false)
   private double comparedToDayBefore;
 
+  public WeatherTemperature(WeatherForecast forecast, double current, Double min, Double max, double comparedToDayBefore) {
+    this.forecast = forecast;
+    this.forecastId = forecast.getId();
+    this.current = current;
+    this.min = min;
+    this.max = max;
+    this.comparedToDayBefore = comparedToDayBefore;
+  }
 }
