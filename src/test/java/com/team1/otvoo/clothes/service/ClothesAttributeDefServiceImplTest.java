@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.team1.otvoo.clothes.dto.ClothesAttributeDefCreateRequest;
 import com.team1.otvoo.clothes.dto.ClothesAttributeDefDto;
+import com.team1.otvoo.clothes.dto.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
@@ -12,6 +13,7 @@ import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ClothesAttributeDefServiceImplTest {
@@ -34,11 +37,13 @@ class ClothesAttributeDefServiceImplTest {
 
   private ClothesAttributeDefinition clothesAttributeDefinition;
   private ClothesAttributeDefDto clothesAttributeDefDto;
+  private UUID definitionId;
   private String name;
   private List<String> selectableValues;
 
   @BeforeEach
   void setUp() {
+    definitionId = UUID.randomUUID();
     name = "색상";
     selectableValues = List.of("빨강", "파랑", "초록");
 
@@ -48,8 +53,10 @@ class ClothesAttributeDefServiceImplTest {
 
     clothesAttributeDefinition = new ClothesAttributeDefinition(name, values);
 
+    ReflectionTestUtils.setField(clothesAttributeDefinition, "id", definitionId);
+
     clothesAttributeDefDto = new ClothesAttributeDefDto(
-        UUID.randomUUID(),
+        definitionId,
         name,
         selectableValues
     );
@@ -100,7 +107,7 @@ class ClothesAttributeDefServiceImplTest {
   void createClothesAttributeDef_DuplicateValue() {
     // given
     List<String> duplicateValues = List.of("빨강", "빨강");
-    ClothesAttributeDefCreateRequest request =  new ClothesAttributeDefCreateRequest(name,
+    ClothesAttributeDefCreateRequest request = new ClothesAttributeDefCreateRequest(name,
         duplicateValues);
 
     when(clothesAttributeDefRepository.existsByName(name)).thenReturn(false);
@@ -111,5 +118,57 @@ class ClothesAttributeDefServiceImplTest {
         .hasMessage(ErrorCode.ATTRIBUTE_VALUE_DUPLICATE.getMessage());
 
     then(clothesAttributeDefRepository).should(never()).save(any());
+  }
+
+  @Test
+  @DisplayName("의상 속성 수정 성공")
+  void updateClothesAttributeDef_Success() {
+    // given
+    String newName = "새로운 색상";
+    List<String> newValues = List.of("빨강", "노랑", "초록", "보라");
+    ClothesAttributeDefUpdateRequest request =
+        new ClothesAttributeDefUpdateRequest(newName, newValues);
+
+    when(clothesAttributeDefRepository.findById(definitionId))
+        .thenReturn(Optional.of(clothesAttributeDefinition));
+    when(clothesAttributeDefRepository.existsByName(newName)).thenReturn(false);
+    when(clothesAttributeDefRepository.save(clothesAttributeDefinition))
+        .thenReturn(clothesAttributeDefinition);
+    when(clothesAttributeDefMapper.toDto(clothesAttributeDefinition))
+        .thenReturn(new ClothesAttributeDefDto(definitionId, newName, newValues));
+
+    // when
+    ClothesAttributeDefDto result = clothesAttributeDefService.update(definitionId, request);
+
+    // then
+    assertThat(result).isNotNull();
+    assertThat(result.name()).isEqualTo(newName);
+    assertThat(result.selectableValues()).containsExactlyElementsOf(newValues);
+
+    verify(clothesAttributeDefRepository).findById(definitionId);
+    verify(clothesAttributeDefRepository).save(clothesAttributeDefinition);
+  }
+
+  @Test
+  @DisplayName("의상 속성 수정 실패_ 존재하지 않는 definitionId")
+  void updateClothesAttributeDef_NotFound() {
+    // given
+    UUID nonExistentId = UUID.randomUUID();
+    String newName = "새로운 색상";
+    List<String> newValues = List.of("빨강", "노랑");
+
+    ClothesAttributeDefUpdateRequest request =
+        new ClothesAttributeDefUpdateRequest(newName, newValues);
+
+    when(clothesAttributeDefRepository.findById(nonExistentId))
+        .thenReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> clothesAttributeDefService.update(nonExistentId, request))
+        .isInstanceOf(RestException.class)
+        .hasMessage(ErrorCode.NOT_FOUND.getMessage());
+
+    verify(clothesAttributeDefRepository).findById(nonExistentId);
+    verify(clothesAttributeDefRepository, never()).save(any());
   }
 }
