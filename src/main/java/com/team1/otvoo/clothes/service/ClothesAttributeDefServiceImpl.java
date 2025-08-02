@@ -64,10 +64,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     log.info("의상 속성 수정 요청: id = {}, name = {}, selectableValues = {}",
         definitionId, request.name(), request.selectableValues());
 
-    ClothesAttributeDefinition clothesAttributeDefinition =
-        clothesAttributeDefRepository.findById(definitionId)
-            .orElseThrow(
-                () -> new RestException(ErrorCode.NOT_FOUND, Map.of("definitionId", definitionId)));
+    ClothesAttributeDefinition clothesAttributeDefinition = getDefinition(definitionId);
 
     if (!clothesAttributeDefinition.getName().equals(request.name())) {
       checkDuplicateName(request.name());
@@ -111,12 +108,29 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     return clothesAttributeDefMapper.toDto(saved);
   }
 
+  @Override
+  @Transactional
+  public void delete(UUID definitionId) {
+    ClothesAttributeDefinition clothesAttributeDefinition = getDefinition(definitionId);
+    clothesAttributeDefRepository.delete(clothesAttributeDefinition);
+    log.info("의상 속성 삭제 완료 - id: {}", definitionId);
+  }
+
   private void checkDuplicateName(String name) {
     if (clothesAttributeDefRepository.existsByName(name)) {
       log.warn("의상 속성 등록 실패 - 이미 존재하는 속성 이름: {}", name);
       throw new RestException(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE,
           Map.of("name", name));
     }
+  }
+
+  private ClothesAttributeDefinition getDefinition(UUID definitionId) {
+    return clothesAttributeDefRepository.findById(definitionId)
+        .orElseThrow(
+            () -> {
+              log.warn("해당 속성 정의가 존재하지 않습니다. definitionId = {}", definitionId);
+              return new RestException(ErrorCode.NOT_FOUND, Map.of("definitionId", definitionId));
+            });
   }
 
   private void checkDuplicateValue(List<String> values) {
