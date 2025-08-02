@@ -132,12 +132,43 @@ public class FeedServiceTest {
     FeedUpdateRequest request = new FeedUpdateRequest("update test");
     given(feedRepository.findById(feedId)).willReturn(Optional.empty());
 
-    // when
+    // when & then
     assertThatThrownBy(() -> feedService.update(feedId, request))
         .isInstanceOf(RestException.class)
         .hasMessageContaining("찾을 수 없습니다.");
+    then(feedRepository).should(never()).save(any());
+  }
+
+  @Test
+  @DisplayName("피드 삭제 성공")
+  void feed_delete_success() {
+    // given
+    UUID feedId = UUID.randomUUID();
+    Feed feed = Feed.builder()
+        .content("test")
+        .build();
+    ReflectionTestUtils.setField(feed, "id", feedId);
+
+    given(feedRepository.findById(feedId)).willReturn(Optional.of(feed));
+
+    // when
+    feedService.delete(feedId);
 
     // then
-    then(feedRepository).should(never()).save(any());
+    then(feedRepository).should(times(1)).delete(feed);
+  }
+
+  @Test
+  @DisplayName("피드 삭제 실패 - 피드가 존재하지 않을 때")
+  void feed_delete_failed_when_feed_not_found() {
+    // given
+    UUID feedId = UUID.randomUUID();
+    given(feedRepository.findById(feedId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> feedService.delete(feedId))
+        .isInstanceOf(RestException.class)
+        .hasMessageContaining("찾을 수 없습니다.");
+    then(feedRepository).should(never()).delete(any());
   }
 }
