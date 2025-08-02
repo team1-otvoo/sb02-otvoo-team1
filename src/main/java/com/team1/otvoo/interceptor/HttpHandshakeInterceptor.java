@@ -52,11 +52,11 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
       return false;
     }
 
-    String username = jwtTokenProvider.getUsernameFromToken(token);
-    attributes.put("username", username);
+    String userId = jwtTokenProvider.getUserIdFromToken(token);
+    attributes.put("userId", userId);
     attributes.put("token", token);
 
-    log.info("✅ [WebSocket] 핸드셰이크 성공 - 사용자: {}", username);
+    log.info("✅ [WebSocket] 핸드셰이크 성공 - userId={}", userId);
     return true;
   }
 

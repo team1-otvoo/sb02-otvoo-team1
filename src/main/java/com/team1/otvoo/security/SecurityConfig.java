@@ -17,8 +17,7 @@ public class SecurityConfig {
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
             .ignoringRequestMatchers(
-                "/api/auth/sign-in",
-                "/api/auth/csrf-token",
+                "/api/auth/**",
                 "/api/users"
             )
         )
