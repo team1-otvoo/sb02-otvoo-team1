@@ -9,10 +9,7 @@ public record UserDtoCursorResponse(
     UUID nextIdAfter,
     boolean hasNext,
     long totalCount,
-    String sortBy,
+    SortBy sortBy,
     SortDirection sortDirection
 ) {
-  public enum SortDirection {
-    ASCENDING, DESCENDING
-  }
 }
