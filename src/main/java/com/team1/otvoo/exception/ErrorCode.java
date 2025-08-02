@@ -51,7 +51,8 @@ public enum ErrorCode implements Code{
   DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "데이터베이스 처리 중 오류가 발생했습니다."),
 
   // --- Clothes 관련 ErrorCode ---
-  ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다.");
+  ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),
+  ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "중복된 속성값이 존재합니다");
 
   private final HttpStatus status;
   private final String message;
