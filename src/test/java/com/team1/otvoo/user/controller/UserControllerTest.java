@@ -2,6 +2,7 @@ package com.team1.otvoo.user.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,8 +12,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.SortBy;
+import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.service.UserService;
 import jakarta.annotation.Resource;
@@ -42,6 +46,58 @@ class UserControllerTest {
 
   @Resource
   private ObjectMapper objectMapper;
+
+  @Test
+  @DisplayName("사용자 목록 조회 성공 시 200 OK")
+  void getUserList_success_shouldReturn200() throws Exception {
+    // given
+    UserDto user1 = new UserDto(
+        UUID.randomUUID(),
+        Instant.now(),
+        "alice@example.com",
+        "Alice",
+        Role.USER,
+        List.of(),
+        false
+    );
+
+    UserDto user2 = new UserDto(
+        UUID.randomUUID(),
+        Instant.now(),
+        "bob@example.com",
+        "Bob",
+        Role.USER,
+        List.of(),
+        false
+    );
+
+    UserDtoCursorResponse response = new UserDtoCursorResponse(
+        List.of(user1, user2),
+        "cursor123",
+        user2.id(),
+        true,
+        100L,
+        SortBy.CREATED_AT,
+        SortDirection.DESCENDING
+    );
+
+    given(userService.getUsers(any())).willReturn(response);
+
+    // when & then
+    mockMvc.perform(get("/api/users")
+            .param("limit", "10")
+            .param("sortBy", "CREATED_AT")
+            .param("sortDirection", "DESCENDING"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.data.length()").value(2))
+        .andExpect(jsonPath("$.data[0].email").value("alice@example.com"))
+        .andExpect(jsonPath("$.data[1].email").value("bob@example.com"))
+        .andExpect(jsonPath("$.hasNext").value(true))
+        .andExpect(jsonPath("$.totalCount").value(100))
+        .andExpect(jsonPath("$.sortBy").value("created_at"))
+        .andExpect(jsonPath("$.sortDirection").value("DESCENDING"));
+  }
 
   @Test
   @DisplayName("회원 가입 성공")
