@@ -171,4 +171,36 @@ class ClothesAttributeDefServiceImplTest {
     verify(clothesAttributeDefRepository).findById(nonExistentId);
     verify(clothesAttributeDefRepository, never()).save(any());
   }
+
+  @Test
+  @DisplayName("의상 속성 삭제 성공")
+  void deleteClothesAttributeDef_Success() {
+    // given
+    when(clothesAttributeDefRepository.findById(definitionId))
+        .thenReturn(Optional.of(clothesAttributeDefinition));
+
+    // when
+    clothesAttributeDefService.delete(definitionId);
+
+    // then
+    verify(clothesAttributeDefRepository).findById(definitionId);
+    verify(clothesAttributeDefRepository).delete(clothesAttributeDefinition);
+  }
+
+  @Test
+  @DisplayName("의상 속성 삭제 실패_존재하지 않는 definitionId")
+  void deleteClothesAttributeDef_NotFound() {
+    // given
+    UUID nonExistentId = UUID.randomUUID();
+    when(clothesAttributeDefRepository.findById(nonExistentId))
+        .thenReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> clothesAttributeDefService.delete(nonExistentId))
+        .isInstanceOf(RestException.class)
+        .hasMessage(ErrorCode.NOT_FOUND.getMessage());
+
+    verify(clothesAttributeDefRepository).findById(nonExistentId);
+    verify(clothesAttributeDefRepository, never()).delete(any());
+  }
 }
