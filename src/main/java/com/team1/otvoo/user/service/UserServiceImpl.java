@@ -3,12 +3,17 @@ package com.team1.otvoo.user.service;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.dto.UserDtoCursorRequest;
+import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
-import com.team1.otvoo.user.util.UserMapper;
+import com.team1.otvoo.user.mapper.UserMapper;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +31,36 @@ public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
+
+  @Transactional(readOnly = true)
+  @Override
+  public UserDtoCursorResponse getUsers(UserDtoCursorRequest request) {
+
+    UserSlice slice = userRepository.searchUsersWithCursor(request);
+
+    List<UserDto> dtos = slice.content().stream()
+        .map(userMapper::toUserDto)
+        .toList();
+
+    String nextCursor = null;
+    UUID nextIdAfter = null;
+
+    if (slice.hasNext()) {
+      User last = slice.content().get(slice.content().size() - 1);
+      nextIdAfter = last.getId();
+      nextCursor = extractCursorValue(last, request.sortBy());
+    }
+
+    return new UserDtoCursorResponse(
+        dtos,
+        nextCursor,
+        nextIdAfter,
+        slice.hasNext(),
+        slice.totalCount(),
+        request.sortBy(),
+        request.sortDirection()
+    );
+  }
 
   @Override
   public UserDto createUser(UserCreateRequest userCreateRequest) {
@@ -62,5 +97,13 @@ public class UserServiceImpl implements UserService {
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
     user.changePassword(newEncodedPassword);
+  }
+
+  private String extractCursorValue(User user, SortBy sortBy) {
+    return switch (sortBy) {
+      case EMAIL -> user.getEmail();
+      case CREATED_AT -> user.getCreatedAt().toString();
+      case NAME -> user.getProfile() != null ? user.getProfile().getName() : null;
+    };
   }
 }
