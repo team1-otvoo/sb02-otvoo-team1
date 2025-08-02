@@ -4,12 +4,16 @@ import com.team1.otvoo.auth.dto.CsrfTokenResponse;
 import com.team1.otvoo.auth.dto.SignInRequest;
 import com.team1.otvoo.auth.dto.SignInResponse;
 import com.team1.otvoo.auth.service.AuthService;
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -51,5 +55,22 @@ public class AuthController {
     log.info("✅ 로그아웃 성공");
 
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/me")
+  public ResponseEntity<String> getAccessTokenByRefreshToken(
+      @CookieValue(value = "refresh_token", required = false) String refreshToken
+  ) {
+    log.info("🟡 액세스 토큰 요청 - 쿠키에서 refresh_token 조회됨");
+
+    if (refreshToken == null || refreshToken.isBlank()) {
+      log.warn("❌ 리프레시 토큰이 누락되었습니다.");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "리프레시 토큰이 필요합니다."));
+    }
+
+    String accessToken = authService.getAccessTokenByRefreshToken(refreshToken);
+
+    log.info("✅ 액세스 토큰 조회 완료");
+    return ResponseEntity.ok(accessToken);
   }
 }
