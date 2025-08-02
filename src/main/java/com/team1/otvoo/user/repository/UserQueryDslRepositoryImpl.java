@@ -74,8 +74,9 @@ public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
       builder.and(user.role.eq(request.roleEqual()));
     }
 
-    builder.and(user.locked.eq(request.locked()));
-
+    if (request.locked() != null) {
+      builder.and(user.locked.eq(request.locked()));
+    }
     if ((request.cursor() != null && request.idAfter() == null)
         || (request.cursor() == null && request.idAfter() != null)) {
 

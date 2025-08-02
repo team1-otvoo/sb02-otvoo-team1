@@ -11,7 +11,7 @@ public record UserDtoCursorRequest (
     SortDirection sortDirection,
     String emailLike,
     Role roleEqual,
-    boolean locked
+    Boolean locked
 
 ){
 }
