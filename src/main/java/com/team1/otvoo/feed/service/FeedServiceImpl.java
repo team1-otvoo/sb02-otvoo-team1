@@ -6,6 +6,7 @@ import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
 import com.team1.otvoo.feed.dto.FeedDto;
+import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
 import com.team1.otvoo.feed.mapper.FeedMapper;
@@ -16,6 +17,7 @@ import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -65,5 +67,20 @@ public class FeedServiceImpl implements FeedService {
     feedRepository.save(createdFeed);
 
     return feedMapper.toDto(createdFeed, false);
+  }
+
+  @Override
+  public FeedDto update(UUID id, FeedUpdateRequest request) {
+    Feed feed = feedRepository.findById(id)
+        .orElseThrow(() -> {
+          log.warn("해당 피드가 존재하지 않습니다. - feedId: {}", id);
+          return new RestException(ErrorCode.NOT_FOUND,
+              Map.of("feedId", id, "detail", "Feed not found"));
+        });
+    feed.updateFeed(request.content());
+
+    feedRepository.save(feed);
+
+    return feedMapper.toDto(feed, false); // likedByMe는 like 구현 후 수정 예정
   }
 }

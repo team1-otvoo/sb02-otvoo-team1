@@ -5,7 +5,7 @@ import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
-import com.team1.otvoo.user.mapper.UserMapper;
+import com.team1.otvoo.user.util.UserMapper;
 import com.team1.otvoo.weather.mapper.WeatherMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

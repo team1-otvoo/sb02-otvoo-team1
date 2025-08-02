@@ -73,4 +73,9 @@ public class Feed {
   public void updateFeedClothes(List<FeedClothes> feedClothesList) {
     this.feedClothes = feedClothesList;
   }
+
+  public void updateFeed(String content) {
+    this.content = content;
+    this.updatedAt = Instant.now();
+  }
 }
