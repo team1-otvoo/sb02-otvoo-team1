@@ -1,4 +1,4 @@
-package com.team1.otvoo.user.util;
+package com.team1.otvoo.user.mapper;
 
 import java.lang.reflect.Field;
 
