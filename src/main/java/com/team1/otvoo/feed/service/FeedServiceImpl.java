@@ -48,7 +48,7 @@ public class FeedServiceImpl implements FeedService {
         () -> {
           log.warn("해당 날씨 데이터가 존재하지 않습니다. - weatherId: {}", request.weatherId());
           return new RestException(ErrorCode.NOT_FOUND,
-          Map.of("weatherId", request.weatherId(), "detail", "WeatherForecast not found"));
+          Map.of("weatherId", request.weatherId(),"detail", "WeatherForecast not found"));
         });
 
     List<Clothes> clothesList = clothesRepository.findAllById(request.clothesIds());
@@ -71,16 +71,27 @@ public class FeedServiceImpl implements FeedService {
 
   @Override
   public FeedDto update(UUID id, FeedUpdateRequest request) {
-    Feed feed = feedRepository.findById(id)
-        .orElseThrow(() -> {
-          log.warn("해당 피드가 존재하지 않습니다. - feedId: {}", id);
-          return new RestException(ErrorCode.NOT_FOUND,
-              Map.of("feedId", id, "detail", "Feed not found"));
-        });
+    Feed feed = findFeed(id);
     feed.updateFeed(request.content());
 
     feedRepository.save(feed);
 
     return feedMapper.toDto(feed, false); // likedByMe는 like 구현 후 수정 예정
+  }
+
+  @Override
+  public void delete(UUID id) {
+    Feed feed = findFeed(id);
+
+    feedRepository.delete(feed);
+  }
+
+  private Feed findFeed(UUID id) {
+    return feedRepository.findById(id)
+        .orElseThrow(() -> {
+          log.warn("해당 피드가 존재하지 않습니다. - feedId: {}", id);
+          return new RestException(ErrorCode.NOT_FOUND,
+              Map.of("feedId", id, "detail", "Feed not found"));
+        });
   }
 }

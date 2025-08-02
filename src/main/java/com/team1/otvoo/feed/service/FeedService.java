@@ -10,4 +10,6 @@ public interface FeedService {
 
   FeedDto update(UUID id, FeedUpdateRequest request);
 
+  void delete(UUID id);
+
 }

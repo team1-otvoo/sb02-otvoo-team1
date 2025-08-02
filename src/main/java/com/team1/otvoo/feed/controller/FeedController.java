@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,5 +47,15 @@ public class FeedController {
 
     log.info("피드 수정 완료 - feedId: {}", feedId);
     return ResponseEntity.ok(feedDto);
+  }
+
+  @DeleteMapping("/{feedId}")
+  public ResponseEntity<Void> delete(@PathVariable UUID feedId) {
+    log.info("피드 삭제 요청 - feedId: {}", feedId);
+
+    feedService.delete(feedId);
+
+    log.info("피드 삭제 완료 - feedId: {}", feedId);
+    return ResponseEntity.noContent().build();
   }
 }
