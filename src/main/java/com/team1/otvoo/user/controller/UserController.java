@@ -1,10 +1,13 @@
 package com.team1.otvoo.user.controller;
 
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.SortBy;
+import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.service.UserService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
@@ -30,9 +34,27 @@ public class UserController {
 
   @GetMapping
   ResponseEntity<UserDtoCursorResponse> getUserList(
-      @RequestBody UserDtoCursorRequest request
+      @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) UUID idAfter,
+      @RequestParam int limit,
+      @RequestParam SortBy sortBy,
+      @RequestParam SortDirection sortDirection,
+      @RequestParam(required = false) String emailLike,
+      @RequestParam(required = false) Role roleEqual,
+      @RequestParam(required = false) Boolean locked
   ) {
     log.info("GET /api/users - 계정 목록 조회 요청");
+
+    UserDtoCursorRequest request = new UserDtoCursorRequest(
+        cursor,
+        idAfter,
+        limit,
+        sortBy,
+        sortDirection,
+        emailLike,
+        roleEqual,
+        locked
+    );
 
     UserDtoCursorResponse response = userService.getUsers(request);
 
