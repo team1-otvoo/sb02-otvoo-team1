@@ -78,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
 
     if (!jwtTokenProvider.validateToken(accessToken)) {
       log.warn("❌ 로그아웃 실패 - 유효하지 않은 토큰");
-      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "유효하지 않은 액세스 토큰"));
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "액세스 토큰이 유효하지 않습니다."));
     }
 
     String userId = jwtTokenProvider.getUserIdFromToken(accessToken);
@@ -86,5 +86,25 @@ public class AuthServiceImpl implements AuthService {
     refreshTokenStore.remove(userId);
 
     log.info("✅ 로그아웃 성공: userId={} 의 RefreshToken 삭제됨", userId);
+  }
+
+  @Override
+  public String getAccessTokenByRefreshToken(String refreshToken) {
+    if (!jwtTokenProvider.validateToken(refreshToken)) {
+      log.warn("❌ 유효하지 않은 리프레시 토큰");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "리프레시 토큰이 유효하지 않습니다."));
+    }
+
+    String userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+
+    String storedToken = refreshTokenStore.get(userId);
+    if (storedToken == null || !storedToken.equals(refreshToken)) {
+      log.warn("❌ 저장된 리프레시 토큰과 일치하지 않음");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "토큰 불일치 또는 만료됨"));
+    }
+
+    String newAccessToken = jwtTokenProvider.createAccessToken(userId);
+
+    return newAccessToken;
   }
 }
