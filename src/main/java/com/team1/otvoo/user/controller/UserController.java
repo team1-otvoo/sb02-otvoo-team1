@@ -3,6 +3,8 @@ package com.team1.otvoo.user.controller;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.dto.UserDtoCursorRequest;
+import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.service.UserService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +27,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
   private final UserService userService;
+
+  @GetMapping
+  ResponseEntity<UserDtoCursorResponse> getUserList(
+      @RequestBody UserDtoCursorRequest request
+  ) {
+    log.info("GET /api/users - 계정 목록 조회 요청");
+
+    UserDtoCursorResponse response = userService.getUsers(request);
+
+    log.info("GET /api/users - 계정 목록 조회 완료");
+
+    return ResponseEntity
+        .status(HttpStatus.OK)
+        .body(response);
+  }
 
   @PostMapping
   ResponseEntity<UserDto> createUser(@Valid @RequestBody UserCreateRequest userCreateRequest) {
@@ -47,7 +65,9 @@ public class UserController {
     userService.changePassword(userId, changePasswordRequest);
 
     log.info("비밀번호 변경 완료: userId={}", userId);
-    return ResponseEntity.noContent().build();
+    return ResponseEntity
+        .status(HttpStatus.NO_CONTENT)
+        .build();
   }
 
 
