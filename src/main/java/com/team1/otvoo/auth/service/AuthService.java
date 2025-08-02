@@ -8,4 +8,5 @@ import jakarta.servlet.http.HttpServletRequest;
 public interface AuthService {
   CsrfTokenResponse getCsrfToken(HttpServletRequest request);
   SignInResponse signIn(SignInRequest request);
+  void signOut(String accessToken);
 }

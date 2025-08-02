@@ -71,4 +71,20 @@ public class AuthServiceImpl implements AuthService {
 
     return new SignInResponse(accessToken, refreshToken);
   }
+
+  @Override
+  public void signOut(String accessToken) {
+    log.info("🚪 로그아웃 시도: accessToken={}", accessToken);
+
+    if (!jwtTokenProvider.validateToken(accessToken)) {
+      log.warn("❌ 로그아웃 실패 - 유효하지 않은 토큰");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "유효하지 않은 액세스 토큰"));
+    }
+
+    String userId = jwtTokenProvider.getUserIdFromToken(accessToken);
+
+    refreshTokenStore.remove(userId);
+
+    log.info("✅ 로그아웃 성공: userId={} 의 RefreshToken 삭제됨", userId);
+  }
 }

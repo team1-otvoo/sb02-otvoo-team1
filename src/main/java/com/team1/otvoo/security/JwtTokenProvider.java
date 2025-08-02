@@ -49,7 +49,7 @@ public class JwtTokenProvider {
             .compact();
     }
 
-    public String getUsernameFromToken(String token) {
+    public String getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
             .verifyWith(secretKey)
             .build()
