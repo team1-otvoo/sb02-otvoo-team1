@@ -1,4 +1,4 @@
-package com.team1.otvoo.user.util;
+package com.team1.otvoo.user.mapper;
 
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.dto.UserDto;
@@ -27,7 +27,7 @@ class UserMapperTest {
     );
 
     Profile profile = new Profile(name);
-    profile.setProfileImage(profileImage);
+    profile.updateProfileImage(profileImage);
 
     User user = new User("test@example.com", "encoded-password", profile);
     TestUtils.setField(user, "id", UUID.randomUUID());
