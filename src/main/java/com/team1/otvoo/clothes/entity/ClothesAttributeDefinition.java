@@ -41,4 +41,8 @@ public class ClothesAttributeDefinition {
     values.add(value);
     value.setDefinition(this);
   }
+
+  public void update(String newName) {
+      this.name = newName;
+  }
 }
