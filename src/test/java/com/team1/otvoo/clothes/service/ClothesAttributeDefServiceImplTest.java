@@ -11,7 +11,6 @@ import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,6 +91,24 @@ class ClothesAttributeDefServiceImplTest {
     assertThatThrownBy(() -> clothesAttributeDefService.create(request))
         .isInstanceOf(RestException.class)
         .hasMessage(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE.getMessage());
+
+    then(clothesAttributeDefRepository).should(never()).save(any());
+  }
+
+  @Test
+  @DisplayName("속성 등록 실패_중복된 속성 값")
+  void createClothesAttributeDef_DuplicateValue() {
+    // given
+    List<String> duplicateValues = List.of("빨강", "빨강");
+    ClothesAttributeDefCreateRequest request =  new ClothesAttributeDefCreateRequest(name,
+        duplicateValues);
+
+    when(clothesAttributeDefRepository.existsByName(name)).thenReturn(false);
+
+    // when & then
+    assertThatThrownBy(() -> clothesAttributeDefService.create(request))
+        .isInstanceOf(RestException.class)
+        .hasMessage(ErrorCode.ATTRIBUTE_VALUE_DUPLICATE.getMessage());
 
     then(clothesAttributeDefRepository).should(never()).save(any());
   }
