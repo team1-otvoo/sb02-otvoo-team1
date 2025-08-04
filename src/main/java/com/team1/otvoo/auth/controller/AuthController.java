@@ -1,6 +1,7 @@
 package com.team1.otvoo.auth.controller;
 
 import com.team1.otvoo.auth.dto.CsrfTokenResponse;
+import com.team1.otvoo.auth.dto.ResetPasswordRequest;
 import com.team1.otvoo.auth.dto.SignInRequest;
 import com.team1.otvoo.auth.dto.SignInResponse;
 import com.team1.otvoo.auth.service.AuthService;
@@ -90,5 +91,15 @@ public class AuthController {
     log.info("✅ 토큰 재발급 성공: accessToken={}, refreshToken={}", tokens.accessToken(), tokens.refreshToken());
 
     return ResponseEntity.ok(tokens);
+  }
+
+  @PostMapping("/reset-password")
+  public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+    log.info("🔧 비밀번호 초기화 요청: email={}", request.email());
+
+    authService.resetPassword(request.email());
+
+    log.info("✅ 임시 비밀번호 이메일 전송 완료");
+    return ResponseEntity.noContent().build();
   }
 }
