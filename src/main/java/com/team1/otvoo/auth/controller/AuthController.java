@@ -73,4 +73,22 @@ public class AuthController {
     log.info("✅ 액세스 토큰 조회 완료");
     return ResponseEntity.ok(accessToken);
   }
+
+  @PostMapping("/refresh")
+  public ResponseEntity<SignInResponse> refreshToken(
+      @CookieValue(value = "refresh_token", required = false) String refreshToken
+  ) {
+    log.info("🔄 토큰 재발급 요청");
+
+    if (refreshToken == null || refreshToken.isBlank()) {
+      log.warn("❌ 리프레시 토큰 누락");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "리프레시 토큰이 필요합니다."));
+    }
+
+    SignInResponse tokens = authService.refreshToken(refreshToken);
+
+    log.info("✅ 토큰 재발급 성공: accessToken={}, refreshToken={}", tokens.accessToken(), tokens.refreshToken());
+
+    return ResponseEntity.ok(tokens);
+  }
 }
