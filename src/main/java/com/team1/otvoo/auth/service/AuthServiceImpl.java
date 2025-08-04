@@ -100,11 +100,37 @@ public class AuthServiceImpl implements AuthService {
     String storedToken = refreshTokenStore.get(userId);
     if (storedToken == null || !storedToken.equals(refreshToken)) {
       log.warn("❌ 저장된 리프레시 토큰과 일치하지 않음");
-      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "토큰 불일치 또는 만료됨"));
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "토큰 불일치 또는 만료되었습니다."));
     }
 
     String newAccessToken = jwtTokenProvider.createAccessToken(userId);
 
     return newAccessToken;
+  }
+
+  @Override
+  public SignInResponse refreshToken(String refreshToken) {
+    log.info("🔄 토큰 재발급 시도");
+
+    if (!jwtTokenProvider.validateToken(refreshToken)) {
+      log.warn("❌ 유효하지 않은 리프레시 토큰");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "리프레시 토큰이 유효하지 않습니다."));
+    }
+
+    String userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+
+    String storedToken = refreshTokenStore.get(userId);
+    if (storedToken == null || !storedToken.equals(refreshToken)) {
+      log.warn("❌ 저장된 토큰과 일치하지 않음");
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "저장된 토큰과 일치하지 않거나 만료되었습니다."));
+    }
+
+    String newAccessToken = jwtTokenProvider.createAccessToken(userId);
+    String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+    refreshTokenStore.save(userId, newRefreshToken);
+
+    log.info("✅ 새로운 토큰 생성 완료");
+
+    return new SignInResponse(newAccessToken, newRefreshToken);
   }
 }
