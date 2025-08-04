@@ -16,7 +16,12 @@ import org.springframework.stereotype.Service;
 import com.team1.otvoo.auth.dto.CsrfTokenResponse;
 import lombok.RequiredArgsConstructor;
 
+import java.security.SecureRandom;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,6 +32,15 @@ public class AuthServiceImpl implements AuthService {
   private final JwtTokenProvider jwtTokenProvider;
   private final PasswordEncoder passwordEncoder;
   private final RefreshTokenStore refreshTokenStore;
+  private final EmailService emailService;
+
+  private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
+  private static final String DIGITS = "0123456789";
+  private static final String SPECIAL = "!@#$%^&*";
+  private static final String ALL = UPPER + LOWER + DIGITS + SPECIAL;
+
+  private final Random random = new SecureRandom();
 
   @Override
   public CsrfTokenResponse getCsrfToken(HttpServletRequest request) {
@@ -132,5 +146,47 @@ public class AuthServiceImpl implements AuthService {
     log.info("✅ 새로운 토큰 생성 완료");
 
     return new SignInResponse(newAccessToken, newRefreshToken);
+  }
+
+  @Override
+  public void resetPassword(String email) {
+    User user = userRepository.findByEmail(email)
+        .orElseThrow(() -> {
+          log.warn("❌ 비밀번호 초기화 실패 - 존재하지 않는 이메일: {}", email);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("reason", "해당 이메일의 사용자를 찾을 수 없습니다."));
+        });
+
+    String tempPassword = generateTemporaryPassword();
+    String encodedPassword = passwordEncoder.encode(tempPassword);
+
+    user.changePassword(encodedPassword);
+    userRepository.save(user);
+
+    emailService.sendTemporaryPassword(user.getEmail(), tempPassword);
+  }
+
+  private String generateTemporaryPassword() {
+    StringBuilder password = new StringBuilder();
+
+    // 필수 문자군 각각 1개 이상 포함
+    password.append(UPPER.charAt(random.nextInt(UPPER.length())));
+    password.append(LOWER.charAt(random.nextInt(LOWER.length())));
+    password.append(DIGITS.charAt(random.nextInt(DIGITS.length())));
+    password.append(SPECIAL.charAt(random.nextInt(SPECIAL.length())));
+
+    // 나머지 자리 랜덤 채우기 (총 10자리)
+    for (int i = 4; i < 10; i++) {
+      password.append(ALL.charAt(random.nextInt(ALL.length())));
+    }
+
+    // 문자 섞기
+    List<Character> pwdChars = password.chars()
+        .mapToObj(c -> (char) c)
+        .collect(Collectors.toList());
+    Collections.shuffle(pwdChars);
+
+    return pwdChars.stream()
+        .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+        .toString();
   }
 }

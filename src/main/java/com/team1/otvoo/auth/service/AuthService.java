@@ -11,4 +11,5 @@ public interface AuthService {
   void signOut(String accessToken);
   String getAccessTokenByRefreshToken(String refreshToken);
   SignInResponse refreshToken(String refreshToken);
+  void resetPassword(String email);
 }
