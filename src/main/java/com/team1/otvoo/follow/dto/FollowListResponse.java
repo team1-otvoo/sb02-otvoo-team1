@@ -12,5 +12,13 @@ public record FollowListResponse(
     String sortBy,
     String sortDirection
 ) {
-
+  public FollowListResponse(
+      List<FollowDto> data,
+      String nextCursor,
+      UUID nextIdAfter,
+      boolean hasNext,
+      long totalCount
+  ) {
+    this(data, nextCursor, nextIdAfter, hasNext, totalCount, "createdAt", "DESCENDING");
+  }
 }
