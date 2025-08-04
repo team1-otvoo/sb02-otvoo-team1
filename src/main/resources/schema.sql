@@ -23,7 +23,8 @@ CREATE TABLE users (
 -- clothes_attribute_definitions 테이블
 CREATE TABLE clothes_attribute_definitions (
                                                id UUID PRIMARY KEY,
-                                               name VARCHAR(255) NOT NULL UNIQUE
+                                               name VARCHAR(255) NOT NULL UNIQUE,
+                                               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- clothes_attribute_values 테이블
@@ -126,6 +127,7 @@ CREATE TABLE clothes (
                          name VARCHAR(255) NOT NULL,
                          type VARCHAR(50) NOT NULL,
                          image_url TEXT,
+                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                          CONSTRAINT fk_clothes_owner FOREIGN KEY (owner_id)
                              REFERENCES users(id) ON DELETE CASCADE
 );
