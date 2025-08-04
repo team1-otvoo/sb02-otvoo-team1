@@ -87,15 +87,10 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
           .collect(Collectors.toMap(ClothesAttributeValue::getValue, v -> v));
 
       // 요청 리스트대로 새 리스트 구성
-      List<ClothesAttributeValue> newValues = new ArrayList<>();
-      for (String value : requestValues) {
-        ClothesAttributeValue existValue = existingMap.get(value);
-        if (existValue != null) {
-          newValues.add(existValue); // 기존 value entity 재사용
-        } else {
-          newValues.add(new ClothesAttributeValue(value)); // 새로운 value entity 추가
-        }
-      }
+      List<ClothesAttributeValue> newValues = requestValues.stream()
+          .map(value -> existingMap.getOrDefault(value, new ClothesAttributeValue(value)))
+          .toList();
+
       existingValues.clear();
       existingValues.addAll(newValues);
     }
