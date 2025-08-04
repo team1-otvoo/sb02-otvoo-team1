@@ -12,6 +12,7 @@ import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +41,7 @@ class ClothesAttributeDefServiceImplTest {
   private UUID definitionId;
   private String name;
   private List<String> selectableValues;
+  private static final Instant CREATED_AT = Instant.parse("2025-01-01T00:00:00Z");
 
   @BeforeEach
   void setUp() {
@@ -58,7 +60,8 @@ class ClothesAttributeDefServiceImplTest {
     clothesAttributeDefDto = new ClothesAttributeDefDto(
         definitionId,
         name,
-        selectableValues
+        selectableValues,
+        CREATED_AT
     );
   }
 
@@ -135,7 +138,7 @@ class ClothesAttributeDefServiceImplTest {
     when(clothesAttributeDefRepository.save(clothesAttributeDefinition))
         .thenReturn(clothesAttributeDefinition);
     when(clothesAttributeDefMapper.toDto(clothesAttributeDefinition))
-        .thenReturn(new ClothesAttributeDefDto(definitionId, newName, newValues));
+        .thenReturn(new ClothesAttributeDefDto(definitionId, newName, newValues,CREATED_AT));
 
     // when
     ClothesAttributeDefDto result = clothesAttributeDefService.update(definitionId, request);

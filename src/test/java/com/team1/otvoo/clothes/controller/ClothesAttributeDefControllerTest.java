@@ -14,8 +14,8 @@ import com.team1.otvoo.clothes.dto.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.service.ClothesAttributeDefService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +40,8 @@ public class ClothesAttributeDefControllerTest {
   @MockitoBean
   private ClothesAttributeDefService clothesAttributeDefService;
 
+  private static final Instant CREATED_AT = Instant.parse("2025-01-01T00:00:00Z");
+
   @Test
   @DisplayName("의상 속성 등록 성공")
   void createClothesAttributeDef_Success() throws Exception {
@@ -47,7 +49,7 @@ public class ClothesAttributeDefControllerTest {
     ClothesAttributeDefCreateRequest request =
         new ClothesAttributeDefCreateRequest("색상", List.of("빨강", "파랑"));
     ClothesAttributeDefDto responseDto =
-        new ClothesAttributeDefDto(UUID.randomUUID(), "색상", List.of("빨강", "파랑"));
+        new ClothesAttributeDefDto(UUID.randomUUID(), "색상", List.of("빨강", "파랑"), CREATED_AT);
 
     Mockito.when(clothesAttributeDefService.create(any()))
         .thenReturn(responseDto);
@@ -67,11 +69,11 @@ public class ClothesAttributeDefControllerTest {
   void updateClothesAttributeDef_Success() throws Exception {
     // given
     UUID id = UUID.randomUUID();
-    ClothesAttributeDefCreateRequest request =
-        new ClothesAttributeDefCreateRequest("사이즈", List.of("S", "M", "L"));
+    ClothesAttributeDefUpdateRequest request =
+        new ClothesAttributeDefUpdateRequest("사이즈", List.of("S", "M", "L"));
 
     ClothesAttributeDefDto responseDto =
-        new ClothesAttributeDefDto(id, "사이즈", List.of("S", "M", "L"));
+        new ClothesAttributeDefDto(id, "사이즈", List.of("S", "M", "L"), CREATED_AT);
 
     Mockito.when(clothesAttributeDefService.update(Mockito.eq(id), any()))
         .thenReturn(responseDto);
