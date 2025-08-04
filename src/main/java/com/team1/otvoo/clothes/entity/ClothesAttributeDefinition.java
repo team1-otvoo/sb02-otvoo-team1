@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,7 @@ public class ClothesAttributeDefinition {
   private String name;
 
   @OneToMany(mappedBy = "definition", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderColumn(name = "order_index")
   private List<ClothesAttributeValue> values = new ArrayList<>();
 
   public ClothesAttributeDefinition(String name, List<ClothesAttributeValue> values) {
