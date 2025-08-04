@@ -36,7 +36,9 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         request.name(), request.selectableValues());
 
     checkDuplicateName(request.name());
-    List<String> requestValues = request.selectableValues();
+    List<String> requestValues = request.selectableValues() == null
+        ? List.of()
+        : request.selectableValues();
     checkDuplicateValue(requestValues);
 
     ClothesAttributeDefinition clothesAttributeDefinition = new ClothesAttributeDefinition(
@@ -71,7 +73,9 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
       clothesAttributeDefinition.update(request.name());
     }
 
-    List<String> requestValues = request.selectableValues();
+    List<String> requestValues = request.selectableValues() == null
+        ? List.of()
+        : request.selectableValues();
     checkDuplicateValue(requestValues);
 
     List<ClothesAttributeValue> existingValues = clothesAttributeDefinition.getValues();
@@ -111,14 +115,6 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     log.info("의상 속성 삭제 완료 - id: {}", definitionId);
   }
 
-  private void checkDuplicateName(String name) {
-    if (clothesAttributeDefRepository.existsByName(name)) {
-      log.warn("의상 속성 등록 실패 - 이미 존재하는 속성 이름: {}", name);
-      throw new RestException(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE,
-          Map.of("name", name));
-    }
-  }
-
   private ClothesAttributeDefinition getDefinition(UUID definitionId) {
     return clothesAttributeDefRepository.findById(definitionId)
         .orElseThrow(
@@ -128,8 +124,16 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
             });
   }
 
+  private void checkDuplicateName(String name) {
+    if (clothesAttributeDefRepository.existsByName(name)) {
+      log.warn("의상 속성 등록 실패 - 이미 존재하는 속성 이름: {}", name);
+      throw new RestException(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE,
+          Map.of("name", name));
+    }
+  }
+
   private void checkDuplicateValue(List<String> values) {
-    if (values == null || values.isEmpty()) {
+    if (values.isEmpty()) {
       return;
     }
     Set<String> uniqueValues = new HashSet<>();
