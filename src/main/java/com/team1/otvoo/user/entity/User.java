@@ -88,5 +88,10 @@ public class User{
     }
   }
 
+  public void updateRole(Role newRole) {
+    if (this.role != newRole) {
+      this.role = newRole;
+    }
+  }
 }
 
