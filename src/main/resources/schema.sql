@@ -21,34 +21,6 @@ CREATE TABLE weather_locations (
                                        REFERENCES weather_forecasts(id) ON DELETE CASCADE
 );
 
--- profile_images 테이블
-CREATE TABLE profile_images (
-                                id UUID PRIMARY KEY,
-                                image_url TEXT,
-                                original_filename VARCHAR(255),
-                                content_type VARCHAR(50),
-                                size BIGINT,
-                                width INT,
-                                height INT,
-                                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
--- profiles 테이블
-CREATE TABLE profiles (
-                          id UUID PRIMARY KEY,
-                          name VARCHAR(50) NOT NULL,
-                          gender VARCHAR(10),
-                          birth DATE,
-                          temperature_sensitivity INT,
-                          weather_location_id UUID NOT NULL,
-                          profile_image_id UUID NOT NULL UNIQUE,
-
-                          CONSTRAINT fk_profiles_weather_locations FOREIGN KEY (weather_location_id)
-                              REFERENCES weather_locations(id) ON DELETE SET NULL ,
-                          CONSTRAINT fk_profiles_profile_images FOREIGN KEY (profile_image_id)
-                              REFERENCES profile_images(id) ON DELETE SET NULL
-);
-
 -- users 테이블
 CREATE TABLE users (
                        id UUID PRIMARY KEY,
@@ -58,11 +30,39 @@ CREATE TABLE users (
                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                        follower_count BIGINT NOT NULL DEFAULT 0,
                        following_count BIGINT NOT NULL DEFAULT 0,
-                       locked BOOLEAN NOT NULL DEFAULT FALSE,
-                       profile_id UUID NOT NULL UNIQUE,
+                       locked BOOLEAN NOT NULL DEFAULT FALSE
+);
 
-                       CONSTRAINT fk_users_profile FOREIGN KEY (profile_id)
-                           REFERENCES profiles(id) ON DELETE CASCADE
+-- profiles 테이블
+CREATE TABLE profiles (
+                          id UUID PRIMARY KEY,
+                          name VARCHAR(50) NOT NULL,
+                          gender VARCHAR(10),
+                          birth DATE,
+                          temperature_sensitivity INT,
+                          user_id UUID NOT NULL UNIQUE,
+                          weather_location_id UUID NOT NULL,
+
+                          CONSTRAINT fk_profiles_user FOREIGN KEY (user_id)
+                              REFERENCES users(id) ON DELETE CASCADE,
+                          CONSTRAINT fk_profiles_weather_locations FOREIGN KEY (weather_location_id)
+                              REFERENCES weather_locations(id) ON DELETE SET NULL
+);
+
+-- profile_images 테이블
+CREATE TABLE profile_images (
+                                id UUID PRIMARY KEY,
+                                image_url TEXT,
+                                original_filename VARCHAR(255),
+                                content_type VARCHAR(50),
+                                size BIGINT,
+                                width INT,
+                                height INT,
+                                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+                                profile_id UUID NOT NULL UNIQUE,
+
+                                CONSTRAINT fk_profiles_images_profile FOREIGN KEY (profile_id)
+                                    REFERENCES profiles(id) ON DELETE CASCADE
 );
 
 -- clothes_attribute_definitions 테이블
@@ -192,13 +192,13 @@ CREATE TABLE feeds (
 
 -- feed_clothes 테이블
 CREATE TABLE feed_clothes (
-                                      id UUID PRIMARY KEY,
-                                      feed_id UUID NOT NULL,
-                                      clothes_id UUID NOT NULL,
-                                      CONSTRAINT fk_feed_clothes_feed FOREIGN KEY (feed_id)
-                                          REFERENCES feeds(id) ON DELETE CASCADE,
-                                      CONSTRAINT fk_feed_clothes_recommendation FOREIGN KEY (clothes_id)
-                                          REFERENCES clothes(id) ON DELETE CASCADE
+                              id UUID PRIMARY KEY,
+                              feed_id UUID NOT NULL,
+                              clothes_id UUID NOT NULL,
+                              CONSTRAINT fk_feed_clothes_feed FOREIGN KEY (feed_id)
+                                  REFERENCES feeds(id) ON DELETE CASCADE,
+                              CONSTRAINT fk_feed_clothes_recommendation FOREIGN KEY (clothes_id)
+                                  REFERENCES clothes(id) ON DELETE CASCADE
 );
 
 -- feed_comments 테이블

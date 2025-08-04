@@ -51,9 +51,12 @@ class UserControllerTest {
   @DisplayName("사용자 목록 조회 성공 시 200 OK")
   void getUserList_success_shouldReturn200() throws Exception {
     // given
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
+
     UserDto user1 = new UserDto(
-        UUID.randomUUID(),
-        Instant.now(),
+        id1,
+        Instant.parse("2024-01-01T10:00:00Z"),
         "alice@example.com",
         "Alice",
         Role.USER,
@@ -62,8 +65,8 @@ class UserControllerTest {
     );
 
     UserDto user2 = new UserDto(
-        UUID.randomUUID(),
-        Instant.now(),
+        id2,
+        Instant.parse("2024-01-01T11:00:00Z"),
         "bob@example.com",
         "Bob",
         Role.USER,
@@ -154,13 +157,13 @@ class UserControllerTest {
     // given
     UserCreateRequest request = new UserCreateRequest("홍길동", "test@example.com", "password123!");
 
-    Mockito.doThrow(new com.team1.otvoo.exception.RestException(
+    Mockito.doThrow(new RestException(
         ErrorCode.CONFLICT,
         Map.of("email", "test@example.com")
     )).when(userService).createUser(any(UserCreateRequest.class));
 
     // when & then
-    mockMvc.perform(post("/api/users") // 실제 API 경로에 맞게 수정하세요
+    mockMvc.perform(post("/api/users")
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isConflict())
@@ -174,14 +177,11 @@ class UserControllerTest {
   void changePassword_success_shouldReturnNoContent() throws Exception {
     // given
     UUID userId = UUID.randomUUID();
-    String newPassword = "newStrongPassword123!";
 
-    // 비즈니스 로직은 void이므로 별도 given/stubbing은 필요 없음
     Mockito.doNothing()
         .when(userService)
         .changePassword(Mockito.eq(userId), any(ChangePasswordRequest.class));
 
-    // when & then
     mockMvc.perform(patch("/api/users/{userId}/password", userId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
@@ -189,21 +189,18 @@ class UserControllerTest {
                   "password": "newStrongPassword123!"
               }
           """))
-        .andExpect(status().isNoContent()); // 204 응답 확인
+        .andExpect(status().isNoContent());
   }
 
   @Test
   @DisplayName("기존과 동일한 비밀번호로 변경 시 400 반환")
   void changePassword_samePassword_shouldReturnBadRequest() throws Exception {
-    // given
     UUID userId = UUID.randomUUID();
-    String samePassword = "password123!";
 
     Mockito.doThrow(new RestException(
         ErrorCode.SAME_AS_OLD_PASSWORD
     )).when(userService).changePassword(Mockito.eq(userId), any(ChangePasswordRequest.class));
 
-    // when & then
     mockMvc.perform(patch("/api/users/{userId}/password", userId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
@@ -215,5 +212,4 @@ class UserControllerTest {
         .andExpect(jsonPath("$.exceptionName").value("SAME_AS_OLD_PASSWORD"))
         .andExpect(jsonPath("$.message").value("기존 비밀번호와 동일한 비밀번호는 사용할 수 없습니다."));
   }
-
 }

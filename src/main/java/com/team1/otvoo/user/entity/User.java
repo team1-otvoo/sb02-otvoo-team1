@@ -2,17 +2,13 @@ package com.team1.otvoo.user.entity;
 
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -43,10 +39,6 @@ public class User{
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
-  @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-  @JoinColumn(name = "profile_id", nullable = false, unique = true)
-  private Profile profile;
-
   @Column(name = "follower_count")
   private Long followerCount = 0L;
 
@@ -57,10 +49,9 @@ public class User{
   private boolean locked = false;
 
   @Builder
-  public User(String email, String password, Profile profile) {
+  public User(String email, String password) {
     this.email = email;
     this.password = password;
-    this.profile = profile;
 
     this.role = Role.USER;
     this.createdAt = Instant.now();

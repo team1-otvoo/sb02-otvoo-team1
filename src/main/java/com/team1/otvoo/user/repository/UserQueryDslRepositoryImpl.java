@@ -48,7 +48,6 @@ public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
 
     List<User> result = queryFactory
         .selectFrom(user)
-        .leftJoin(user.profile).fetchJoin()
         .where(builder)
         .orderBy(orderSpecifiers)
         .limit(limit + 1)
@@ -121,17 +120,6 @@ public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
               .or(user.createdAt.eq(cursorTime).and(user.id.lt(idCursor))));
         }
       }
-
-      case NAME -> {
-        String cursorValue = request.cursor();
-        if (direction == SortDirection.ASCENDING) {
-          condition.and(user.profile.name.gt(cursorValue)
-              .or(user.profile.name.eq(cursorValue).and(user.id.gt(idCursor))));
-        } else {
-          condition.and(user.profile.name.lt(cursorValue)
-              .or(user.profile.name.eq(cursorValue).and(user.id.lt(idCursor))));
-        }
-      }
     }
 
     return condition;
@@ -148,10 +136,6 @@ public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
       };
       case CREATED_AT -> new OrderSpecifier[]{
           new OrderSpecifier<>(direction, user.createdAt),
-          new OrderSpecifier<>(direction, user.id)
-      };
-      case NAME -> new OrderSpecifier[]{
-          new OrderSpecifier<>(direction, user.profile.name),
           new OrderSpecifier<>(direction, user.id)
       };
     };

@@ -21,16 +21,19 @@ import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserSlice;
-import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.mapper.TestUtils;
-import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.user.mapper.UserMapper;
+import com.team1.otvoo.user.projection.UserNameView;
+import com.team1.otvoo.user.repository.ProfileRepository;
+import com.team1.otvoo.user.repository.UserRepository;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +53,9 @@ class UserServiceImplTest {
   private UserRepository userRepository;
 
   @Mock
+  private ProfileRepository profileRepository;
+
+  @Mock
   private PasswordEncoder passwordEncoder;
 
   @Mock
@@ -59,7 +65,7 @@ class UserServiceImplTest {
 
   @BeforeEach
   void setUp() {
-    request =new UserCreateRequest(
+    request = new UserCreateRequest(
         "testUser1",
         "testUser1@email.com",
         "password1234!"
@@ -75,11 +81,8 @@ class UserServiceImplTest {
     Instant createdAt1 = Instant.parse("2024-01-01T10:00:00Z");
     Instant createdAt2 = Instant.parse("2024-01-01T11:00:00Z");
 
-    Profile profile1 = new Profile("Alice");
-    Profile profile2 = new Profile("Bob");
-
-    User user1 = new User("alice@example.com", "pw1", profile1);
-    User user2 = new User("bob@example.com", "pw2", profile2);
+    User user1 = new User("alice@example.com", "pw1");
+    User user2 = new User("bob@example.com", "pw2");
 
     TestUtils.setField(user1, "id", id1);
     TestUtils.setField(user2, "id", id2);
@@ -101,12 +104,22 @@ class UserServiceImplTest {
         null
     );
 
+    // 프로젝션 결과 Mock
+    UserNameView view1 = mock(UserNameView.class);
+    UserNameView view2 = mock(UserNameView.class);
+    given(view1.getUserId()).willReturn(id1);
+    given(view1.getName()).willReturn("Alice");
+    given(view2.getUserId()).willReturn(id2);
+    given(view2.getName()).willReturn("Bob");
+
+    given(userRepository.searchUsersWithCursor(request)).willReturn(new UserSlice(userList, hasNext, totalCount));
+    given(profileRepository.findUserNamesByUserIds(List.of(id1, id2))).willReturn(List.of(view1, view2));
+
     UserDto dto1 = new UserDto(id1, createdAt1, "alice@example.com", "Alice", Role.USER, List.of(), false);
     UserDto dto2 = new UserDto(id2, createdAt2, "bob@example.com", "Bob", Role.USER, List.of(), false);
 
-    given(userRepository.searchUsersWithCursor(request)).willReturn(new UserSlice(userList, hasNext, totalCount));
-    given(userMapper.toUserDto(user1)).willReturn(dto1);
-    given(userMapper.toUserDto(user2)).willReturn(dto2);
+    given(userMapper.toUserDto(user1, "Alice")).willReturn(dto1);
+    given(userMapper.toUserDto(user2, "Bob")).willReturn(dto2);
 
     // when
     UserDtoCursorResponse response = userService.getUsers(request);
@@ -124,7 +137,6 @@ class UserServiceImplTest {
   @Test
   @DisplayName("사용자 목록이 비어 있을 경우 - 커서 없음")
   void getUsers_emptyList() {
-    // given
     UserDtoCursorRequest request = new UserDtoCursorRequest(
         null,
         null,
@@ -139,10 +151,8 @@ class UserServiceImplTest {
     given(userRepository.searchUsersWithCursor(request))
         .willReturn(new UserSlice(List.of(), false, 0L));
 
-    // when
     UserDtoCursorResponse response = userService.getUsers(request);
 
-    // then
     assertThat(response.data()).isEmpty();
     assertThat(response.hasNext()).isFalse();
     assertThat(response.totalCount()).isEqualTo(0);
@@ -165,8 +175,11 @@ class UserServiceImplTest {
     given(passwordEncoder.encode(anyString())).willReturn("encodedPassword1234!");
     given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 
+    User savedUser = new User("testuser1@email.com", "encodedPassword1234!");
+    TestUtils.setField(savedUser, "id", UUID.randomUUID());
+
     UserDto expectedDto = new UserDto(
-        UUID.randomUUID(),
+        savedUser.getId(),
         Instant.now(),
         "testuser1@email.com",
         "testUser1",
@@ -174,7 +187,7 @@ class UserServiceImplTest {
         List.of(),
         false
     );
-    given(userMapper.toUserDto(any(User.class))).willReturn(expectedDto);
+    given(userMapper.toUserDto(any(User.class), anyString())).willReturn(expectedDto);
 
     UserDto result = userService.createUser(request);
 
@@ -196,33 +209,28 @@ class UserServiceImplTest {
   @Test
   @DisplayName("비밀번호 변경 성공")
   void changePassword_success() {
-    // given
     UUID userId = UUID.randomUUID();
     String rawPassword = "newPassword123!";
     String encodedPassword = "encodedPassword123!";
     ChangePasswordRequest request = new ChangePasswordRequest(rawPassword);
-    User user = mock(User.class);     // should() 를 사용하기 위해서 (실제로 changePassword() 가 사용되었는지 추적하기 위해)
+    User user = mock(User.class);
 
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
     given(passwordEncoder.encode(rawPassword)).willReturn(encodedPassword);
 
-    // when
     userService.changePassword(userId, request);
 
-    // then
     then(user).should().changePassword(encodedPassword);
   }
 
   @Test
   @DisplayName("존재하지 않는 사용자 ID일 경우 예외 발생")
   void changePassword_userNotFound() {
-    // given
     UUID userId = UUID.randomUUID();
     ChangePasswordRequest request = new ChangePasswordRequest("newPassword123!");
 
     given(userRepository.findById(userId)).willReturn(Optional.empty());
 
-    // when & then
     assertThatThrownBy(() -> userService.changePassword(userId, request))
         .isInstanceOf(RestException.class)
         .hasMessage(ErrorCode.NOT_FOUND.getMessage());
@@ -233,7 +241,6 @@ class UserServiceImplTest {
   @Test
   @DisplayName("기존 비밀번호와 동일하면 예외 발생")
   void changePassword_samePassword() {
-    // given
     UUID userId = UUID.randomUUID();
     String rawPassword = "password123!";
     String encodedPassword = "encodedPassword123!";
@@ -247,7 +254,6 @@ class UserServiceImplTest {
         .given(user)
         .changePassword(encodedPassword);
 
-    // when & then
     assertThatThrownBy(() -> userService.changePassword(userId, request))
         .isInstanceOf(RestException.class)
         .hasMessage(ErrorCode.SAME_AS_OLD_PASSWORD.getMessage());
