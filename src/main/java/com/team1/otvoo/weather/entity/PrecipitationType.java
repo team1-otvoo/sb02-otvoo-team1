@@ -6,5 +6,15 @@ public enum PrecipitationType {
   RAIN,       // 비 (1)
   RAIN_SNOW,  // 비/눈 (2)
   SNOW,       // 눈 (3)
-  SHOWER      // 소나기 (4)
+  SHOWER;     // 소나기 (4)
+
+  public static PrecipitationType fromCode(int code) {
+    return switch (code) {
+      case 1 -> RAIN;
+      case 2 -> RAIN_SNOW;
+      case 3 -> SNOW;
+      case 4 -> SHOWER;
+      default -> NONE;
+    };
+  }
 }
