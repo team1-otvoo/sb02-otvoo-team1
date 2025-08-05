@@ -14,6 +14,8 @@ import static org.mockito.Mockito.verify;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.Location;
+import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
@@ -21,15 +23,21 @@ import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserSlice;
+import com.team1.otvoo.user.entity.Gender;
+import com.team1.otvoo.user.entity.Profile;
+import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.mapper.ProfileMapper;
 import com.team1.otvoo.user.mapper.TestUtils;
 import com.team1.otvoo.user.mapper.UserMapper;
 import com.team1.otvoo.user.projection.UserNameView;
+import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,10 +64,16 @@ class UserServiceImplTest {
   private ProfileRepository profileRepository;
 
   @Mock
+  private ProfileImageRepository profileImageRepository;
+
+  @Mock
   private PasswordEncoder passwordEncoder;
 
   @Mock
   private UserMapper userMapper;
+
+  @Mock
+  private ProfileMapper profileMapper;
 
   private UserCreateRequest request;
 
@@ -259,5 +273,62 @@ class UserServiceImplTest {
         .hasMessage(ErrorCode.SAME_AS_OLD_PASSWORD.getMessage());
 
     then(user).should().changePassword(encodedPassword);
+  }
+
+  @Test
+  @DisplayName("프로필 조회 성공")
+  void getUserProfile_success() {
+    UUID userId = UUID.randomUUID();
+    UUID profileId = UUID.randomUUID();
+
+    User user = new User("test@email.com", "encoded");
+    TestUtils.setField(user, "id", userId);
+
+    String username = "홍길동";
+    Profile profile = new Profile(username, user);
+    TestUtils.setField(profile, "id", profileId);
+
+    String profileImageUrl = "imageUrl";
+    ProfileImage profileImage = new ProfileImage(
+        profileImageUrl,
+        "original.png",
+        "image/png",
+        100L,
+        100,
+        100,
+        profile
+    );
+
+    double latitude = 37.5665;
+    double longitude = 126.9780;
+    int x = 3;
+    int y = 4;
+    List<String> locationNames = List.of("서울특별시", "강남구", "역삼동");
+    Location location = new Location(
+        latitude,
+        longitude,
+        x,
+        y,
+        locationNames
+    );
+
+    ProfileDto expectedDto = new ProfileDto(
+        userId,
+        username,
+        Gender.MALE,
+        LocalDate.of(1990, 1, 1),
+        location,
+        1,
+        profileImageUrl
+    );
+
+    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
+    given(profileImageRepository.findByProfileId(profileId)).willReturn(Optional.of(profileImage));
+    given(profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl()))
+        .willReturn(expectedDto);
+
+    ProfileDto result = userService.getUserProfile(userId);
+
+    assertThat(result).isEqualTo(expectedDto);
   }
 }

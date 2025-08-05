@@ -12,15 +12,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.Location;
+import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.service.UserService;
+import com.team1.otvoo.weather.entity.WeatherLocation;
 import jakarta.annotation.Resource;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -212,4 +217,48 @@ class UserControllerTest {
         .andExpect(jsonPath("$.exceptionName").value("SAME_AS_OLD_PASSWORD"))
         .andExpect(jsonPath("$.message").value("기존 비밀번호와 동일한 비밀번호는 사용할 수 없습니다."));
   }
+
+  @Test
+  @DisplayName("프로필 조회 성공 시 200 OK 응답")
+  void getUserProfile_success_shouldReturn200() throws Exception {
+    // given
+    double latitude = 37.5665;
+    double longitude = 126.9780;
+    int x = 3;
+    int y = 4;
+    List<String> locationNames = List.of("서울특별시", "강남구", "역삼동");
+    Location location = new Location(
+        latitude,
+        longitude,
+        x,
+        y,
+        locationNames
+    );
+
+    UUID userId = UUID.randomUUID();
+    String profileImageUrl = "imageUrl";
+    ProfileDto dto = new ProfileDto(
+        userId,
+        "홍길동",
+        Gender.MALE,
+        LocalDate.of(1990, 1, 1),
+        location,
+        1,
+        profileImageUrl
+    );
+
+    given(userService.getUserProfile(Mockito.eq(userId))).willReturn(dto);
+
+    // when & then
+    mockMvc.perform(get("/api/users/{userId}/profiles", userId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.userId").value(userId.toString()))
+        .andExpect(jsonPath("$.name").value("홍길동"))
+        .andExpect(jsonPath("$.gender").value("MALE"))
+        .andExpect(jsonPath("$.birthDate").value("1990-01-01"))
+        .andExpect(jsonPath("$.temperatureSensitivity").value(1))
+        .andExpect(jsonPath("$.profileImageUrl").value("imageUrl"))
+        .andExpect(jsonPath("$.location.locationNames[0]").value("서울특별시"));
+  }
+
 }
