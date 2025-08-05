@@ -1,6 +1,6 @@
 package com.team1.otvoo.weather.client;
 
-import com.team1.otvoo.weather.client.dto.VilageFcstResponse;
+import com.team1.otvoo.weather.dto.VilageFcstResponse;
 
 import java.net.URI;
 import lombok.RequiredArgsConstructor;

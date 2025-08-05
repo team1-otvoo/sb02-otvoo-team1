@@ -1,4 +1,4 @@
-package com.team1.otvoo.weather.client.dto;
+package com.team1.otvoo.weather.dto;
 
 import java.util.List;
 import lombok.Data;
