@@ -68,7 +68,8 @@ CREATE TABLE users (
 -- clothes_attribute_definitions 테이블
 CREATE TABLE clothes_attribute_definitions (
                                                id UUID PRIMARY KEY,
-                                               name VARCHAR(255) NOT NULL UNIQUE
+                                               name VARCHAR(255) NOT NULL UNIQUE,
+                                               created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- clothes_attribute_values 테이블
@@ -76,8 +77,10 @@ CREATE TABLE clothes_attribute_values (
                                           id UUID PRIMARY KEY,
                                           definition_id UUID NOT NULL,
                                           value VARCHAR(255) NOT NULL,
+                                          order_index INT NOT NULL DEFAULT 0,
                                           CONSTRAINT fk_clothes_attribute_definition FOREIGN KEY (definition_id)
-                                              REFERENCES clothes_attribute_definitions(id) ON DELETE CASCADE
+                                              REFERENCES clothes_attribute_definitions(id) ON DELETE CASCADE,
+                                          CONSTRAINT uq_definition_value UNIQUE (definition_id, value)
 );
 
 -- weather_temperatures 테이블
@@ -126,6 +129,7 @@ CREATE TABLE clothes (
                          name VARCHAR(255) NOT NULL,
                          type VARCHAR(50) NOT NULL,
                          image_url TEXT,
+                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                          CONSTRAINT fk_clothes_owner FOREIGN KEY (owner_id)
                              REFERENCES users(id) ON DELETE CASCADE
 );

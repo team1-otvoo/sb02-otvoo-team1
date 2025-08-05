@@ -7,8 +7,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,6 +30,26 @@ public class ClothesAttributeDefinition {
   private String name;
 
   @OneToMany(mappedBy = "definition", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderColumn(name = "order_index")
   private List<ClothesAttributeValue> values = new ArrayList<>();
 
+  @Column(name = "created_at", nullable = false,updatable = false)
+  private Instant createdAt;
+
+  public ClothesAttributeDefinition(String name, List<ClothesAttributeValue> values) {
+    this.name = name;
+    for (ClothesAttributeValue value : values) {
+      addValue(value);
+    }
+    this.createdAt = Instant.now();
+  }
+
+  public void addValue(ClothesAttributeValue value) {
+    values.add(value);
+    value.setDefinition(this);
+  }
+
+  public void update(String newName) {
+      this.name = newName;
+  }
 }

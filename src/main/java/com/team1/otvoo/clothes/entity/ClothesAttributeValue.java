@@ -9,12 +9,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "clothes_attribute_values")
+@Table(name = "clothes_attribute_values",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"definition_id", "value"})
+    })
 @Getter
 @NoArgsConstructor
 public class ClothesAttributeValue {
@@ -29,4 +33,17 @@ public class ClothesAttributeValue {
 
   @Column(nullable = false)
   private String value;
+
+  public ClothesAttributeValue(String value) {
+    this.value = value;
+  }
+
+  protected void setDefinition(ClothesAttributeDefinition definition) {
+    this.definition = definition;
+  }
+
+  @Override
+  public String toString() {
+    return value;
+  }
 }
