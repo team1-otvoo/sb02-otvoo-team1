@@ -6,6 +6,7 @@ import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
 import com.team1.otvoo.feed.dto.FeedDto;
+import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +71,7 @@ public class FeedServiceImpl implements FeedService {
     return feedMapper.toDto(createdFeed, false);
   }
 
+  @Transactional
   @Override
   public FeedDto update(UUID id, FeedUpdateRequest request) {
     Feed feed = findFeed(id);
@@ -79,6 +82,15 @@ public class FeedServiceImpl implements FeedService {
     return feedMapper.toDto(feed, false); // likedByMe는 like 구현 후 수정 예정
   }
 
+  @Transactional(readOnly = true)
+  @Override
+  public Slice<FeedDto> getFeedsWithCursor(FeedSearchCondition searchCondition) {
+    Slice<Feed> feeds = feedRepository.searchByCondition(searchCondition);
+    // 좋아요 구현 후 반영 예정
+    return feeds.map(feed -> feedMapper.toDto(feed, false));
+  }
+
+  @Transactional
   @Override
   public void delete(UUID id) {
     Feed feed = findFeed(id);

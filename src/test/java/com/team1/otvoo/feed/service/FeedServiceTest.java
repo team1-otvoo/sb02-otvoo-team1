@@ -4,6 +4,7 @@ import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
 import com.team1.otvoo.feed.dto.FeedDto;
+import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.mapper.FeedMapper;
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.*;
@@ -170,5 +173,37 @@ public class FeedServiceTest {
         .isInstanceOf(RestException.class)
         .hasMessageContaining("찾을 수 없습니다.");
     then(feedRepository).should(never()).delete(any());
+  }
+
+  @Test
+  @DisplayName("피드 목록 조회 성공")
+  void get_feeds_success() {
+    // given
+    Feed feed1 = Feed.builder()
+        .content("test1")
+        .build();
+    Feed feed2 = Feed.builder()
+        .content("test2")
+        .build();
+    Slice<Feed> feedSlice = new SliceImpl<>(List.of(feed1, feed2));
+
+    FeedDto feedDto1 = FeedDto.builder()
+        .content(feed1.getContent())
+        .build();
+    FeedDto feedDto2 = FeedDto.builder()
+        .content(feed2.getContent())
+        .build();
+
+    given(feedMapper.toDto(feed1,false)).willReturn(feedDto1);
+    given(feedMapper.toDto(feed2,false)).willReturn(feedDto2);
+    given(feedRepository.searchByCondition(any())).willReturn(feedSlice);
+
+    // when
+    Slice<FeedDto> result = feedService.getFeedsWithCursor(mock(FeedSearchCondition.class));
+
+    // then
+    assertThat(2).isEqualTo(result.getContent().size());
+    assertThat(feedDto1).isEqualTo(result.getContent().get(0));
+    assertThat(feedDto2).isEqualTo(result.getContent().get(1));
   }
 }

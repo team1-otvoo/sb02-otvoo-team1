@@ -10,16 +10,47 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
 
   profiles:
     active:
       - dev
+  sql:
+    init:
+      mode: never
 
   config:
     import: optional:file:.env[.properties]
 
+data:
+  redis:
+    port: 6379
+    host: localhost
+
 logging:
   level:
     root: info
+
+weather:
+  api:
+    base-url: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst
+    service-key: ${WEATHER_API_KEY}
+
+kakao:
+  local:
+    api:
+      base-url: https://dapi.kakao.com/v2/local/geo/coord2regioncode.json
+      service-key: ${KAKAO_REST_API_KEY}
+
+mail:
+  host: smtp.gmail.com
+  port: 587
+  username: otvoo1t@gmail.com
+  password: ickfzkxkyyjtvukd
+  properties:
+    mail:
+      smtp:
+        auth: true
+        starttls:
+          enable: true
