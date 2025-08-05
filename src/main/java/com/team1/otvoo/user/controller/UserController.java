@@ -85,6 +85,8 @@ public class UserController {
 
     ProfileDto dto = userService.getUserProfile(userId);
 
+    log.info("프로필 조회 완료: userId={}", dto.userId());
+
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(dto);

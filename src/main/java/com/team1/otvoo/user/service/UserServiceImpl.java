@@ -3,14 +3,18 @@ package com.team1.otvoo.user.service;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
+import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.mapper.ProfileMapper;
 import com.team1.otvoo.user.projection.UserNameView;
+import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.user.mapper.UserMapper;
@@ -32,8 +36,10 @@ public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
   private final ProfileRepository profileRepository;
+  private final ProfileImageRepository profileImageRepository;
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
+  private final ProfileMapper profileMapper;
 
   @Transactional(readOnly = true)
   @Override
@@ -99,6 +105,30 @@ public class UserServiceImpl implements UserService {
     UserDto userDto = userMapper.toUserDto(savedUser, name);
 
     return userDto;
+  }
+
+  @Override
+  public ProfileDto getUserProfile(UUID userId) {
+
+    Profile profile = profileRepository.findByUserId(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 profile을 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("profile-userId", userId));
+        }
+    );
+
+    UUID profileId = profile.getId();
+
+    ProfileImage profileImage = profileImageRepository.findByProfileId(profileId).orElseThrow(
+        () -> {
+          log.warn("해당 profileId를 가진 profileImage를 찾을 수 없습니다. [{}]", profileId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("profileIamge - profileId", profileId));
+        }
+    );
+
+    ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl());
+
+    return dto;
   }
 
   @Override
