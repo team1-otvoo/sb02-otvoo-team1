@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public enum SortBy {
-  EMAIL, CREATED_AT, NAME;
+  EMAIL, CREATED_AT;
 
   @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
   public static SortBy from(String value) {
@@ -21,7 +21,6 @@ public enum SortBy {
     return switch (value.toLowerCase()) {
       case "email" -> EMAIL;
       case "created_at" -> CREATED_AT;
-      case "name" -> NAME;
       default -> throw new RestException(ErrorCode.INVALID_SORT_BY_FIELD, Map.of("sortBy", value));
     };
   }

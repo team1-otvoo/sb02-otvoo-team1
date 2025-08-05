@@ -17,7 +17,6 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "profiles")
@@ -42,18 +41,15 @@ public class Profile{
   private Integer temperatureSensitivity;
 
   @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "profile_image_id", unique = true)
-  private ProfileImage profileImage;
+  @JoinColumn(name = "user_id", unique = true)
+  private User user;
 
   @OneToOne
   @JoinColumn(name = "weather_location_id", unique = true)
   private WeatherLocation location;
 
-  public Profile (String name) {
+  public Profile (String name, User user) {
     this.name = name;
-  }
-
-  public void updateProfileImage(ProfileImage profileImage) {
-    this.profileImage = profileImage;
+    this.user = user;
   }
 }

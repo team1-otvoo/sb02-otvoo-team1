@@ -3,19 +3,25 @@ package com.team1.otvoo.user.service;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
-import com.team1.otvoo.user.dto.SortBy;
+import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
+import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.mapper.ProfileMapper;
+import com.team1.otvoo.user.projection.UserNameView;
+import com.team1.otvoo.user.repository.ProfileImageRepository;
+import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.user.mapper.UserMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,26 +35,42 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
   private final UserRepository userRepository;
+  private final ProfileRepository profileRepository;
+  private final ProfileImageRepository profileImageRepository;
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
+  private final ProfileMapper profileMapper;
 
   @Transactional(readOnly = true)
   @Override
   public UserDtoCursorResponse getUsers(UserDtoCursorRequest request) {
 
     UserSlice slice = userRepository.searchUsersWithCursor(request);
+    List<User> users = slice.content();
 
-    List<UserDto> dtos = slice.content().stream()
-        .map(userMapper::toUserDto)
+
+    List<UUID> userIds = users.stream().map(User::getId).toList();
+    Map<UUID, String> nameMap = profileRepository.findUserNamesByUserIds(userIds).stream()
+        .collect(Collectors.toMap(UserNameView::getUserId, UserNameView::getName));
+
+
+    List<UserDto> dtos = users.stream()
+        .map(user -> {
+          String name = nameMap.get(user.getId());
+          return userMapper.toUserDto(user, name);
+        })
         .toList();
 
     String nextCursor = null;
     UUID nextIdAfter = null;
 
     if (slice.hasNext()) {
-      User last = slice.content().get(slice.content().size() - 1);
+      User last = users.get(users.size() - 1);
       nextIdAfter = last.getId();
-      nextCursor = extractCursorValue(last, request.sortBy());
+      nextCursor = switch (request.sortBy()) {
+        case EMAIL -> last.getEmail();
+        case CREATED_AT -> last.getCreatedAt().toString();
+      };
     }
 
     return new UserDtoCursorResponse(
@@ -75,13 +97,38 @@ public class UserServiceImpl implements UserService {
       throw new RestException(ErrorCode.CONFLICT, Map.of("email", email));
     }
 
-    Profile profile = new Profile(name);
-    User user = new User(email, encodedPassword, profile);
+    User user = new User(email, encodedPassword);
+    Profile profile = new Profile(name, user);
     User savedUser = userRepository.save(user);
+    profileRepository.save(profile);
 
-    UserDto userDto = userMapper.toUserDto(savedUser);
+    UserDto userDto = userMapper.toUserDto(savedUser, name);
 
     return userDto;
+  }
+
+  @Override
+  public ProfileDto getUserProfile(UUID userId) {
+
+    Profile profile = profileRepository.findByUserId(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 profile을 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("profile-userId", userId));
+        }
+    );
+
+    UUID profileId = profile.getId();
+
+    ProfileImage profileImage = profileImageRepository.findByProfileId(profileId).orElseThrow(
+        () -> {
+          log.warn("해당 profileId를 가진 profileImage를 찾을 수 없습니다. [{}]", profileId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("profileIamge - profileId", profileId));
+        }
+    );
+
+    ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl());
+
+    return dto;
   }
 
   @Override
@@ -97,13 +144,5 @@ public class UserServiceImpl implements UserService {
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
     user.changePassword(newEncodedPassword);
-  }
-
-  private String extractCursorValue(User user, SortBy sortBy) {
-    return switch (sortBy) {
-      case EMAIL -> user.getEmail();
-      case CREATED_AT -> user.getCreatedAt().toString();
-      case NAME -> user.getProfile() != null ? user.getProfile().getName() : null;
-    };
   }
 }

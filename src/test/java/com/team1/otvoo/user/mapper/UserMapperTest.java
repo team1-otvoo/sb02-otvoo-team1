@@ -17,37 +17,40 @@ class UserMapperTest {
   private final UserMapper userMapper = Mappers.getMapper(UserMapper.class);
 
   private User createMockUser(String name, String imageUrl) {
+
+    User user = new User("test@example.com", "encoded-password");
+    TestUtils.setField(user, "id", UUID.randomUUID());
+    TestUtils.setField(user, "createdAt", Instant.now());
+
+    Profile profile = new Profile(name, user);
+
     ProfileImage profileImage = new ProfileImage(
         imageUrl,
         "originalFilename",
         "contentType",
         10L,
         5,
-        5
+        5,
+        profile
     );
 
-    Profile profile = new Profile(name);
-    profile.updateProfileImage(profileImage);
-
-    User user = new User("test@example.com", "encoded-password", profile);
-    TestUtils.setField(user, "id", UUID.randomUUID());
-    TestUtils.setField(user, "createdAt", Instant.now());
     return user;
   }
 
   @Test
   void toUserDto_shouldMapCorrectly() {
     // given
-    User user = createMockUser("홍길동", "http://image.url/sample.jpg");
+    String name = "홍길동";
+    User user = createMockUser(name, "http://image.url/sample.jpg");
 
     // when
-    UserDto dto = userMapper.toUserDto(user);
+    UserDto dto = userMapper.toUserDto(user, name);
 
     // then
     assertThat(dto.id()).isEqualTo(user.getId());
     assertThat(dto.createdAt()).isEqualTo(user.getCreatedAt());
     assertThat(dto.email()).isEqualTo(user.getEmail());
-    assertThat(dto.name()).isEqualTo(user.getProfile().getName());
+    assertThat(dto.name()).isEqualTo(name);
     assertThat(dto.role()).isEqualTo(user.getRole());
     assertThat(dto.locked()).isEqualTo(user.isLocked());
     assertThat(dto.linkedOAuthProviders()).isEmpty();
@@ -59,7 +62,7 @@ class UserMapperTest {
     User user = createMockUser("김요약", "http://img/summary.png");
 
     // when
-    UserSummary summary = userMapper.toSummary(user);
+    UserSummary summary = userMapper.toSummary(user, "김요약", "http://img/summary.png");
 
     // then
     assertThat(summary.userId()).isEqualTo(user.getId());
@@ -73,7 +76,7 @@ class UserMapperTest {
     User user = createMockUser("작성자", "http://img/author.jpg");
 
     // when
-    AuthorDto dto = userMapper.toAuthorDto(user);
+    AuthorDto dto = userMapper.toAuthorDto(user, "작성자", "http://img/author.jpg");
 
     // then
     assertThat(dto.userId()).isEqualTo(user.getId());

@@ -1,6 +1,7 @@
 package com.team1.otvoo.user.controller;
 
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
+import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
@@ -78,6 +79,19 @@ public class UserController {
         .body(userDto);
   }
 
+  @GetMapping("/{userId}/profiles")
+  ResponseEntity<ProfileDto> getUserProfile(@PathVariable UUID userId) {
+    log.info("GET /api/users/{userId}/profiles} - 프로필 조회 요청: userId={}", userId);
+
+    ProfileDto dto = userService.getUserProfile(userId);
+
+    log.info("프로필 조회 완료: userId={}", dto.userId());
+
+    return ResponseEntity
+        .status(HttpStatus.OK)
+        .body(dto);
+  }
+
   @PatchMapping("/{userId}/password")
   ResponseEntity<Void> changePassword(
       @PathVariable UUID userId,
@@ -91,6 +105,4 @@ public class UserController {
         .status(HttpStatus.NO_CONTENT)
         .build();
   }
-
-
 }
