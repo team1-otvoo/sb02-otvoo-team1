@@ -71,6 +71,7 @@ public class FeedServiceImpl implements FeedService {
     return feedMapper.toDto(createdFeed, false);
   }
 
+  @Transactional
   @Override
   public FeedDto update(UUID id, FeedUpdateRequest request) {
     Feed feed = findFeed(id);
@@ -81,6 +82,7 @@ public class FeedServiceImpl implements FeedService {
     return feedMapper.toDto(feed, false); // likedByMe는 like 구현 후 수정 예정
   }
 
+  @Transactional(readOnly = true)
   @Override
   public Slice<FeedDto> getFeedsWithCursor(FeedSearchCondition searchCondition) {
     Slice<Feed> feeds = feedRepository.searchByCondition(searchCondition);
@@ -88,6 +90,7 @@ public class FeedServiceImpl implements FeedService {
     return feeds.map(feed -> feedMapper.toDto(feed, false));
   }
 
+  @Transactional
   @Override
   public void delete(UUID id) {
     Feed feed = findFeed(id);
