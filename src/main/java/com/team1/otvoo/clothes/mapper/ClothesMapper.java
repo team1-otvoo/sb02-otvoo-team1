@@ -1,6 +1,6 @@
 package com.team1.otvoo.clothes.mapper;
 
-import com.team1.otvoo.clothes.dto.ClothesAttributeWithDefDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;

@@ -1,8 +1,8 @@
 package com.team1.otvoo.clothes.controller;
 
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefCreateRequest;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefDto;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefUpdateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefCreateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.service.ClothesAttributeDefService;
 import jakarta.validation.Valid;
 import java.util.UUID;

@@ -8,9 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefCreateRequest;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefDto;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefUpdateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefCreateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.service.ClothesAttributeDefService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
