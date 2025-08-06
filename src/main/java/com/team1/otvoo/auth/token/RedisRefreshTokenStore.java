@@ -16,22 +16,35 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
   @Value("${jwt.refresh-token-expiration-ms:86400000}") // 1일 (기본값)
   private long refreshTokenExpirationMs;
 
-  private String getKey(String userId) {
-    return "refresh_token:" + userId;
+  private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
+  private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
+
+  private String getRefreshTokenKey(String userId) {
+    return REFRESH_TOKEN_PREFIX + userId;
   }
 
   @Override
   public void save(String userId, String refreshToken) {
-    redisTemplate.opsForValue().set(getKey(userId), refreshToken, Duration.ofMillis(refreshTokenExpirationMs));
+    redisTemplate.opsForValue().set(getRefreshTokenKey(userId), refreshToken, Duration.ofMillis(refreshTokenExpirationMs));
   }
 
   @Override
   public String get(String userId) {
-    return redisTemplate.opsForValue().get(getKey(userId));
+    return redisTemplate.opsForValue().get(getRefreshTokenKey(userId));
   }
 
   @Override
   public void remove(String userId) {
-    redisTemplate.delete(getKey(userId));
+    redisTemplate.delete(getRefreshTokenKey(userId));
+  }
+
+  @Override
+  public void blacklistAccessToken(String accessToken, long expirationSeconds) {
+    redisTemplate.opsForValue().set(BLACKLIST_PREFIX + accessToken, "1", Duration.ofSeconds(expirationSeconds));
+  }
+
+  @Override
+  public boolean isBlacklisted(String accessToken) {
+    return redisTemplate.hasKey(BLACKLIST_PREFIX + accessToken);
   }
 }
