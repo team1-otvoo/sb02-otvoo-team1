@@ -55,7 +55,19 @@ public enum ErrorCode implements Code{
 
   // --- Clothes 관련 ErrorCode ---
   ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),
-  ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "중복된 속성값이 존재합니다");
+  ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "중복된 속성값이 존재합니다"),
+
+  // --- Feed 관련 ErrorCode ---
+  FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다"),
+
+  // --- User 관련 ErrorCode ---
+  USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저가 존재하지 않습니다."),
+  PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "유저의 프로필이 존재하지 않습니다."),
+  PROFILE_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "유저의 프로필 이미지가 존재하지 않습니다."),
+
+  // --- Weather 관련 ErrorCode ---
+  WEATHER_FORECAST_NOT_FOUND(HttpStatus.NOT_FOUND, "날씨 데이터가 존재하지 않습니다.");
+
 
   private final HttpStatus status;
   private final String message;
