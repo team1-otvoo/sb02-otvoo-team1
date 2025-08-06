@@ -1,6 +1,9 @@
 package com.team1.otvoo.security;
 
+import com.team1.otvoo.auth.token.RedisRefreshTokenStore;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -10,10 +13,11 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 
-@Slf4j
 @Component
+@Slf4j
 public class JwtTokenProvider {
 
     private SecretKey secretKey;
@@ -24,51 +28,90 @@ public class JwtTokenProvider {
     @Value("${jwt.secret:websocket-chat-secret-key-256-bit-minimum-length-required}")
     private String secret;
 
+    private final RedisRefreshTokenStore refreshTokenStore;
+
+    public JwtTokenProvider(RedisRefreshTokenStore refreshTokenStore) {
+        this.refreshTokenStore = refreshTokenStore;
+    }
+
     @PostConstruct
     public void init() {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        log.info("🔑 JWT Secret Key 초기화 완료");
     }
 
-    public String createAccessToken(String username) {
-        return createToken(username, ACCESS_TOKEN_EXPIRATION_MS);
-    }
-
-    public String createRefreshToken(String username) {
-        return createToken(username, REFRESH_TOKEN_EXPIRATION_MS);
-    }
-
-    private String createToken(String username, long expiration) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration);
-
+    public String createAccessToken(String userId) {
+        Instant now = Instant.now();
         return Jwts.builder()
-            .subject(username)
-            .issuedAt(now)
-            .expiration(expiryDate)
+            .setSubject(userId)
+            .setIssuedAt(Date.from(now))
+            .setExpiration(Date.from(now.plusMillis(ACCESS_TOKEN_EXPIRATION_MS)))
             .signWith(secretKey)
             .compact();
     }
 
-    public String getUserIdFromToken(String token) {
-        Claims claims = Jwts.parser()
-            .verifyWith(secretKey)
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+    public String createRefreshToken(String userId) {
+        Instant now = Instant.now();
+        String refreshToken = Jwts.builder()
+            .setSubject(userId)
+            .setIssuedAt(Date.from(now))
+            .setExpiration(Date.from(now.plusMillis(REFRESH_TOKEN_EXPIRATION_MS)))
+            .signWith(secretKey)
+            .compact();
 
-        return claims.getSubject();
+        refreshTokenStore.save(userId, refreshToken);
+        log.debug("💾 RefreshToken 저장: userId={}, 토큰 만료시간={}", userId, REFRESH_TOKEN_EXPIRATION_MS);
+        return refreshToken;
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser()
-                .verifyWith(secretKey)
+            Jws<Claims> claimsJws = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
                 .build()
-                .parseSignedClaims(token);
-            return true;
-        } catch (Exception e) {
-            log.warn("❌ JWT 토큰 유효성 검사 실패: {}", e.getMessage());
+                .parseClaimsJws(token);
+
+            boolean isBlacklisted = refreshTokenStore.isBlacklisted(token);
+            if (isBlacklisted) {
+                log.warn("🚫 블랙리스트에 등록된 토큰 사용 시도");
+                return false;
+            }
+
+            return !claimsJws.getBody().getExpiration().before(new Date());
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("⚠️ JWT 토큰 검증 실패: {}", e.getMessage());
             return false;
+        }
+    }
+
+    public String getUserIdFromToken(String token) {
+        try {
+            return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+        } catch (JwtException e) {
+            log.warn("⚠️ JWT 토큰에서 사용자 아이디 추출 실패: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public long getExpiration(String token) {
+        try {
+            Date expiration = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+
+            long now = System.currentTimeMillis();
+            return (expiration.getTime() - now) / 1000;
+        } catch (JwtException e) {
+            log.warn("⚠️ JWT 토큰 만료시간 조회 실패: {}", e.getMessage());
+            return 0;
         }
     }
 }
