@@ -65,6 +65,10 @@ public class WeatherForecast {
     this.updatedAt = Instant.now();
   }
 
+  public static WeatherForecast of(Instant forecastedAt, Instant forecastAt, SkyStatus skyStatus) {
+    return new WeatherForecast(forecastedAt, forecastAt, skyStatus);
+  }
+
   public void updateSkyStatus(SkyStatus skyStatus) {
     this.skyStatus = skyStatus;
     this.updatedAt = Instant.now();
