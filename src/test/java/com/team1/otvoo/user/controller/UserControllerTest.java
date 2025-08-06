@@ -3,6 +3,7 @@ package com.team1.otvoo.user.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +15,7 @@ import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileDto;
+import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
@@ -36,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -260,5 +263,49 @@ class UserControllerTest {
         .andExpect(jsonPath("$.profileImageUrl").value("imageUrl"))
         .andExpect(jsonPath("$.location.locationNames[0]").value("서울특별시"));
   }
+
+  @DisplayName("프로필 업데이트 성공 - 이미지 포함 시 200 OK")
+  @Test
+  void updateUserProfile_withImage_success() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+
+    ProfileDto response = new ProfileDto(
+        userId,
+        "홍길동",
+        Gender.MALE,
+        LocalDate.of(1990, 1, 1),
+        new Location(37.5, 127.0, 3, 4, List.of("서울", "강남", "역삼")),
+        1,
+        "http://image.url/profile.jpg"
+    );
+
+    MockMultipartFile requestPart = new MockMultipartFile(
+        "request", null, "application/json",
+        objectMapper.writeValueAsBytes(new ProfileUpdateRequest("홍길동", Gender.MALE, LocalDate.of(1990, 1, 1), null, 1))
+    );
+
+    MockMultipartFile imagePart = new MockMultipartFile(
+        "image", "profile.jpg", MediaType.IMAGE_JPEG_VALUE, "fake-image".getBytes()
+    );
+
+    given(userService.updateProfile(Mockito.eq(userId), any(), any())).willReturn(response);
+
+    // when & then
+    mockMvc.perform(multipart("/api/users/{userId}/profiles", userId)
+            .file(requestPart)
+            .file(imagePart)
+            .contentType(MediaType.MULTIPART_FORM_DATA)
+            // PATCH 방식으로 강제 전환
+            .with(request -> {
+              request.setMethod("PATCH");
+              return request;
+            }))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.userId").value(userId.toString()))
+        .andExpect(jsonPath("$.name").value("홍길동"))
+        .andExpect(jsonPath("$.profileImageUrl").value("http://image.url/profile.jpg"));
+  }
+
 
 }

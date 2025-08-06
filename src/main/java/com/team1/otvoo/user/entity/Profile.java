@@ -1,5 +1,7 @@
 package com.team1.otvoo.user.entity;
 
+import com.team1.otvoo.user.dto.Location;
+import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.weather.entity.WeatherLocation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,5 +53,39 @@ public class Profile{
   public Profile (String name, User user) {
     this.name = name;
     this.user = user;
+  }
+
+  public Profile updateProfile(ProfileUpdateRequest request) {
+    if (request.name() != null && !request.name().equals(this.name)) {
+      this.name = request.name();
+    }
+
+    if (request.gender() != null && !request.gender().equals(this.gender)) {
+      this.gender = request.gender();
+    }
+
+    if (request.birthDate() != null && !request.birthDate().equals(this.birth)) {
+      this.birth = request.birthDate();
+    }
+
+    if (request.location() != null) {
+      Location requestLocation = request.location();
+
+      this.location.updateCoordinates(
+          requestLocation.latitude(),
+          requestLocation.longitude(),
+          requestLocation.x(),
+          requestLocation.y()
+      );
+
+      String result = String.join(", ", requestLocation.locationNames());
+      this.location.updateLocationNames(result);
+    }
+
+    if (request.temperatureSensitivity() != null && !request.temperatureSensitivity().equals(this.temperatureSensitivity)) {
+      this.temperatureSensitivity = request.temperatureSensitivity();
+    }
+
+    return this;
   }
 }

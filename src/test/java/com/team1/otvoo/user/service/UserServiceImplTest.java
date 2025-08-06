@@ -16,6 +16,7 @@ import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileDto;
+import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
@@ -36,6 +37,7 @@ import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 
+import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -50,12 +52,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
 
   @InjectMocks
   private UserServiceImpl userService;
+
+  @Mock
+  private ProfileImageService profileImageService;
 
   @Mock
   private UserRepository userRepository;
@@ -74,6 +80,9 @@ class UserServiceImplTest {
 
   @Mock
   private ProfileMapper profileMapper;
+
+  @Mock
+  private ProfileImageUrlResolver profileImageUrlResolver;
 
   private UserCreateRequest request;
 
@@ -250,6 +259,47 @@ class UserServiceImplTest {
         .hasMessage(ErrorCode.NOT_FOUND.getMessage());
 
     then(userRepository).shouldHaveNoMoreInteractions();
+  }
+
+  @DisplayName("프로필 업데이트 성공 - 이미지 포함")
+  @Test
+  void updateProfile_success_withImage() {
+    // given
+    UUID userId = UUID.randomUUID();
+    UUID profileId = UUID.randomUUID();
+
+    User user = new User("user@example.com", "encodedPassword");
+    TestUtils.setField(user, "id", userId);
+
+    Profile profile = new Profile("홍길동", user);
+    TestUtils.setField(profile, "id", profileId);
+
+    // 기존 이미지
+    ProfileImage oldImage = mock(ProfileImage.class);
+    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
+    given(profileImageRepository.findByProfileId(profileId)).willReturn(Optional.of(oldImage));
+
+    // 새 이미지 저장
+    MultipartFile newImageFile = mock(MultipartFile.class);
+    ProfileImage newImage = mock(ProfileImage.class);
+
+    ProfileDto expectedDto = mock(ProfileDto.class);
+
+    given(profileImageService.createProfileImage(newImageFile, profile)).willReturn(newImage);
+    given(profileImageUrlResolver.resolve(profileId)).willReturn("https://cdn.example.com/newImage.png");
+    given(profileMapper.toProfileDto(userId, profile, "https://cdn.example.com/newImage.png")).willReturn(expectedDto);
+
+    // when
+    ProfileDto result = userService.updateProfile(userId, new ProfileUpdateRequest("홍길동", Gender.MALE, LocalDate.now(), null, 1), newImageFile);
+
+    // then
+    verify(profileImageService).deleteProfileImage(oldImage);
+    verify(profileImageRepository).delete(oldImage);
+    verify(profileImageRepository).save(newImage);
+    verify(profileImageService).createProfileImage(newImageFile, profile);
+    verify(profileMapper).toProfileDto(userId, profile, "https://cdn.example.com/newImage.png");
+
+    assertThat(result).isEqualTo(expectedDto);
   }
 
   @Test
