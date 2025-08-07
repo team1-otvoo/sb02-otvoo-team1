@@ -58,7 +58,7 @@ public enum ErrorCode implements Code{
   ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "중복된 속성값이 존재합니다"),
 
   // --- Feed 관련 ErrorCode ---
-  FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다"),
+  FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),
 
   // --- User 관련 ErrorCode ---
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저가 존재하지 않습니다."),

@@ -1,6 +1,8 @@
 package com.team1.otvoo.feed.service;
 
+import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.Clothes;
+import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -11,7 +13,9 @@ import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
 import com.team1.otvoo.feed.mapper.FeedMapper;
+import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.User;
@@ -20,9 +24,11 @@ import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
@@ -38,17 +44,20 @@ public class FeedServiceImpl implements FeedService {
   private final WeatherForecastRepository weatherForecastRepository;
   private final ClothesRepository clothesRepository;
   private final FeedRepository feedRepository;
+  private final FeedClothesRepository feedClothesRepository;
   private final ProfileRepository profileRepository;
   private final ProfileImageRepository profileImageRepository;
   private final FeedMapper feedMapper;
+  private final ClothesMapper clothesMapper;
 
   @Transactional
   @Override
   public FeedDto create(FeedCreateRequest request) {
     User user = findUser(request.authorId());
+    WeatherForecast weather = findForecast(request.weatherId());
     Profile profile = findProfile(user.getId());
     ProfileImage profileImage = findProfileImage(user.getId(), profile.getId());
-    WeatherForecast weather = findForecast(request.weatherId());
+    AuthorDto authorDto = new AuthorDto(user.getId(), profile.getName(), profileImage.getImageUrl());
 
     List<Clothes> clothesList = clothesRepository.findAllById(request.clothesIds());
 
@@ -65,7 +74,7 @@ public class FeedServiceImpl implements FeedService {
     createdFeed.updateFeedClothes(feedClothesList);
     feedRepository.save(createdFeed);
 
-    return feedMapper.toDto(createdFeed, profile.getName(), profileImage.getImageUrl(),false);
+    return feedMapper.toDto(createdFeed, authorDto,false);
   }
 
   @Transactional
@@ -74,19 +83,44 @@ public class FeedServiceImpl implements FeedService {
     Feed feed = findFeed(id);
     Profile profile = findProfile(feed.getUser().getId());
     ProfileImage profileImage = findProfileImage(feed.getUser().getId(), profile.getId());
+    AuthorDto authorDto = new AuthorDto(feed.getUser().getId(), profile.getName(), profileImage.getImageUrl());
+
     feed.updateFeed(request.content());
 
     feedRepository.save(feed);
     // likedByMe는 like 구현 후 수정 예정
-    return feedMapper.toDto(feed, profile.getName(), profileImage.getImageUrl(),false);
+    return feedMapper.toDto(feed, authorDto,false);
   }
 
   @Transactional(readOnly = true)
   @Override
   public Slice<FeedDto> getFeedsWithCursor(FeedSearchCondition searchCondition) {
-    Slice<Feed> feeds = feedRepository.searchByCondition(searchCondition);
-    // 좋아요 구현 후 반영 예정
-    return feeds.map(feed -> feedMapper.toDto(feed, false));
+    Slice<FeedDto> feeds = feedRepository.searchByCondition(searchCondition);
+
+    List<UUID> feedIds = feeds.stream()
+        .map(FeedDto::getId)
+        .toList();
+
+    List<FeedClothes> feedClothesList =
+        feedClothesRepository.findAllByFeedIdInWithClothesAndSelectedValues(feedIds);
+
+    // feedId로 그룹핑 후, 연관된 Clothes들을 ootdDto List로 변환
+    // Collectors.mapping은 groupingBy로 묶인 각 그룹 내부 요소에만 작동
+    Map<UUID, List<OotdDto>> ootdMap = feedClothesList.stream()
+        .collect(Collectors.groupingBy(
+            fc -> fc.getFeed().getId(),
+            Collectors.mapping(
+                fc -> clothesMapper.toOotdDto(fc.getClothes()),
+                    Collectors.toList()
+            )
+        ));
+
+    // FeedDto에 OotdDto 리스트 세팅
+    for (FeedDto feedDto : feeds) {
+      feedDto.setOotds(ootdMap.getOrDefault(feedDto.getId(), Collections.emptyList()));
+    }
+
+    return feeds;
   }
 
   @Transactional
@@ -111,19 +145,19 @@ public class FeedServiceImpl implements FeedService {
 
   private Profile findProfile(UUID id) {
     return profileRepository.findByUserId(id).orElseThrow(
-        () -> new RestException(ErrorCode.NOT_FOUND,
+        () -> new RestException(ErrorCode.PROFILE_NOT_FOUND,
             Map.of("userId", id)));
   }
 
   private ProfileImage findProfileImage(UUID userId, UUID profileId) {
     return profileImageRepository.findByProfileId(profileId).orElseThrow(
-        () -> new RestException(ErrorCode.NOT_FOUND,
+        () -> new RestException(ErrorCode.PROFILE_IMAGE_NOT_FOUND,
             Map.of("userId", userId, "profileId", profileId)));
   }
 
   private WeatherForecast findForecast(UUID id) {
     return weatherForecastRepository.findById(id).orElseThrow(
-        () -> new RestException(ErrorCode.NOT_FOUND,
+        () -> new RestException(ErrorCode.WEATHER_FORECAST_NOT_FOUND,
               Map.of("weatherId", id)));
   }
 }

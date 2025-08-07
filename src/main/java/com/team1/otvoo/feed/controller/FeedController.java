@@ -40,7 +40,7 @@ public class FeedController {
 
     FeedDto feedDto = feedService.create(request);
 
-    log.info("피드 생성 완료 - authorId: {}, feedId: {}", feedDto.author(), feedDto.id());
+    log.info("피드 생성 완료 - authorId: {}, feedId: {}", feedDto.getAuthor().name(), feedDto.getId());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)

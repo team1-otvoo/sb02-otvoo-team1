@@ -2,6 +2,18 @@ spring:
   application:
     name: otvoo
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: otvoo1t@gmail.com
+    password: ickfzkxkyyjtvukd
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   datasource:
     url: jdbc:postgresql://localhost:5432/otvoo_db
     username: otvoo_user
@@ -42,15 +54,3 @@ kakao:
     api:
       base-url: https://dapi.kakao.com/v2/local/geo/coord2regioncode.json
       service-key: ${KAKAO_REST_API_KEY}
-
-mail:
-  host: smtp.gmail.com
-  port: 587
-  username: otvoo1t@gmail.com
-  password: ickfzkxkyyjtvukd
-  properties:
-    mail:
-      smtp:
-        auth: true
-        starttls:
-          enable: true
