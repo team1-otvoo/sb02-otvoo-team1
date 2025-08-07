@@ -42,22 +42,26 @@ public class Clothes {
   @Column(nullable = false)
   private ClothesType type;
 
-  @Column
-  private String imageUrl;
-
   @OneToMany(mappedBy = "clothes", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<ClothesSelectedValue> selectedValues = new ArrayList<>();
 
-  @Column(name = "created_at", nullable = false,updatable = false)
+  @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
-  public Clothes(User owner, String name, ClothesType type, String imageUrl, List<ClothesSelectedValue> selectedValues) {
+  public Clothes(User owner, String name, ClothesType type,
+      List<ClothesSelectedValue> selectedValues) {
     this.owner = owner;
     this.name = name;
     this.type = type;
-    this.imageUrl = imageUrl;
-    this.selectedValues = selectedValues;
+    for (ClothesSelectedValue value : selectedValues) {
+      addSelectedValue(value);
+    }
     this.createdAt = Instant.now();
+  }
+
+  public void addSelectedValue(ClothesSelectedValue value) {
+    this.selectedValues.add(value);
+    value.setClothes(this);
   }
 
 }

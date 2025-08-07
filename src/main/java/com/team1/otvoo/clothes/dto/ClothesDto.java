@@ -1,6 +1,6 @@
 package com.team1.otvoo.clothes.dto;
 
-import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.ClothesType;
 import java.time.Instant;
 import java.util.List;
@@ -12,7 +12,7 @@ public record ClothesDto(
     String name,
     String imageUrl,
     ClothesType type,
-    List<ClothesAttributeDto> attributes,
+    List<ClothesAttributeWithDefDto> attributes,
     Instant createdAt
 ) {
 
