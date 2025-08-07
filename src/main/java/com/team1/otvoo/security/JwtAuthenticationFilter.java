@@ -1,6 +1,6 @@
 package com.team1.otvoo.security;
 
-import com.team1.otvoo.auth.token.RefreshTokenStore;
+import com.team1.otvoo.auth.token.AccessTokenStore;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,7 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtTokenProvider jwtService;
   private final CustomUserDetailsService userDetailsService;
-  private final RefreshTokenStore refreshTokenStore;
+  private final AccessTokenStore accessTokenStore;
 
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -35,7 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       String accessToken = extractAccessToken(bearerValue);
 
       if (accessToken != null && jwtService.validateToken(accessToken)
-          && !refreshTokenStore.isBlacklisted(accessToken)) {
+          && !accessTokenStore.isBlacklisted(accessToken)) {
 
         String username = jwtService.getUserIdFromToken(accessToken);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);

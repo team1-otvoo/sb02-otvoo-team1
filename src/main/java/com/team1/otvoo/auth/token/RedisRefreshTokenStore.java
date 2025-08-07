@@ -37,14 +37,4 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
   public void remove(String userId) {
     redisTemplate.delete(getRefreshTokenKey(userId));
   }
-
-  @Override
-  public void blacklistAccessToken(String accessToken, long expirationSeconds) {
-    redisTemplate.opsForValue().set(BLACKLIST_PREFIX + accessToken, "1", Duration.ofSeconds(expirationSeconds));
-  }
-
-  @Override
-  public boolean isBlacklisted(String accessToken) {
-    return redisTemplate.hasKey(BLACKLIST_PREFIX + accessToken);
-  }
 }

@@ -1,5 +1,6 @@
 package com.team1.otvoo.security;
 
+import com.team1.otvoo.auth.token.AccessTokenStore;
 import com.team1.otvoo.auth.token.RefreshTokenStore;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,6 +20,7 @@ public class JwtLogoutHandler implements LogoutHandler {
 
   private final JwtTokenProvider jwtTokenProvider;
   private final RefreshTokenStore refreshTokenStore;
+  private final AccessTokenStore accessTokenStore;
 
   @Override
   public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
@@ -45,7 +47,7 @@ public class JwtLogoutHandler implements LogoutHandler {
         log.debug("✅ RefreshTokenStore 에서 userId={} 토큰 제거 완료", userId);
 
         long expiration = jwtTokenProvider.getExpiration(accessToken);
-        refreshTokenStore.blacklistAccessToken(accessToken, expiration);
+        accessTokenStore.blacklistAccessToken(accessToken, expiration);
         log.debug("✅ AccessToken 블랙리스트 등록 완료: 만료시간={}초", expiration);
 
         try {
