@@ -3,13 +3,16 @@ package com.team1.otvoo.follow.controller;
 import com.team1.otvoo.follow.dto.FollowCreateRequest;
 import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
+import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.service.FollowService;
+import com.team1.otvoo.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,12 +41,25 @@ public class FollowController {
         .body(createdFollow);
   }
 
+  @GetMapping("/summary")
+  public ResponseEntity<FollowSummaryDto> getSummary(
+      @RequestParam("userId") UUID userId,
+      @AuthenticationPrincipal CustomUserDetails userDetails) {
+    log.info("팔로우 요약 정보 조회 요청: userId={}", userId);
+    UUID myId = userDetails.getUser().getId();
+    FollowSummaryDto summary = followService.getSummary(userId, myId);
+    log.debug("팔로우 요약 정보 조회 응답: followeeId={}", summary.followeeId());
+    return ResponseEntity
+        .status(HttpStatus.OK)
+        .body(summary);
+  }
+
   @GetMapping("/followings")
   public ResponseEntity<FollowListResponse> getFollowingList(
       @RequestParam("followerId") UUID followerId,
       @RequestParam(value = "cursor", required = false) String cursor,
       @RequestParam(value = "idAfter", required = false) UUID idAfter,
-      @RequestParam(value = "limit", required = false, defaultValue = "20") int limit,
+      @RequestParam(value = "limit", defaultValue = "20") int limit,
       @RequestParam(value = "nameLike", required = false) String nameLike) {
     log.info("팔로잉 목록 조회 요청: followerId={}, cursor={}, idAfter={}, limit={}, nameLike={}",
         followerId, cursor, idAfter, limit, nameLike);
@@ -59,7 +75,7 @@ public class FollowController {
       @RequestParam("followerId") UUID followeeId,
       @RequestParam(value = "cursor", required = false) String cursor,
       @RequestParam(value = "idAfter", required = false) UUID idAfter,
-      @RequestParam(value = "limit", required = false, defaultValue = "20") int limit,
+      @RequestParam(value = "limit", defaultValue = "20") int limit,
       @RequestParam(value = "nameLike", required = false) String nameLike) {
     log.info("팔로워 목록 조회 요청: followeeId={}, cursor={}, idAfter={}, limit={}, nameLike={}",
         followeeId, cursor, idAfter, limit, nameLike);

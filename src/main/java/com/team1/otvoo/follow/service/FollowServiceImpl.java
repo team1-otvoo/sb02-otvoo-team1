@@ -5,17 +5,19 @@ import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.follow.dto.FollowCreateRequest;
 import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
+import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
+import com.team1.otvoo.notification.service.NotificationService;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ public class FollowServiceImpl implements FollowService {
   private final FollowRepository followRepository;
   private final UserRepository userRepository;
   private final FollowMapper followMapper;
+  private final NotificationService notificationService;
 
   @Transactional
   @Override
@@ -57,7 +60,43 @@ public class FollowServiceImpl implements FollowService {
     followee.increaseFollowerCount();
     follower.increaseFollowingCount();
 
+    // 알림 생성
+    //notificationService.sendFollowNotification(follower, followee);
+
     return followMapper.toDto(createdFollow);
+  }
+
+  @Transactional(readOnly = true)
+  @Override
+  public FollowSummaryDto getSummary(UUID userId, UUID myId) {
+    User followee = userRepository.findById(userId)
+        .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", userId)));
+
+    boolean followedByMe = false;
+    UUID followedByMeId = null;
+    boolean followingMe = false;
+
+    // 본인이 아닌 경우에만 팔로우 관계 확인
+    if (!myId.equals(userId)) {
+      // 내가 대상 사용자를 팔로우하는지 확인
+      Optional<Follow> followOptional = followRepository.findByFolloweeIdAndFollowerId(userId, myId);
+      if (followOptional.isPresent()) {
+        followedByMe = true;
+        followedByMeId = followOptional.get().getId();
+      }
+
+      // 대상 사용자가 나를 팔로우하는지 확인
+      followingMe = followRepository.existsByFolloweeIdAndFollowerId(myId, userId);
+    }
+
+    return new FollowSummaryDto(
+        userId,
+        followee.getFollowerCount(),
+        followee.getFollowingCount(),
+        followedByMe,
+        followedByMeId,
+        followingMe
+    );
   }
 
   @Transactional(readOnly = true)
