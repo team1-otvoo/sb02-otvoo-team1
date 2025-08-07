@@ -1,7 +1,11 @@
 package com.team1.otvoo.user.service;
 
+import com.team1.otvoo.auth.token.AccessTokenStore;
+import com.team1.otvoo.auth.token.RefreshTokenStore;
+import com.team1.otvoo.auth.token.TemporaryPasswordStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.ProfileUpdateRequest;
@@ -9,6 +13,7 @@ import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.ProfileImage;
@@ -47,6 +52,11 @@ public class UserServiceImpl implements UserService {
   private final UserMapper userMapper;
   private final ProfileMapper profileMapper;
   private final ProfileImageUrlResolver profileImageUrlResolver;
+
+  private final TemporaryPasswordStore temporaryPasswordStore;
+  private final JwtTokenProvider jwtTokenProvider;
+  private final RefreshTokenStore refreshTokenStore;
+  private final AccessTokenStore accessTokenStore;
 
   @Transactional(readOnly = true)
   @Override
@@ -184,5 +194,29 @@ public class UserServiceImpl implements UserService {
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
     user.changePassword(newEncodedPassword);
+  }
+
+  @Override
+  public UUID changeLock(UUID userId, UserLockUpdateRequest request) {
+    User user = userRepository.findById(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 User 를 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("id", userId));
+        }
+    );
+
+    user.updateLocked(request.locked());
+
+    if (user.isLocked()) {
+      refreshTokenStore.remove(userId.toString());
+
+      // 특정 사용자의 access 토큰 redis에서 불러와서 블랙리스트에 추가
+      String accessToken = accessTokenStore.get(userId.toString());
+      long expiration = jwtTokenProvider.getExpiration(accessToken);
+      accessTokenStore.blacklistAccessToken(accessToken, expiration);
+      accessTokenStore.remove(userId.toString());
+    }
+
+    return userId;
   }
 }
