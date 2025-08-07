@@ -1,6 +1,6 @@
 package com.team1.otvoo.clothes.mapper;
 
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDto;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

@@ -4,6 +4,7 @@ import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.ProfileDto;
+import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
@@ -18,6 +19,7 @@ import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.user.mapper.UserMapper;
+import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -34,12 +37,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class UserServiceImpl implements UserService {
 
+  private final ProfileImageService profileImageService;
+
   private final UserRepository userRepository;
   private final ProfileRepository profileRepository;
   private final ProfileImageRepository profileImageRepository;
+
   private final PasswordEncoder passwordEncoder;
   private final UserMapper userMapper;
   private final ProfileMapper profileMapper;
+  private final ProfileImageUrlResolver profileImageUrlResolver;
 
   @Transactional(readOnly = true)
   @Override
@@ -99,6 +106,7 @@ public class UserServiceImpl implements UserService {
 
     User user = new User(email, encodedPassword);
     Profile profile = new Profile(name, user);
+
     User savedUser = userRepository.save(user);
     profileRepository.save(profile);
 
@@ -107,6 +115,7 @@ public class UserServiceImpl implements UserService {
     return userDto;
   }
 
+  @Transactional(readOnly = true)
   @Override
   public ProfileDto getUserProfile(UUID userId) {
 
@@ -127,6 +136,37 @@ public class UserServiceImpl implements UserService {
     );
 
     ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl());
+
+    return dto;
+  }
+
+  @Override
+  public ProfileDto updateProfile(UUID userId, ProfileUpdateRequest profileUpdateRequest,
+      MultipartFile profileImageFile) {
+
+    Profile profile = profileRepository.findByUserId(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 Profile을 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("profile-userId", userId));
+        }
+    );
+
+    profile.updateProfile(profileUpdateRequest);
+    UUID profileId = profile.getId();
+
+    if (profileImageFile != null) {
+      profileImageRepository.findByProfileId(profileId)
+          .ifPresent(image -> {
+            profileImageService.deleteProfileImage(image);
+            profileImageRepository.delete(image);
+          });
+
+      ProfileImage newProfileImage = profileImageService.createProfileImage(profileImageFile, profile);
+      profileImageRepository.save(newProfileImage);
+    }
+
+    String profileImageUrl = profileImageUrlResolver.resolve(profileId);
+    ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImageUrl);
 
     return dto;
   }

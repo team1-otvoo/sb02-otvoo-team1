@@ -1,22 +1,24 @@
 package com.team1.otvoo.auth.service;
 
-import com.team1.otvoo.auth.dto.SignInRequest;
+import com.team1.otvoo.auth.dto.CsrfTokenResponse;
 import com.team1.otvoo.auth.dto.SignInResponse;
 import com.team1.otvoo.auth.token.RefreshTokenStore;
+import com.team1.otvoo.auth.token.TemporaryPassword;
+import com.team1.otvoo.auth.token.TemporaryPasswordStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
-import com.team1.otvoo.auth.dto.CsrfTokenResponse;
-import lombok.RequiredArgsConstructor;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ public class AuthServiceImpl implements AuthService {
   private final PasswordEncoder passwordEncoder;
   private final RefreshTokenStore refreshTokenStore;
   private final EmailService emailService;
+  private final TemporaryPasswordStore temporaryPasswordStore;
 
   private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -60,49 +63,6 @@ public class AuthServiceImpl implements AuthService {
   }
 
   @Override
-  public SignInResponse signIn(SignInRequest request) {
-    log.info("🔐 로그인 시도: email={}", request.email());
-
-    User user = userRepository.findByEmail(request.email())
-        .orElseThrow(() -> {
-          log.warn("❌ 로그인 실패 - 존재하지 않는 이메일: {}", request.email());
-          return new RestException(ErrorCode.INVALID_CREDENTIALS);
-        });
-
-    boolean matches = passwordEncoder.matches(request.password(), user.getPassword());
-
-    if (!matches) {
-      log.warn("❌ 로그인 실패 - 비밀번호 불일치: email={}", request.email());
-      throw new RestException(ErrorCode.INVALID_CREDENTIALS);
-    }
-
-    String accessToken = jwtTokenProvider.createAccessToken(user.getId().toString());
-    String refreshToken = jwtTokenProvider.createRefreshToken(user.getId().toString());
-
-    refreshTokenStore.save(user.getId().toString(), refreshToken);
-
-    log.info("✅ 로그인 성공: userId={}", user.getId());
-
-    return new SignInResponse(accessToken, refreshToken);
-  }
-
-  @Override
-  public void signOut(String accessToken) {
-    log.info("🚪 로그아웃 시도: accessToken={}", accessToken);
-
-    if (!jwtTokenProvider.validateToken(accessToken)) {
-      log.warn("❌ 로그아웃 실패 - 유효하지 않은 토큰");
-      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "액세스 토큰이 유효하지 않습니다."));
-    }
-
-    String userId = jwtTokenProvider.getUserIdFromToken(accessToken);
-
-    refreshTokenStore.remove(userId);
-
-    log.info("✅ 로그아웃 성공: userId={} 의 RefreshToken 삭제됨", userId);
-  }
-
-  @Override
   public String getAccessTokenByRefreshToken(String refreshToken) {
     if (!jwtTokenProvider.validateToken(refreshToken)) {
       log.warn("❌ 유효하지 않은 리프레시 토큰");
@@ -110,16 +70,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     String userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-
     String storedToken = refreshTokenStore.get(userId);
     if (storedToken == null || !storedToken.equals(refreshToken)) {
       log.warn("❌ 저장된 리프레시 토큰과 일치하지 않음");
       throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "토큰 불일치 또는 만료되었습니다."));
     }
 
-    String newAccessToken = jwtTokenProvider.createAccessToken(userId);
-
-    return newAccessToken;
+    return jwtTokenProvider.createAccessToken(userId);
   }
 
   @Override
@@ -132,7 +89,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     String userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-
     String storedToken = refreshTokenStore.get(userId);
     if (storedToken == null || !storedToken.equals(refreshToken)) {
       log.warn("❌ 저장된 토큰과 일치하지 않음");
@@ -145,7 +101,7 @@ public class AuthServiceImpl implements AuthService {
 
     log.info("✅ 새로운 토큰 생성 완료");
 
-    return new SignInResponse(newAccessToken, newRefreshToken);
+    return new SignInResponse(newAccessToken, newRefreshToken, false);
   }
 
   @Override
@@ -157,10 +113,9 @@ public class AuthServiceImpl implements AuthService {
         });
 
     String tempPassword = generateTemporaryPassword();
-    String encodedPassword = passwordEncoder.encode(tempPassword);
 
-    user.changePassword(encodedPassword);
-    userRepository.save(user);
+    TemporaryPassword temporaryPassword = new TemporaryPassword(tempPassword, System.currentTimeMillis() + Duration.ofMinutes(3).toMillis());
+    temporaryPasswordStore.save(email, temporaryPassword, Duration.ofMinutes(30));
 
     emailService.sendTemporaryPassword(user.getEmail(), tempPassword);
   }

@@ -19,6 +19,7 @@ public enum ErrorCode implements Code{
   MISSING_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "필수 요청 파라미터가 누락되었습니다."),
   SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "기존 비밀번호와 동일한 비밀번호는 사용할 수 없습니다."),
   INVALID_SORT_BY_FIELD(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 필드입니다."),
+  INVALID_SORT_DIRECTION(HttpStatus.BAD_REQUEST,"지원하지 않는 정렬 방향입니다."),
 
 
   // --- 401 Unauthorized ---
@@ -52,6 +53,8 @@ public enum ErrorCode implements Code{
   UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "예기치 못한 오류가 발생했습니다."),
   IO_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "입출력 처리 중 오류가 발생했습니다."),
   DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "데이터베이스 처리 중 오류가 발생했습니다."),
+  EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API 호출 중 오류가 발생했습니다."),
+  EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API가 빈 응답을 반환했습니다."),
 
   // --- Clothes 관련 ErrorCode ---
   ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),

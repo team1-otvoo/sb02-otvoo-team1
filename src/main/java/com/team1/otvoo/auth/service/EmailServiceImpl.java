@@ -30,7 +30,9 @@ public class EmailServiceImpl implements EmailService {
 
           임시 비밀번호: %s
 
-          로그인 후 반드시 비밀번호를 변경해 주세요.
+          임시 비밀번호는 30분간만 유효하며, 이 후 자동으로 만료되어 로그인이 불가합니다.
+          
+          반드시 로그인 후 빠르게 비밀번호를 변경해 주세요.
 
           감사합니다.
           """.formatted(tempPassword), false);

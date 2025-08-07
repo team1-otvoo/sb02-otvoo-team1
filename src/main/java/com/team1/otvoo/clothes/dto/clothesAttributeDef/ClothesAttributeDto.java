@@ -1,4 +1,4 @@
-package com.team1.otvoo.clothes.dto;
+package com.team1.otvoo.clothes.dto.clothesAttributeDef;
 
 import java.util.UUID;
 
