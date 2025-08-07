@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 
@@ -16,11 +15,11 @@ import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.follow.dto.FollowCreateRequest;
 import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
+import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.user.dto.UserSummary;
-import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.time.Instant;
@@ -70,13 +69,11 @@ public class FollowServiceTest {
     followId = UUID.randomUUID();
 
     // followee
-    Profile followeeProfile = mock(Profile.class);
-    followee = spy(new User("test@followee.com", "password123", followeeProfile));
+    followee = spy(new User("test@followee.com", "password123"));
     ReflectionTestUtils.setField(followee, "id", followeeId);
 
     // follower
-    Profile followerProfile = mock(Profile.class);
-    follower = spy(new User("test@follower.com", "password123", followerProfile));
+    follower = spy(new User("test@follower.com", "password123"));
     ReflectionTestUtils.setField(follower, "id", followerId);
 
     // follow entity
@@ -98,7 +95,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("성공")
-    void createFollow_Success_shouldReturnCreatedFollow() {
+    void createFollow_Success_ShouldReturnCreatedFollow() {
       // given
       FollowCreateRequest request = new FollowCreateRequest(followeeId, followerId);
 
@@ -127,7 +124,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("실패_자기 자신 팔로우")
-    void createFollow_Failure_shouldThrowException_whenFollowingMyself() {
+    void createFollow_Failure_ShouldThrowException_WhenFollowingMyself() {
       // given
       UUID sameUserId = UUID.randomUUID();
       FollowCreateRequest request = new FollowCreateRequest(sameUserId, sameUserId);
@@ -147,7 +144,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("실패_이미 존재하는 팔로우 내역")
-    void createFollow_Failure_shouldThrowException_whenDuplicateExists() {
+    void createFollow_Failure_ShouldThrowException_WhenDuplicateExists() {
       // given
       FollowCreateRequest request = new FollowCreateRequest(followeeId, followerId);
       given(followRepository.existsByFolloweeIdAndFollowerId(followeeId, followerId)).willReturn(true);
@@ -168,7 +165,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("실패_존재하지 않는 팔로우 대상")
-    void createFollow_Failure_shouldThrowException_whenFolloweeNotFound() {
+    void createFollow_Failure_ShouldThrowException_WhenFolloweeNotFound() {
       // given
       FollowCreateRequest request = new FollowCreateRequest(followeeId, followerId);
 
@@ -213,7 +210,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("실패_존재하지 않는 팔로우 내역")
-    void deleteFollow_Failure_shouldThrowException_whenFollowNotFound() {
+    void deleteFollow_Failure_ShouldThrowException_WhenFollowNotFound() {
       // given
       given(followRepository.findById(followId)).willReturn(Optional.empty());
 
@@ -227,6 +224,88 @@ public class FollowServiceTest {
       // then
       then(followRepository).should().findById(followId);
       then(followRepository).should(never()).delete(follow);
+    }
+
+  }
+
+  @Nested
+  @DisplayName("팔로우 요약 정보 조회 테스트")
+  class getSummary {
+
+    @Test
+    @DisplayName("성공_서로 팔로우하는 경우")
+    void getSummary_Success_WhenMutualFollow() {
+      // given
+      UUID myId = UUID.randomUUID();
+
+      ReflectionTestUtils.setField(followee, "followerCount", 100L);
+      ReflectionTestUtils.setField(followee, "followingCount", 50L);
+
+      given(userRepository.findById(followeeId)).willReturn(Optional.of(followee));
+      given(followRepository.findByFolloweeIdAndFollowerId(followeeId, myId)).willReturn(Optional.of(follow));
+      given(followRepository.existsByFolloweeIdAndFollowerId(myId, followeeId)).willReturn(true);
+
+      // when
+      FollowSummaryDto response = followService.getSummary(followeeId, myId);
+
+      // then
+      assertThat(response.followeeId()).isEqualTo(followeeId);
+      assertThat(response.followerCount()).isEqualTo(100L);
+      assertThat(response.followingCount()).isEqualTo(50L);
+      assertThat(response.followedByMe()).isTrue();
+      assertThat(response.followedByMeId()).isEqualTo(followId);
+      assertThat(response.followingMe()).isTrue();
+
+      then(userRepository).should().findById(eq(followeeId));
+      then(followRepository).should().findByFolloweeIdAndFollowerId(eq(followeeId), eq(myId));
+      then(followRepository).should().existsByFolloweeIdAndFollowerId(eq(myId), eq(followeeId));
+    }
+
+    @Test
+    @DisplayName("성공_내 팔로우 정보 조회하는 경우")
+    void getSummary_Success_WhenMyFollowInfo() {
+      // given
+      UUID followeeId = UUID.randomUUID();
+      UUID myId = followeeId;
+
+      ReflectionTestUtils.setField(followee, "followerCount", 200L);
+      ReflectionTestUtils.setField(followee, "followingCount", 100L);
+
+      given(userRepository.findById(followeeId)).willReturn(Optional.of(followee));
+
+      // when
+      FollowSummaryDto response = followService.getSummary(followeeId, myId);
+
+      // then
+      assertThat(response.followeeId()).isEqualTo(followeeId);
+      assertThat(response.followerCount()).isEqualTo(200L);
+      assertThat(response.followingCount()).isEqualTo(100L);
+      assertThat(response.followedByMe()).isFalse();
+      assertThat(response.followedByMeId()).isNull();
+      assertThat(response.followingMe()).isFalse();
+
+      then(userRepository).should().findById(eq(followeeId));
+      then(followRepository).should(never()).findByFolloweeIdAndFollowerId(any(), any());
+      then(followRepository).should(never()).existsByFolloweeIdAndFollowerId(any(), any());
+    }
+
+    @Test
+    @DisplayName("실패_존재하지 않는 사용자")
+    void getSummary_Failure_ShouldThrowException_WhenUserNotFound() {
+      // given
+      UUID myId = UUID.randomUUID();
+      given(userRepository.findById(followeeId)).willReturn(Optional.empty());
+
+      // when & then
+      RestException exception = assertThrows(RestException.class,
+          () -> followService.getSummary(followeeId, myId));
+
+      assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
+      assertThat(exception.getDetails().get("id")).isEqualTo(followeeId);
+
+      then(userRepository).should().findById(eq(followeeId));
+      then(followRepository).should(never()).findByFolloweeIdAndFollowerId(any(), any());
+      then(followRepository).should(never()).existsByFolloweeIdAndFollowerId(any(), any());
     }
 
   }
@@ -328,7 +407,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("실패_유효하지 않은 cursor 포맷")
-    void getFollowingList_Failure_WithInvalidCursorFormat() {
+    void getFollowingList_Failure_ShouldThrowException_WithInvalidCursorFormat() {
       // given
       String invalidCursor = "이건-날짜가-아닙니다";
       int limit = 20;
@@ -442,7 +521,7 @@ public class FollowServiceTest {
 
     @Test
     @DisplayName("실패_유효하지 않은 cursor 포맷")
-    void getFollowerList_Failure_WithInvalidCursorFormat() {
+    void getFollowerList_Failure_ShouldThrowException_WithInvalidCursorFormat() {
       // given
       String invalidCursor = "이건-날짜가-아닙니다";
       int limit = 20;
