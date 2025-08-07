@@ -1,5 +1,6 @@
 package com.team1.otvoo.security;
 
+import com.team1.otvoo.auth.token.RedisAccessTokenStore;
 import com.team1.otvoo.auth.token.RedisRefreshTokenStore;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -7,6 +8,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -18,21 +20,19 @@ import java.util.Date;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class JwtTokenProvider {
 
     private SecretKey secretKey;
 
-    private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60 * 60;
-    private static final long REFRESH_TOKEN_EXPIRATION_MS = 1000 * 60 * 60 * 24;
+    private static final long ACCESS_TOKEN_EXPIRATION_MS = 1000 * 60 * 60;           // 1시간
+    private static final long REFRESH_TOKEN_EXPIRATION_MS = 1000 * 60 * 60 * 24;     // 24시간
 
     @Value("${jwt.secret:websocket-chat-secret-key-256-bit-minimum-length-required}")
     private String secret;
 
+    private final RedisAccessTokenStore accessTokenStore;
     private final RedisRefreshTokenStore refreshTokenStore;
-
-    public JwtTokenProvider(RedisRefreshTokenStore refreshTokenStore) {
-        this.refreshTokenStore = refreshTokenStore;
-    }
 
     @PostConstruct
     public void init() {
@@ -42,12 +42,15 @@ public class JwtTokenProvider {
 
     public String createAccessToken(String userId) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        String accessToken = Jwts.builder()
             .setSubject(userId)
             .setIssuedAt(Date.from(now))
             .setExpiration(Date.from(now.plusMillis(ACCESS_TOKEN_EXPIRATION_MS)))
             .signWith(secretKey)
             .compact();
+
+        log.debug("🛠 액세스 토큰 생성: userId={}, 만료시간={}", userId, ACCESS_TOKEN_EXPIRATION_MS);
+        return accessToken;
     }
 
     public String createRefreshToken(String userId) {
@@ -71,7 +74,7 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token);
 
-            boolean isBlacklisted = refreshTokenStore.isBlacklisted(token);
+            boolean isBlacklisted = accessTokenStore.isBlacklisted(token);
             if (isBlacklisted) {
                 log.warn("🚫 블랙리스트에 등록된 토큰 사용 시도");
                 return false;

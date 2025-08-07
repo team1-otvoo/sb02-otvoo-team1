@@ -31,14 +31,14 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
     http
         .csrf(csrf -> csrf
-            .ignoringRequestMatchers("/api/auth/**", "/api/users"))
+            .ignoringRequestMatchers("/api/auth/**", "/api/users/**"))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**", "/api/users", "/", "/index.html", "/vite.svg", "/assets/**").permitAll()
+            .requestMatchers("/api/auth/**", "/api/users/**", "/", "/index.html", "/vite.svg", "/assets/**").permitAll()
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .userDetailsService(customUserDetailsService)
-        .addFilterBefore(jsonUsernamePasswordAuthenticationFilter(http, authenticationManager), UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(jsonUsernamePasswordAuthenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .logout(logout -> logout
             .logoutUrl("/api/auth/sign-out")
@@ -49,9 +49,7 @@ public class SecurityConfig {
   }
 
   @Bean
-  public JsonUsernamePasswordAuthenticationFilter jsonUsernamePasswordAuthenticationFilter(
-      HttpSecurity http,
-      AuthenticationManager authenticationManager) throws Exception {
+  public JsonUsernamePasswordAuthenticationFilter jsonUsernamePasswordAuthenticationFilter(AuthenticationManager authenticationManager) {
     JsonUsernamePasswordAuthenticationFilter filter = new JsonUsernamePasswordAuthenticationFilter(objectMapper);
     filter.setAuthenticationManager(authenticationManager);
     filter.setAuthenticationSuccessHandler(jwtLoginSuccessHandler);

@@ -1,6 +1,6 @@
 package com.team1.otvoo.security;
 
-import com.team1.otvoo.auth.token.RedisTemporaryPasswordStore;
+import com.team1.otvoo.auth.token.AccessTokenStore;
 import com.team1.otvoo.auth.token.RedisRefreshTokenStore;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,6 +19,7 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
   private final JwtTokenProvider jwtTokenProvider;
   private final RedisRefreshTokenStore refreshTokenStore;
+  private final AccessTokenStore accessTokenStore;
 
   @Override
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -32,6 +33,10 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     String accessToken = jwtTokenProvider.createAccessToken(username);
     String refreshToken = jwtTokenProvider.createRefreshToken(username);
+
+    long accessTokenExp = jwtTokenProvider.getExpiration(accessToken);
+    accessTokenStore.save(username, accessToken, accessTokenExp);
+    log.debug("💾 AccessToken Redis 저장: key=access_token:{}, 만료시간={}", username, accessTokenExp);
 
     refreshTokenStore.save(username, refreshToken);
     log.debug("💾 RefreshToken Redis 저장: key=refreshToken:{}, 만료시간={}", username, jwtTokenProvider.getExpiration(refreshToken));
