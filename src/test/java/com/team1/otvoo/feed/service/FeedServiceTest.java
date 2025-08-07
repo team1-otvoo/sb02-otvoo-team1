@@ -1,5 +1,8 @@
 package com.team1.otvoo.feed.service;
 
+import com.team1.otvoo.clothes.dto.OotdDto;
+import com.team1.otvoo.clothes.entity.Clothes;
+import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
@@ -7,8 +10,15 @@ import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
+import com.team1.otvoo.feed.entity.FeedClothes;
 import com.team1.otvoo.feed.mapper.FeedMapper;
+import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.user.entity.Profile;
+import com.team1.otvoo.user.entity.ProfileImage;
+import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.repository.ProfileImageRepository;
+import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.List;
@@ -37,7 +47,15 @@ public class FeedServiceTest {
   @Mock
   ClothesRepository clothesRepository;
   @Mock
+  ProfileRepository profileRepository;
+  @Mock
+  ProfileImageRepository profileImageRepository;
+  @Mock
+  FeedClothesRepository feedClothesRepository;
+  @Mock
   FeedRepository feedRepository;
+  @Mock
+  ClothesMapper clothesMapper;
   @Mock
   FeedMapper feedMapper;
   @InjectMocks
@@ -53,11 +71,22 @@ public class FeedServiceTest {
   @DisplayName("피드 생성 성공")
   void feed_create_success() {
     // given
-    given(userRepository.findById(any(UUID.class))).willReturn(mock());
+    User user = User.builder()
+        .email("test@test.com")
+        .build();
+    ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+
+    Profile profile = new Profile("testProfile", user);
+    ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
+    ProfileImage profileImage = new ProfileImage("test.url", "test", "jpeg", 0L, 1, 1, profile);
+
+    given(userRepository.findById(any(UUID.class))).willReturn(Optional.of(user));
+    given(profileRepository.findByUserId(any(UUID.class))).willReturn(Optional.of(profile));
+    given(profileImageRepository.findByProfileId(any(UUID.class))).willReturn(
+        Optional.of(profileImage));
     given(weatherForecastRepository.findById(any(UUID.class))).willReturn(mock());
     given(clothesRepository.findAllById(any())).willReturn(List.of());
-
-    given(feedMapper.toDto(any(Feed.class), anyBoolean())).willAnswer(invocation -> {
+    given(feedMapper.toDto(any(Feed.class), any(), anyBoolean())).willAnswer(invocation -> {
       Feed feedArg = invocation.getArgument(0);
       return FeedDto.builder()
           .content(feedArg.getContent())
@@ -68,7 +97,7 @@ public class FeedServiceTest {
     FeedDto createdFeed = feedService.create(request);
 
     // then
-    assertThat(createdFeed.content()).isEqualTo("testContent");
+    assertThat(createdFeed.getContent()).isEqualTo("testContent");
     then(feedRepository).should(times(1)).save(any());
   }
 
@@ -81,7 +110,7 @@ public class FeedServiceTest {
     // when & then
     assertThatThrownBy(() -> feedService.create(request))
         .isInstanceOf(RestException.class)
-        .hasMessageContaining("찾을 수 없습니다.");
+        .hasMessageContaining("유저가 존재하지 않습니다.");
     then(feedRepository).should(never()).save(any());
   }
 
@@ -95,7 +124,7 @@ public class FeedServiceTest {
     // when & then
     assertThatThrownBy(() -> feedService.create(request))
         .isInstanceOf(RestException.class)
-        .hasMessageContaining("찾을 수 없습니다.");
+        .hasMessageContaining("날씨 데이터가 존재하지 않습니다.");
     then(feedRepository).should(never()).save(any());
   }
 
@@ -103,14 +132,26 @@ public class FeedServiceTest {
   @DisplayName("피드 수정 성공")
   void feed_update_success() {
     // given
+    User user = User.builder()
+        .email("test@test.com")
+        .build();
+    ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+    Profile profile = new Profile("testProfile", user);
+    ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
+    ProfileImage profileImage = new ProfileImage("test.url", "test", "jpeg", 0L, 1, 1, profile);
+
     UUID feedId = UUID.randomUUID();
     Feed feed = Feed.builder()
         .content("test")
+        .user(user)
         .build();
     ReflectionTestUtils.setField(feed, "id", feedId);
 
+    given(profileRepository.findByUserId(any(UUID.class))).willReturn(Optional.of(profile));
+    given(profileImageRepository.findByProfileId(any(UUID.class))).willReturn(
+        Optional.of(profileImage));
     given(feedRepository.findById(feedId)).willReturn(Optional.of(feed));
-    given(feedMapper.toDto(any(Feed.class), anyBoolean())).willAnswer(invocation -> {
+    given(feedMapper.toDto(any(Feed.class), any(), anyBoolean())).willAnswer(invocation -> {
       Feed feedArg = invocation.getArgument(0);
       return FeedDto.builder()
           .content(feedArg.getContent())
@@ -123,7 +164,7 @@ public class FeedServiceTest {
     FeedDto updatedFeed = feedService.update(feedId, request);
 
     // then
-    assertThat(updatedFeed.content()).isEqualTo("update test");
+    assertThat(updatedFeed.getContent()).isEqualTo("update test");
     then(feedRepository).should(times(1)).save(feed);
   }
 
@@ -138,7 +179,7 @@ public class FeedServiceTest {
     // when & then
     assertThatThrownBy(() -> feedService.update(feedId, request))
         .isInstanceOf(RestException.class)
-        .hasMessageContaining("찾을 수 없습니다.");
+        .hasMessageContaining("피드가 존재하지 않습니다.");
     then(feedRepository).should(never()).save(any());
   }
 
@@ -171,7 +212,7 @@ public class FeedServiceTest {
     // when & then
     assertThatThrownBy(() -> feedService.delete(feedId))
         .isInstanceOf(RestException.class)
-        .hasMessageContaining("찾을 수 없습니다.");
+        .hasMessageContaining("피드가 존재하지 않습니다.");
     then(feedRepository).should(never()).delete(any());
   }
 
@@ -179,31 +220,35 @@ public class FeedServiceTest {
   @DisplayName("피드 목록 조회 성공")
   void get_feeds_success() {
     // given
-    Feed feed1 = Feed.builder()
-        .content("test1")
-        .build();
-    Feed feed2 = Feed.builder()
-        .content("test2")
-        .build();
-    Slice<Feed> feedSlice = new SliceImpl<>(List.of(feed1, feed2));
+    UUID feedId = UUID.randomUUID();
 
-    FeedDto feedDto1 = FeedDto.builder()
-        .content(feed1.getContent())
-        .build();
-    FeedDto feedDto2 = FeedDto.builder()
-        .content(feed2.getContent())
+    FeedDto feedDto = FeedDto.builder()
+        .id(feedId)
+        .content("test")
         .build();
 
-    given(feedMapper.toDto(feed1,false)).willReturn(feedDto1);
-    given(feedMapper.toDto(feed2,false)).willReturn(feedDto2);
+    Slice<FeedDto> feedSlice = new SliceImpl<>(List.of(feedDto));
     given(feedRepository.searchByCondition(any())).willReturn(feedSlice);
+
+    FeedClothes feedClothes = mock(FeedClothes.class);
+    Feed feed = mock(Feed.class);
+    Clothes clothes = mock(Clothes.class);
+    given(feed.getId()).willReturn(feedId);
+    given(feedClothes.getFeed()).willReturn(feed);
+    given(feedClothes.getClothes()).willReturn(clothes);
+
+    given(feedClothesRepository.findAllByFeedIdInWithClothesAndSelectedValues(List.of(feedId)))
+        .willReturn(List.of(feedClothes));
+
+    OotdDto ootdDto = mock(OotdDto.class);
+    given(clothesMapper.toOotdDto(clothes)).willReturn(ootdDto);
 
     // when
     Slice<FeedDto> result = feedService.getFeedsWithCursor(mock(FeedSearchCondition.class));
 
     // then
-    assertThat(2).isEqualTo(result.getContent().size());
-    assertThat(feedDto1).isEqualTo(result.getContent().get(0));
-    assertThat(feedDto2).isEqualTo(result.getContent().get(1));
+    assertThat(result.getContent()).hasSize(1);
+    assertThat(result.getContent().get(0).getContent()).isEqualTo("test");
+    assertThat(result.getContent().get(0).getOotds()).containsExactly(ootdDto);
   }
 }

@@ -2,6 +2,7 @@ package com.team1.otvoo.feed.repository;
 
 import com.team1.otvoo.common.AbstractPostgresTest;
 import com.team1.otvoo.config.QueryDslConfig;
+import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.user.entity.Profile;
@@ -43,31 +44,18 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
   private EntityManager entityManager;
 
   @BeforeEach
-  void setUpd() {
+  void setUp() {
     User author = User.builder()
-        .profile(new Profile("testUser"))
         .email("test@test.com")
         .password("test1234!")
         .build();
     userRepository.save(author);
 
-    WeatherForecast weatherForecast1 = WeatherForecast.builder()
-        .skyStatus(SkyStatus.CLEAR)
-        .forecastedAt(Instant.now())
-        .forecastAt(Instant.now())
-        .createdAt(Instant.now())
-        .updatedAt(Instant.now())
-        .build();
+    WeatherForecast weatherForecast1 = new WeatherForecast(Instant.now(), Instant.now(), SkyStatus.CLEAR);
     WeatherPrecipitation weatherPrecipitation1 = new WeatherPrecipitation(weatherForecast1, PrecipitationType.NONE, 3.0, 3.0);
     weatherForecast1.setPrecipitation(weatherPrecipitation1);
 
-    WeatherForecast weatherForecast2 = WeatherForecast.builder()
-        .skyStatus(SkyStatus.CLOUDY)
-        .forecastedAt(Instant.now())
-        .forecastAt(Instant.now())
-        .createdAt(Instant.now())
-        .updatedAt(Instant.now())
-        .build();
+    WeatherForecast weatherForecast2 = new WeatherForecast(Instant.now(), Instant.now(), SkyStatus.CLOUDY);
     WeatherPrecipitation weatherPrecipitation2 = new WeatherPrecipitation(weatherForecast2, PrecipitationType.RAIN, 3.0, 3.0);
     weatherForecast2.setPrecipitation(weatherPrecipitation2);
 
@@ -144,13 +132,14 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(4);
     assertThat(result.getContent().get(0).getContent()).isEqualTo("비올 때 입는 옷1");
     assertThat(result.getContent().get(1).getContent()).isEqualTo("비올 때 입는 옷2");
     assertThat(result.getContent().get(3).getContent()).isEqualTo("맑을 때 입는 옷2");
+    assertThat(result.getContent().get(3).getWeather().precipitation().type()).isEqualTo(PrecipitationType.NONE);
   }
 
   @Test
@@ -170,13 +159,14 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(3);
     assertThat(result.getContent().get(0).getContent()).isEqualTo("맑을 때 입는 옷1");
     assertThat(result.getContent().get(1).getContent()).isEqualTo("맑을 때 입는 옷2");
     assertThat(result.getContent().get(2).getContent()).isEqualTo("맑을 때 입는 옷3");
+    assertThat(result.getContent().get(2).getWeather().precipitation().type()).isEqualTo(PrecipitationType.NONE);
   }
 
   @Test
@@ -196,13 +186,14 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(3);
     assertThat(result.getContent().get(0).getContent()).isEqualTo("맑을 때 입는 옷3");
     assertThat(result.getContent().get(1).getContent()).isEqualTo("맑을 때 입는 옷2");
     assertThat(result.getContent().get(2).getContent()).isEqualTo("맑을 때 입는 옷1");
+    assertThat(result.getContent().get(2).getWeather().precipitation().type()).isEqualTo(PrecipitationType.NONE);
   }
 
   @Test
@@ -222,11 +213,12 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(1);
     assertThat(result.getContent().get(0).getContent()).isEqualTo("맑을 때 입는 옷3");
+    assertThat(result.getContent().get(0).getWeather().precipitation().type()).isEqualTo(PrecipitationType.NONE);
   }
   
   @Test
@@ -240,7 +232,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
       
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
       
     // then
     assertThat(result.hasNext()).isTrue();
@@ -257,7 +249,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
 
     // then
     assertThat(result.hasNext()).isFalse();
@@ -276,7 +268,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<Feed> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
 
     // then
     assertThat(result).isEmpty();
