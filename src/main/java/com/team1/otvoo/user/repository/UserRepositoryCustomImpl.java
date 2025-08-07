@@ -23,11 +23,11 @@ import java.util.UUID;
 
 @Slf4j
 @Repository
-public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
+public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
 
-  public UserQueryDslRepositoryImpl(EntityManager em) {
+  public UserRepositoryCustomImpl(EntityManager em) {
     this.queryFactory = new JPAQueryFactory(em);
   }
 
