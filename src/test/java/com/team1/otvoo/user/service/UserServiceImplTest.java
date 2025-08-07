@@ -11,8 +11,12 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.team1.otvoo.auth.token.AccessTokenStore;
+import com.team1.otvoo.auth.token.RefreshTokenStore;
+import com.team1.otvoo.auth.token.TemporaryPasswordStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileDto;
@@ -23,6 +27,7 @@ import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Profile;
@@ -83,6 +88,18 @@ class UserServiceImplTest {
 
   @Mock
   private ProfileImageUrlResolver profileImageUrlResolver;
+
+  @Mock
+  private TemporaryPasswordStore temporaryPasswordStore;
+
+  @Mock
+  private RefreshTokenStore refreshTokenStore;
+
+  @Mock
+  private AccessTokenStore accessTokenStore;
+
+  @Mock
+  private JwtTokenProvider jwtTokenProvider;
 
   private UserCreateRequest request;
 
@@ -381,4 +398,35 @@ class UserServiceImplTest {
 
     assertThat(result).isEqualTo(expectedDto);
   }
+
+  @Test
+  @DisplayName("계정 잠금 상태 변경 성공 - 잠금 처리 시 토큰 삭제 및 블랙리스트 등록")
+  void changeLock_success_locked() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user = mock(User.class); // ✅ mock 처리
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+    // isLocked() == true 인 상태
+    given(user.isLocked()).willReturn(true);
+
+    String accessToken = "access.token.value";
+    long expiration = 3600L;
+
+    given(accessTokenStore.get(userId.toString())).willReturn(accessToken);
+    given(jwtTokenProvider.getExpiration(accessToken)).willReturn(expiration);
+
+    // when
+    UUID result = userService.changeLock(userId, new UserLockUpdateRequest(true));
+
+    // then
+    assertThat(result).isEqualTo(userId);
+    verify(refreshTokenStore).remove(userId.toString());
+    verify(accessTokenStore).get(userId.toString());
+    verify(jwtTokenProvider).getExpiration(accessToken);
+    verify(accessTokenStore).blacklistAccessToken(accessToken, expiration);
+    verify(accessTokenStore).remove(userId.toString());
+  }
+
 }
