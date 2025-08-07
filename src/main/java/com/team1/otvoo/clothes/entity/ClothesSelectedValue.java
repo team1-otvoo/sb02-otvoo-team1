@@ -34,9 +34,14 @@ public class ClothesSelectedValue {
   @JoinColumn(name = "value_id", nullable = false)
   private ClothesAttributeValue value;
 
-  public ClothesSelectedValue(Clothes clothes, ClothesAttributeDefinition definition, ClothesAttributeValue value) {
+  public ClothesSelectedValue(Clothes clothes, ClothesAttributeDefinition definition,
+      ClothesAttributeValue value) {
     this.clothes = clothes;
     this.definition = definition;
     this.value = value;
+  }
+
+  protected void setClothes(Clothes clothes) {
+    this.clothes = clothes;
   }
 }

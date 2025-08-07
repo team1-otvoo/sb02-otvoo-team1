@@ -128,7 +128,6 @@ CREATE TABLE clothes (
                          owner_id UUID NOT NULL,
                          name VARCHAR(255) NOT NULL,
                          type VARCHAR(50) NOT NULL,
-                         image_url TEXT,
                          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                          CONSTRAINT fk_clothes_owner FOREIGN KEY (owner_id)
                              REFERENCES users(id) ON DELETE CASCADE
@@ -146,6 +145,22 @@ CREATE TABLE clothes_selected_values (
                                              REFERENCES clothes_attribute_definitions(id) ON DELETE CASCADE,
                                          CONSTRAINT fk_clothes_selected_values_value FOREIGN KEY (value_id)
                                              REFERENCES clothes_attribute_values(id) ON DELETE CASCADE
+);
+
+-- clothes_images 테이블
+CREATE TABLE clothes_images (
+                                id UUID PRIMARY KEY,
+                                image_url TEXT NOT NULL,
+                                file_name VARCHAR(255),
+                                content_type VARCHAR(100),
+                                size BIGINT,
+                                width INT,
+                                height INT,
+                                upload_at TIMESTAMPTZ DEFAULT now(),
+                                clothes_id UUID NOT NULL UNIQUE,
+
+                                CONSTRAINT fk_clothes_images_clothes FOREIGN KEY (clothes_id)
+                                    REFERENCES clothes(id) ON DELETE CASCADE
 );
 
 -- recommendations 테이블
