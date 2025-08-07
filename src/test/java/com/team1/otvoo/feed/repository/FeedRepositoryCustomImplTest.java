@@ -5,7 +5,6 @@ import com.team1.otvoo.config.QueryDslConfig;
 import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.entity.Feed;
-import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.entity.PrecipitationType;
