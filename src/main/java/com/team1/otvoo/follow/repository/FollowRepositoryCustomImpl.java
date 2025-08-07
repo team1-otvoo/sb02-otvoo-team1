@@ -4,6 +4,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.entity.QFollow;
+import com.team1.otvoo.user.entity.QProfile;
 import com.team1.otvoo.user.entity.QUser;
 import java.time.Instant;
 import java.util.List;
@@ -40,6 +41,7 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
 
     QFollow follow = QFollow.follow;
     QUser userToJoin;
+    QProfile profile = QProfile.profile;
     BooleanExpression userIdCondition;
 
     if (type == SearchType.FOLLOWING) {
@@ -55,10 +57,10 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
     return queryFactory
         .selectFrom(follow)
         .join(userToJoin).fetchJoin()
-        .join(userToJoin.profile).fetchJoin()
+        .leftJoin(profile).on(profile.user.id.eq(userToJoin.id)).fetchJoin()
         .where(
             userIdCondition, // ID 조건
-            nameLike(userToJoin, nameLike), // 사용자 이름 검색 조건
+            nameLike(profile, nameLike), // 사용자 이름 검색 조건
             cursorCondition(follow, cursor, idAfter) // 커서 조건
         )
         .orderBy(follow.createdAt.desc(), follow.id.desc())
@@ -67,11 +69,11 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
   }
 
   // 사용자 이름 검색 조건
-  private BooleanExpression nameLike(QUser user, String nameLike) {
+  private BooleanExpression nameLike(QProfile profile, String nameLike) {
     if (!StringUtils.hasText(nameLike)) {
       return null;
     }
-    return user.profile.name.containsIgnoreCase(nameLike);
+    return profile.name.containsIgnoreCase(nameLike);
   }
 
   // 커서 조건
@@ -80,7 +82,7 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
       return null;
     }
     return follow.createdAt.lt(cursor)
-        .or(follow.createdAt.eq(cursor).and(follow.id.lt(idAfter)));
+        .or(follow.createdAt.eq(cursor).and(follow.id.lt(idAfter))); // idAfter 어떻게 할지
   }
 }
 
