@@ -1,5 +1,7 @@
 package com.team1.otvoo.clothes.dto.clothesAttributeDef;
 
+import com.team1.otvoo.clothes.dto.SortBy;
+import com.team1.otvoo.clothes.dto.SortDirection;
 import java.util.List;
 import java.util.UUID;
 
@@ -9,8 +11,8 @@ public record ClothesAttributeDefDtoCursorResponse(
     UUID nextIdAfter,
     boolean hasNext,
     long totalCount,
-    String sortBy,
-    String sortDirection
+    SortBy sortBy,
+    SortDirection sortDirection
 ) {
 
 }
