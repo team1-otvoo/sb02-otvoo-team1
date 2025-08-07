@@ -138,14 +138,9 @@ public class UserServiceImpl implements UserService {
 
     UUID profileId = profile.getId();
 
-    ProfileImage profileImage = profileImageRepository.findByProfileId(profileId).orElseThrow(
-        () -> {
-          log.warn("해당 profileId를 가진 profileImage를 찾을 수 없습니다. [{}]", profileId);
-          return new RestException(ErrorCode.NOT_FOUND, Map.of("profileIamge - profileId", profileId));
-        }
-    );
+    String imageUrl = profileImageUrlResolver.resolve(profileId);
 
-    ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl());
+    ProfileDto dto = profileMapper.toProfileDto(userId, profile, imageUrl);
 
     return dto;
   }
