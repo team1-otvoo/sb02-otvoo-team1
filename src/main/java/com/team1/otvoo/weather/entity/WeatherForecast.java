@@ -12,13 +12,14 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "weather_forecasts")
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class WeatherForecast {
 
   @Id
@@ -62,6 +63,10 @@ public class WeatherForecast {
     this.skyStatus = skyStatus;
     this.createdAt = Instant.now();
     this.updatedAt = Instant.now();
+  }
+
+  public static WeatherForecast of(Instant forecastedAt, Instant forecastAt, SkyStatus skyStatus) {
+    return new WeatherForecast(forecastedAt, forecastAt, skyStatus);
   }
 
   public void updateSkyStatus(SkyStatus skyStatus) {
