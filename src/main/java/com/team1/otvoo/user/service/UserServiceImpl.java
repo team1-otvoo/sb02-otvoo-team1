@@ -194,6 +194,7 @@ public class UserServiceImpl implements UserService {
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
     user.changePassword(newEncodedPassword);
+    temporaryPasswordStore.remove(user.getEmail());
   }
 
   @Override
