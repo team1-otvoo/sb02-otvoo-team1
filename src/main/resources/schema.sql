@@ -41,7 +41,7 @@ CREATE TABLE profiles (
                           birth DATE,
                           temperature_sensitivity INT,
                           user_id UUID NOT NULL UNIQUE,
-                          weather_location_id UUID NOT NULL,
+                          weather_location_id UUID,
 
                           CONSTRAINT fk_profiles_user FOREIGN KEY (user_id)
                               REFERENCES users(id) ON DELETE CASCADE,

@@ -34,5 +34,13 @@ public interface ClothesMapper {
         .toList();
   }
 
-  List<ClothesAttributeWithDefDto> toDtoList(List<ClothesSelectedValue> values);
+  default List<ClothesAttributeWithDefDto> toDtoList(List<ClothesSelectedValue> values) {
+    if (values == null) {
+      return Collections.emptyList();
+    }
+    return values.stream()
+        .map(this::toAttributeDefDto)
+        .distinct() // 중복 제거
+        .toList();
+  }
 }

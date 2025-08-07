@@ -21,13 +21,13 @@ public class FeedPageResponseMapper {
     if (last != null) {
       nextCursor = "likeCount".equalsIgnoreCase(searchCondition.sortBy())
           // 복합 커서 생성
-          ? last.likeCount() + "_" + last.createdAt().toString()
-          : last.createdAt().toString();
+          ? last.getLikeCount() + "_" + last.getCreatedAt().toString()
+          : last.getCreatedAt().toString();
     }
 
     UUID nextIdAfter = null;
     if (last != null) {
-      nextIdAfter = last.id();
+      nextIdAfter = last.getId();
     }
 
     return new FeedDtoCursorResponse(

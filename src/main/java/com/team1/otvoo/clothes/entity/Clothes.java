@@ -51,4 +51,13 @@ public class Clothes {
   @Column(name = "created_at", nullable = false,updatable = false)
   private Instant createdAt;
 
+  public Clothes(User owner, String name, ClothesType type, String imageUrl, List<ClothesSelectedValue> selectedValues) {
+    this.owner = owner;
+    this.name = name;
+    this.type = type;
+    this.imageUrl = imageUrl;
+    this.selectedValues = selectedValues;
+    this.createdAt = Instant.now();
+  }
+
 }

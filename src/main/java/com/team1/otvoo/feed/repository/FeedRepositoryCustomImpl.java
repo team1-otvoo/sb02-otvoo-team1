@@ -3,14 +3,27 @@ package com.team1.otvoo.feed.repository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
-import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.QFeed;
+import com.team1.otvoo.user.dto.AuthorDto;
+import com.team1.otvoo.user.entity.QProfile;
+import com.team1.otvoo.user.entity.QProfileImage;
+import com.team1.otvoo.user.entity.QUser;
+import com.team1.otvoo.weather.dto.PrecipitationDto;
+import com.team1.otvoo.weather.dto.TemperatureDto;
+import com.team1.otvoo.weather.dto.WeatherSummaryDto;
 import com.team1.otvoo.weather.entity.PrecipitationType;
+import com.team1.otvoo.weather.entity.QWeatherForecast;
+import com.team1.otvoo.weather.entity.QWeatherPrecipitation;
+import com.team1.otvoo.weather.entity.QWeatherTemperature;
 import com.team1.otvoo.weather.entity.SkyStatus;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +37,15 @@ import org.springframework.util.StringUtils;
 public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
   private final JPAQueryFactory queryFactory;
   QFeed feed = QFeed.feed;
+  QUser user = QUser.user;
+  QProfile profile = QProfile.profile;
+  QProfileImage profileImage = QProfileImage.profileImage;
+  QWeatherForecast weather = QWeatherForecast.weatherForecast;
+  QWeatherPrecipitation precipitation = QWeatherPrecipitation.weatherPrecipitation;
+  QWeatherTemperature temperature = QWeatherTemperature.weatherTemperature;
 
   @Override
-  public Slice<Feed> searchByCondition(FeedSearchCondition condition) {
+  public Slice<FeedDto> searchByCondition(FeedSearchCondition condition) {
     BooleanBuilder where = new BooleanBuilder();
     where.and(keywordLike(condition.keywordLike()))
         .and(precipitationTypeEq(condition.precipitationTypeEqual()))
@@ -51,7 +70,50 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
 
     int limit = condition.limit();
 
-    List<Feed> results = queryFactory.selectFrom(feed)
+    List<FeedDto> results = queryFactory
+        .select(Projections.constructor(
+          FeedDto.class,
+            feed.id,
+          feed.createdAt,
+          feed.updatedAt,
+          Projections.constructor(
+              AuthorDto.class,
+              user.id,
+              profile.name,
+              profileImage.imageUrl
+          ),
+            Projections.constructor(
+                WeatherSummaryDto.class,
+                weather.id,
+                weather.skyStatus,
+                Projections.constructor(
+                    PrecipitationDto.class,
+                    precipitation.type,
+                    precipitation.amount,
+                    precipitation.probability
+                ),
+                Projections.constructor(
+                    TemperatureDto.class,
+                    temperature.current,
+                    temperature.comparedToDayBefore,
+                    temperature.min,
+                    temperature.max
+                )
+            ),
+            // Ootd List는 Service단에서 따로 조립
+            Expressions.constant(Collections.emptyList()),
+            feed.content,
+            feed.likeCount,
+            feed.commentCount,
+            Expressions.constant(false)// likedByMe 좋아요 구현 후 수정
+        ))
+        .from(feed)
+        .join(feed.user, user)
+        .leftJoin(profile).on(profile.user.id.eq(user.id))
+        .leftJoin(profileImage).on(profileImage.profile.id.eq(profile.id))
+        .join(feed.weather, weather)
+        .leftJoin(precipitation).on(precipitation.forecast.eq(weather))
+        .leftJoin(temperature).on(temperature.forecast.eq(weather))
         .where(where)
         .orderBy(orderSpecifiers)
         .limit(limit + 1)
