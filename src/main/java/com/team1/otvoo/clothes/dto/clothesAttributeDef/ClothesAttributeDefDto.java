@@ -1,4 +1,4 @@
-package com.team1.otvoo.clothes.dto;
+package com.team1.otvoo.clothes.dto.clothesAttributeDef;
 
 import java.time.Instant;
 import java.util.List;

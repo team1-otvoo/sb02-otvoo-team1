@@ -3,9 +3,13 @@ package com.team1.otvoo.clothes.service;
 import static org.mockito.BDDMockito.*;
 import static org.assertj.core.api.Assertions.*;
 
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefCreateRequest;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefDto;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefUpdateRequest;
+import com.team1.otvoo.clothes.dto.SortBy;
+import com.team1.otvoo.clothes.dto.SortDirection;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefCreateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDtoCursorResponse;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefSearchCondition;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
@@ -124,6 +128,84 @@ class ClothesAttributeDefServiceImplTest {
   }
 
   @Test
+  @DisplayName("이름순 정렬 + 키워드 검색으로 속성 목록 조회 성공")
+  void getClothesAttributeDefs_Success() {
+    // given
+    ClothesAttributeDefSearchCondition condition = new ClothesAttributeDefSearchCondition(
+        null,
+        null,
+        5,
+        SortBy.NAME,
+        SortDirection.ASCENDING,
+        "감"
+    );
+
+    ClothesAttributeDefinition thicknessDef = new ClothesAttributeDefinition("두께감", List.of());
+    ClothesAttributeDefinition patternDef = new ClothesAttributeDefinition("패턴", List.of());
+    ClothesAttributeDefinition seasonDef = new ClothesAttributeDefinition("계절감", List.of());
+
+    thicknessDef.addValue(new ClothesAttributeValue("얇음"));
+    thicknessDef.addValue(new ClothesAttributeValue("두꺼움"));
+
+    patternDef.addValue(new ClothesAttributeValue("줄무늬"));
+    patternDef.addValue(new ClothesAttributeValue("땡땡이"));
+
+    seasonDef.addValue(new ClothesAttributeValue("봄"));
+    seasonDef.addValue(new ClothesAttributeValue("여름"));
+
+    ReflectionTestUtils.setField(thicknessDef, "id", UUID.randomUUID());
+    ReflectionTestUtils.setField(patternDef, "id", UUID.randomUUID());
+    ReflectionTestUtils.setField(seasonDef, "id", UUID.randomUUID());
+
+    ReflectionTestUtils.setField(thicknessDef, "createdAt", Instant.now());
+    ReflectionTestUtils.setField(patternDef, "createdAt", Instant.now());
+    ReflectionTestUtils.setField(seasonDef, "createdAt", Instant.now());
+
+    given(clothesAttributeDefRepository.searchWithCursor(condition))
+        .willReturn(List.of(seasonDef, thicknessDef));
+
+    given(clothesAttributeDefRepository.countWithCondition(condition))
+        .willReturn(2L);
+
+    ClothesAttributeDefDto thicknessDefDto = new ClothesAttributeDefDto(
+        thicknessDef.getId(),
+        thicknessDef.getName(),
+        List.of("얇음", "두꺼움"),
+        thicknessDef.getCreatedAt()
+    );
+    ClothesAttributeDefDto seasonDefDto = new ClothesAttributeDefDto(
+        seasonDef.getId(),
+        seasonDef.getName(),
+        List.of("봄", "여름"),
+        seasonDef.getCreatedAt()
+    );
+
+    given(clothesAttributeDefMapper.toDto(thicknessDef)).willReturn(thicknessDefDto);
+    given(clothesAttributeDefMapper.toDto(seasonDef)).willReturn(seasonDefDto);
+
+    // when
+    ClothesAttributeDefDtoCursorResponse result =
+        clothesAttributeDefService.getClothesAttributeDefs(condition);
+
+    // then
+    assertThat(result).isNotNull();
+    assertThat(result.data()).hasSize(2);
+
+    assertThat(result.data())
+        .extracting("name")
+        .containsExactly("계절감", "두께감");
+
+    assertThat(result.data().get(0).selectableValues())
+        .containsExactly("봄", "여름");
+
+    assertThat(result.data().get(1).selectableValues())
+        .containsExactly("얇음", "두꺼움");
+
+    assertThat(result.hasNext()).isFalse();
+    assertThat(result.totalCount()).isEqualTo(2L);
+  }
+
+  @Test
   @DisplayName("의상 속성 수정 성공")
   void updateClothesAttributeDef_Success() {
     // given
@@ -138,7 +220,7 @@ class ClothesAttributeDefServiceImplTest {
     when(clothesAttributeDefRepository.save(clothesAttributeDefinition))
         .thenReturn(clothesAttributeDefinition);
     when(clothesAttributeDefMapper.toDto(clothesAttributeDefinition))
-        .thenReturn(new ClothesAttributeDefDto(definitionId, newName, newValues,CREATED_AT));
+        .thenReturn(new ClothesAttributeDefDto(definitionId, newName, newValues, CREATED_AT));
 
     // when
     ClothesAttributeDefDto result = clothesAttributeDefService.update(definitionId, request);

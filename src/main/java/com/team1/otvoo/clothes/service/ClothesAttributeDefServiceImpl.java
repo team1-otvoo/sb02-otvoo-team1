@@ -1,8 +1,10 @@
 package com.team1.otvoo.clothes.service;
 
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefCreateRequest;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefDto;
-import com.team1.otvoo.clothes.dto.ClothesAttributeDefUpdateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefCreateRequest;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDto;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDtoCursorResponse;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefSearchCondition;
+import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
@@ -57,6 +59,52 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         saved.getValues());
 
     return clothesAttributeDefMapper.toDto(saved);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public ClothesAttributeDefDtoCursorResponse getClothesAttributeDefs(
+      ClothesAttributeDefSearchCondition condition) {
+    List<ClothesAttributeDefinition> clothesAttributeDefs =
+        clothesAttributeDefRepository.searchWithCursor(condition);
+
+    boolean hasNext = clothesAttributeDefs.size() > condition.limit();
+    ClothesAttributeDefinition last = null;
+    int limit = condition.limit();
+
+    if (hasNext) {
+      last = clothesAttributeDefs.get(limit - 1);
+      clothesAttributeDefs = clothesAttributeDefs.subList(0, limit);
+    } else if (!clothesAttributeDefs.isEmpty()) {
+      last = clothesAttributeDefs.get(clothesAttributeDefs.size() - 1);
+    }
+
+    String nextCursor = null;
+    UUID nextIdAfter = null;
+
+    if (last != null && hasNext) {
+      switch (condition.sortBy()) {
+        case NAME -> nextCursor = last.getName();
+        case CREATED_AT -> nextCursor = last.getCreatedAt().toString();
+      }
+      nextIdAfter = last.getId();
+    }
+
+    long totalCount = clothesAttributeDefRepository.countWithCondition(condition);
+
+    List<ClothesAttributeDefDto> dtos = clothesAttributeDefs.stream()
+        .map(clothesAttributeDefMapper::toDto)
+        .toList();
+
+    return new ClothesAttributeDefDtoCursorResponse(
+        dtos,
+        nextCursor,
+        nextIdAfter,
+        hasNext,
+        totalCount,
+        condition.sortBy(),
+        condition.sortDirection()
+    );
   }
 
   @Override
