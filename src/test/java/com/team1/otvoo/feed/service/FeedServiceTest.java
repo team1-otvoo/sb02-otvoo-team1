@@ -18,11 +18,8 @@ import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
 import com.team1.otvoo.security.CustomUserDetails;
-import com.team1.otvoo.user.entity.Profile;
-import com.team1.otvoo.user.entity.ProfileImage;
+import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
-import com.team1.otvoo.user.repository.ProfileImageRepository;
-import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.List;
@@ -46,7 +43,6 @@ import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class FeedServiceTest {
-
   @Mock
   UserRepository userRepository;
   @Mock
@@ -55,10 +51,6 @@ public class FeedServiceTest {
   ClothesRepository clothesRepository;
   @Mock
   ClothesImageRepository clothesImageRepository;
-  @Mock
-  ProfileRepository profileRepository;
-  @Mock
-  ProfileImageRepository profileImageRepository;
   @Mock
   FeedClothesRepository feedClothesRepository;
   @Mock
@@ -87,14 +79,10 @@ public class FeedServiceTest {
         .build();
     ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
 
-    Profile profile = new Profile("testProfile", user);
-    ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
-    ProfileImage profileImage = new ProfileImage("test.url", "test", "jpeg", 0L, 1, 1, profile);
+    AuthorDto authorDto = new AuthorDto(user.getId(), "양고기", "image.url");
 
+    given(userRepository.projectionAuthorDtoById(user.getId())).willReturn(authorDto);
     given(userRepository.findById(any(UUID.class))).willReturn(Optional.of(user));
-    given(profileRepository.findByUserId(any(UUID.class))).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(any(UUID.class))).willReturn(
-        Optional.of(profileImage));
     given(weatherForecastRepository.findById(any(UUID.class))).willReturn(mock());
     given(clothesRepository.findAllById(any())).willReturn(List.of());
     given(feedMapper.toDto(any(Feed.class), any(), anyBoolean())).willAnswer(invocation -> {
@@ -147,9 +135,8 @@ public class FeedServiceTest {
         .email("test@test.com")
         .build();
     ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
-    Profile profile = new Profile("testProfile", user);
-    ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
-    ProfileImage profileImage = new ProfileImage("test.url", "test", "jpeg", 0L, 1, 1, profile);
+
+    AuthorDto authorDto = new AuthorDto(user.getId(), "양고기", "image.url");
 
     UUID feedId = UUID.randomUUID();
     Feed feed = Feed.builder()
@@ -161,9 +148,7 @@ public class FeedServiceTest {
     Authentication authentication = mock(Authentication.class);
     CustomUserDetails customUserDetails = mock(CustomUserDetails.class);
 
-    given(profileRepository.findByUserId(any(UUID.class))).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(any(UUID.class))).willReturn(
-        Optional.of(profileImage));
+    given(userRepository.projectionAuthorDtoById(user.getId())).willReturn(authorDto);
     given(feedRepository.findById(feedId)).willReturn(Optional.of(feed));
     given(authentication.getPrincipal()).willReturn(customUserDetails);
     given(customUserDetails.getUser()).willReturn(user);
