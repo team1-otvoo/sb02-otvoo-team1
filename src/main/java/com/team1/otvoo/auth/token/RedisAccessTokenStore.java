@@ -5,6 +5,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -15,22 +16,22 @@ public class RedisAccessTokenStore implements AccessTokenStore {
   private static final String ACCESS_TOKEN_PREFIX = "access_token:";
   private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
-  private String getAccessTokenKey(String userId) {
+  private String getAccessTokenKey(UUID userId) {
     return ACCESS_TOKEN_PREFIX + userId;
   }
 
   @Override
-  public void save(String userId, String accessToken, long expirationSeconds) {
+  public void save(UUID userId, String accessToken, long expirationSeconds) {
     redisTemplate.opsForValue().set(getAccessTokenKey(userId), accessToken, Duration.ofSeconds(expirationSeconds));
   }
 
   @Override
-  public String get(String userId) {
+  public String get(UUID userId) {
     return redisTemplate.opsForValue().get(getAccessTokenKey(userId));
   }
 
   @Override
-  public void remove(String userId) {
+  public void remove(UUID userId) {
     redisTemplate.delete(getAccessTokenKey(userId));
   }
 

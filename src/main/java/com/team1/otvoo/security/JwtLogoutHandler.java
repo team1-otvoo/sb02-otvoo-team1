@@ -2,6 +2,7 @@ package com.team1.otvoo.security;
 
 import com.team1.otvoo.auth.token.AccessTokenStore;
 import com.team1.otvoo.auth.token.RefreshTokenStore;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -25,70 +27,70 @@ public class JwtLogoutHandler implements LogoutHandler {
   @Override
   public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
     String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+    String refreshToken = null;
 
-    if (authHeader != null && authHeader.startsWith("Bearer ")) {
-      String rawToken = authHeader.substring(7).trim();
-      String accessToken = extractAccessToken(rawToken);
-      String refreshToken = extractRefreshToken(rawToken);
-
-      if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
-        String userId = jwtTokenProvider.getUserIdFromToken(accessToken);
-
-        String storedRefreshToken = refreshTokenStore.get(userId);
-        if (storedRefreshToken == null || refreshToken == null || !storedRefreshToken.equals(refreshToken)) {
-          log.warn("❌ 로그아웃 실패 - Refresh Token 불일치 또는 존재하지 않음");
-          response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-          return;
+    if (request.getCookies() != null) {
+      for (var cookie : request.getCookies()) {
+        if ("refresh_token".equals(cookie.getName())) {
+          refreshToken = cookie.getValue();
+          break;
         }
-
-        log.info("🚪 로그아웃 처리 시작: userId={}", userId);
-
-        refreshTokenStore.remove(userId);
-        log.debug("✅ RefreshTokenStore 에서 userId={} 토큰 제거 완료", userId);
-
-        long expiration = jwtTokenProvider.getExpiration(accessToken);
-        accessTokenStore.blacklistAccessToken(accessToken, expiration);
-        log.debug("✅ AccessToken 블랙리스트 등록 완료: 만료시간={}초", expiration);
-
-        try {
-          response.setStatus(HttpServletResponse.SC_OK);
-          response.setContentType("text/plain");
-          response.setCharacterEncoding("UTF-8");
-          response.getWriter().write("logout=success");
-          log.info("✅ 로그아웃 응답 전송 완료");
-        } catch (IOException e) {
-          log.error("⚠️ 로그아웃 응답 전송 중 오류 발생", e);
-        }
-      } else {
-        log.warn("❌ 로그아웃 실패 - 유효하지 않은 Access Token");
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       }
-    } else {
-      log.warn("❌ 로그아웃 실패 - Authorization 헤더 없음 또는 Bearer 토큰 아님");
+    }
+
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      log.warn("❌ 로그아웃 실패 - Authorization 헤더 없음 또는 형식 오류");
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      return;
     }
-  }
 
-  private String extractAccessToken(String rawToken) {
-    if (rawToken.startsWith("accessToken=")) {
-      for (String part : rawToken.split("&")) {
-        if (part.startsWith("accessToken=")) {
-          return part.substring("accessToken=".length());
-        }
-      }
-      return null;
-    }
-    return rawToken.contains("&") ? rawToken.split("&")[0].trim() : rawToken;
-  }
+    String accessToken = authHeader.substring(7).trim();
 
-  private String extractRefreshToken(String rawToken) {
-    if (rawToken.contains("refreshToken=")) {
-      for (String part : rawToken.split("&")) {
-        if (part.startsWith("refreshToken=")) {
-          return part.substring("refreshToken=".length());
-        }
-      }
+    if (!jwtTokenProvider.validateToken(accessToken)) {
+      log.warn("❌ 로그아웃 실패 - 유효하지 않은 Access Token");
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
     }
-    return null;
+
+    UUID userId = jwtTokenProvider.getUserIdFromToken(accessToken);
+    if (userId == null) {
+      log.warn("❌ 로그아웃 실패 - Access Token에서 userId 추출 실패");
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
+    }
+
+    String storedRefreshToken = refreshTokenStore.get(userId);
+    if (storedRefreshToken == null || refreshToken == null || !storedRefreshToken.equals(refreshToken)) {
+      log.warn("❌ 로그아웃 실패 - Refresh Token 불일치 또는 존재하지 않음");
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
+    }
+
+    log.info("🚪 로그아웃 처리 시작: userId={}", userId);
+
+    refreshTokenStore.remove(userId);
+    log.debug("✅ RefreshToken 제거 완료: userId={}", userId);
+
+    long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+    accessTokenStore.blacklistAccessToken(accessToken, expiration);
+    log.debug("✅ AccessToken 블랙리스트 등록 완료: 만료시간(ms)={}", expiration);
+
+    Cookie deleteCookie = new Cookie("refresh_token", null);
+    deleteCookie.setPath("/");
+    deleteCookie.setMaxAge(0);
+    deleteCookie.setHttpOnly(true);
+    deleteCookie.setSecure(false);
+    response.addCookie(deleteCookie);
+    log.debug("✅ refresh_token 쿠키 삭제 완료");
+
+    try {
+      response.setStatus(HttpServletResponse.SC_OK);
+      response.setContentType("application/json");
+      response.setCharacterEncoding("UTF-8");
+      response.getWriter().write("{\"logout\":\"success\"}");
+      log.info("✅ 로그아웃 완료 및 응답 전송");
+    } catch (IOException e) {
+      log.error("⚠️ 로그아웃 응답 전송 실패", e);
+    }
   }
 }

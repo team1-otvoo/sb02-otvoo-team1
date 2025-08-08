@@ -6,7 +6,9 @@ import com.team1.otvoo.auth.dto.SignInResponse;
 import com.team1.otvoo.auth.service.AuthService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -50,8 +52,9 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  public ResponseEntity<SignInResponse> refreshToken(
-      @CookieValue(value = "refresh_token", required = false) String refreshToken
+  public ResponseEntity<Map<String, String>> refreshToken(
+      @CookieValue(value = "refresh_token", required = false) String refreshToken,
+      HttpServletResponse response
   ) {
     log.info("🔄 토큰 재발급 요청");
 
@@ -62,9 +65,16 @@ public class AuthController {
 
     SignInResponse tokens = authService.refreshToken(refreshToken);
 
-    log.info("✅ 토큰 재발급 성공: accessToken={}, refreshToken={}", tokens.accessToken(), tokens.refreshToken());
+    Cookie refreshCookie = new Cookie("refresh_token", tokens.refreshToken());
+    refreshCookie.setHttpOnly(true);
+    refreshCookie.setSecure(false);
+    refreshCookie.setPath("/");
+    refreshCookie.setMaxAge(7 * 24 * 60 * 60);
+    response.addCookie(refreshCookie);
 
-    return ResponseEntity.ok(tokens);
+    log.info("✅ 토큰 재발급 성공: accessToken={}, refreshToken(COOKIE)", tokens.accessToken());
+
+    return ResponseEntity.ok(Map.of("accessToken", tokens.accessToken()));
   }
 
   @PostMapping("/reset-password")

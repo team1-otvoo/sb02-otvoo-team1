@@ -13,16 +13,12 @@ import com.team1.otvoo.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,7 +28,6 @@ public class AuthServiceImpl implements AuthService {
 
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
-  private final PasswordEncoder passwordEncoder;
   private final RefreshTokenStore refreshTokenStore;
   private final EmailService emailService;
   private final TemporaryPasswordStore temporaryPasswordStore;
@@ -69,14 +64,18 @@ public class AuthServiceImpl implements AuthService {
       throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "리프레시 토큰이 유효하지 않습니다."));
     }
 
-    String userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+    UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
     String storedToken = refreshTokenStore.get(userId);
     if (storedToken == null || !storedToken.equals(refreshToken)) {
       log.warn("❌ 저장된 리프레시 토큰과 일치하지 않음");
       throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "토큰 불일치 또는 만료되었습니다."));
     }
 
-    return jwtTokenProvider.createAccessToken(userId);
+    User user = userRepository.findById(userId).orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("reason", "사용자를 찾을 수 없습니다.")));
+    String role = user.getRole().name();
+    String name = user.getEmail();
+
+    return jwtTokenProvider.createAccessToken(userId, role, user.getEmail());
   }
 
   @Override
@@ -88,20 +87,24 @@ public class AuthServiceImpl implements AuthService {
       throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "리프레시 토큰이 유효하지 않습니다."));
     }
 
-    String userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+    UUID userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
     String storedToken = refreshTokenStore.get(userId);
     if (storedToken == null || !storedToken.equals(refreshToken)) {
       log.warn("❌ 저장된 토큰과 일치하지 않음");
       throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "저장된 토큰과 일치하지 않거나 만료되었습니다."));
     }
 
-    String newAccessToken = jwtTokenProvider.createAccessToken(userId);
-    String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+    User user = userRepository.findById(userId).orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("reason", "사용자를 찾을 수 없습니다.")));
+    String role = user.getRole().name();
+    String name = user.getEmail();
+
+    String newAccessToken = jwtTokenProvider.createAccessToken(userId, role, user.getEmail());
+    String newRefreshToken = jwtTokenProvider.createRefreshToken(userId, role, user.getEmail());
     refreshTokenStore.save(userId, newRefreshToken);
 
     log.info("✅ 새로운 토큰 생성 완료");
 
-    return new SignInResponse(newAccessToken, newRefreshToken, false);
+    return new SignInResponse(newAccessToken, newRefreshToken);
   }
 
   @Override
@@ -115,7 +118,8 @@ public class AuthServiceImpl implements AuthService {
     String tempPassword = generateTemporaryPassword();
 
     TemporaryPassword temporaryPassword = new TemporaryPassword(tempPassword, System.currentTimeMillis() + Duration.ofMinutes(3).toMillis());
-    temporaryPasswordStore.save(email, temporaryPassword, Duration.ofMinutes(30));
+
+    temporaryPasswordStore.save(user.getId(), temporaryPassword, Duration.ofMinutes(30));
 
     emailService.sendTemporaryPassword(user.getEmail(), tempPassword);
   }
