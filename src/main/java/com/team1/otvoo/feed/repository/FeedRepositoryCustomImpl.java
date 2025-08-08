@@ -10,6 +10,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.entity.QFeed;
+import com.team1.otvoo.feed.entity.QFeedLike;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.QProfile;
 import com.team1.otvoo.user.entity.QProfileImage;
@@ -34,7 +35,8 @@ import org.springframework.util.StringUtils;
 
 @Repository
 @RequiredArgsConstructor
-public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
+public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
+
   private final JPAQueryFactory queryFactory;
   QFeed feed = QFeed.feed;
   QUser user = QUser.user;
@@ -43,9 +45,10 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
   QWeatherForecast weather = QWeatherForecast.weatherForecast;
   QWeatherPrecipitation precipitation = QWeatherPrecipitation.weatherPrecipitation;
   QWeatherTemperature temperature = QWeatherTemperature.weatherTemperature;
+  QFeedLike feedLike = QFeedLike.feedLike;
 
   @Override
-  public Slice<FeedDto> searchByCondition(FeedSearchCondition condition) {
+  public Slice<FeedDto> searchByCondition(FeedSearchCondition condition, UUID currentUserId) {
     BooleanBuilder where = new BooleanBuilder();
     where.and(keywordLike(condition.keywordLike()))
         .and(precipitationTypeEq(condition.precipitationTypeEqual()))
@@ -72,16 +75,16 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
 
     List<FeedDto> results = queryFactory
         .select(Projections.constructor(
-          FeedDto.class,
+            FeedDto.class,
             feed.id,
-          feed.createdAt,
-          feed.updatedAt,
-          Projections.constructor(
-              AuthorDto.class,
-              user.id,
-              profile.name,
-              profileImage.imageUrl
-          ),
+            feed.createdAt,
+            feed.updatedAt,
+            Projections.constructor(
+                AuthorDto.class,
+                user.id,
+                profile.name,
+                profileImage.imageUrl
+            ),
             Projections.constructor(
                 WeatherSummaryDto.class,
                 weather.id,
@@ -105,9 +108,11 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
             feed.content,
             feed.likeCount,
             feed.commentCount,
-            Expressions.constant(false)// likedByMe 좋아요 구현 후 수정
+            feedLike.id.isNotNull()
         ))
         .from(feed)
+        .leftJoin(feedLike)
+        .on(feedLike.feed.id.eq(feed.id).and(feedLike.likedBy.id.eq(currentUserId)))
         .join(feed.user, user)
         .leftJoin(profile).on(profile.user.id.eq(user.id))
         .leftJoin(profileImage).on(profileImage.profile.id.eq(profile.id))
@@ -120,7 +125,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
         .fetch();
 
     boolean hasNext = results.size() > limit;
-    if(hasNext) {
+    if (hasNext) {
       results.remove(results.size() - 1);
     }
 
@@ -147,14 +152,15 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
   // 커서 조건 이후의 값들만 조회
   // 정렬과는 별개지만, 정렬 조건과 맞춰줘야 페이지 간 정렬 정합성이 유지됨
   // ex) 1페이지의 끝 데이터와 2페이지의 첫 데이터 간에도 정렬 정합성이 맞아야함
-  private BooleanExpression cursorCondition(String cursor, UUID idAfter, String sortBy, String sortDirection) {
+  private BooleanExpression cursorCondition(String cursor, UUID idAfter, String sortBy,
+      String sortDirection) {
     if (!StringUtils.hasText(cursor)) {
       return null;
     }
 
     boolean descending = "DESCENDING".equalsIgnoreCase(sortDirection);
 
-    if("likeCount".equalsIgnoreCase(sortBy)) {
+    if ("likeCount".equalsIgnoreCase(sortBy)) {
       // 복합 커서를 두 커서 조건으로 분리 (복합 커서: likeCount_createdAt)
       String[] cursorList = cursor.split("_");
 
@@ -219,12 +225,12 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom{
         : Order.ASC;
 
     return "likeCount".equalsIgnoreCase(sortBy)
-        ? new OrderSpecifier[] {
-            new OrderSpecifier<>(direction, feed.likeCount),
-            new OrderSpecifier<>(Order.DESC, feed.createdAt),
-            new OrderSpecifier<>(Order.DESC, feed.id)
+        ? new OrderSpecifier[]{
+        new OrderSpecifier<>(direction, feed.likeCount),
+        new OrderSpecifier<>(Order.DESC, feed.createdAt),
+        new OrderSpecifier<>(Order.DESC, feed.id)
     }
-        : new OrderSpecifier[] {
+        : new OrderSpecifier[]{
             new OrderSpecifier<>(direction, feed.createdAt),
             new OrderSpecifier<>(Order.DESC, feed.id)
         };
