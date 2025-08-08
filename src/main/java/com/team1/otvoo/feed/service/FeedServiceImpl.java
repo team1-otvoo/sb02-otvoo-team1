@@ -20,11 +20,7 @@ import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
 import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.user.dto.AuthorDto;
-import com.team1.otvoo.user.entity.Profile;
-import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.User;
-import com.team1.otvoo.user.repository.ProfileImageRepository;
-import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
@@ -52,8 +48,6 @@ public class FeedServiceImpl implements FeedService {
   private final FeedRepository feedRepository;
   private final FeedLikeRepository feedLikeRepository;
   private final FeedClothesRepository feedClothesRepository;
-  private final ProfileRepository profileRepository;
-  private final ProfileImageRepository profileImageRepository;
   private final FeedMapper feedMapper;
   private final ClothesMapper clothesMapper;
 
@@ -62,9 +56,7 @@ public class FeedServiceImpl implements FeedService {
   public FeedDto create(FeedCreateRequest request) {
     User user = findUser(request.authorId());
     WeatherForecast weather = findForecast(request.weatherId());
-    Profile profile = findProfile(user.getId());
-    ProfileImage profileImage = findProfileImage(user.getId(), profile.getId());
-    AuthorDto authorDto = new AuthorDto(user.getId(), profile.getName(), profileImage.getImageUrl());
+    AuthorDto authorDto = userRepository.projectionAuthorDtoById(user.getId());
 
     List<Clothes> clothesList = clothesRepository.findAllById(request.clothesIds());
 
@@ -88,10 +80,8 @@ public class FeedServiceImpl implements FeedService {
   @Override
   public FeedDto update(UUID id, FeedUpdateRequest request) {
     Feed feed = findFeed(id);
-    Profile profile = findProfile(feed.getUser().getId());
-    ProfileImage profileImage = findProfileImage(feed.getUser().getId(), profile.getId());
     User user = ((CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUser();
-    AuthorDto authorDto = new AuthorDto(feed.getUser().getId(), profile.getName(), profileImage.getImageUrl());
+    AuthorDto authorDto = userRepository.projectionAuthorDtoById(user.getId());
 
     feed.updateFeed(request.content());
 
@@ -164,18 +154,6 @@ public class FeedServiceImpl implements FeedService {
     return userRepository.findById(id).orElseThrow(
         () ->  new RestException(ErrorCode.USER_NOT_FOUND,
             Map.of("authorId", id)));
-  }
-
-  private Profile findProfile(UUID id) {
-    return profileRepository.findByUserId(id).orElseThrow(
-        () -> new RestException(ErrorCode.PROFILE_NOT_FOUND,
-            Map.of("userId", id)));
-  }
-
-  private ProfileImage findProfileImage(UUID userId, UUID profileId) {
-    return profileImageRepository.findByProfileId(profileId).orElseThrow(
-        () -> new RestException(ErrorCode.PROFILE_IMAGE_NOT_FOUND,
-            Map.of("userId", userId, "profileId", profileId)));
   }
 
   private WeatherForecast findForecast(UUID id) {
