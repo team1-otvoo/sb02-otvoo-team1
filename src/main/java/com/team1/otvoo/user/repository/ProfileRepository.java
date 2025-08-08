@@ -19,5 +19,13 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
 """)
   List<UserNameView> findUserNamesByUserIds(@Param("userIds") List<UUID> userIds);
 
+
+  @Query("""
+    select p from Profile p
+    join fetch p.user u
+    where u.id = :userId
+""")
+  Optional<Profile> findByUserIdWithUser(@Param("userId") UUID userId);
+
   Optional<Profile> findByUserId(UUID userId);
 }

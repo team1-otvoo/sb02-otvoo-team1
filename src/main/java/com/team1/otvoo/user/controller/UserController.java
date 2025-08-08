@@ -10,6 +10,7 @@ import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserLockUpdateRequest;
+import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.service.UserService;
 import jakarta.validation.Valid;
@@ -84,6 +85,23 @@ public class UserController {
     log.info("회원 가입 완료: userId={}", userDto.id());
     return ResponseEntity
         .status(HttpStatus.CREATED)
+        .body(userDto);
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @PatchMapping("{userId}/role")
+  ResponseEntity<UserDto> updateUserRole(
+      @PathVariable UUID userId,
+      @Valid @RequestBody UserRoleUpdateRequest userRoleUpdateRequest
+  ) {
+    log.info("PATCH /api/users/{userId}/role} - 유저 권한 수정 요청: userId={}", userId);
+
+    UserDto userDto = userService.updateUserRole(userId, userRoleUpdateRequest);
+
+    log.info("PATCH /api/users/{userId}/role} - 유저 권한 수정 요청: userId={}", userId);
+
+    return ResponseEntity
+        .status(HttpStatus.OK)
         .body(userDto);
   }
 
