@@ -3,6 +3,7 @@ package com.team1.otvoo.clothes.mapper;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.dto.OotdDto;
+import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +33,17 @@ public interface ClothesMapper {
         .stream()
         .map(clothesAttributeValue -> clothesAttributeValue.getValue())
         .toList();
+  }
+
+  default OotdDto toOotdDto(Clothes clothes, String imageUrl) {
+    if (clothes == null) return null;
+    return OotdDto.builder()
+        .clothesId(clothes.getId())
+        .name(clothes.getName())
+        .imageUrl(imageUrl)
+        .type(clothes.getType())
+        .attributes(toDtoList(clothes.getSelectedValues()))
+        .build();
   }
 
   default List<ClothesAttributeWithDefDto> toDtoList(List<ClothesSelectedValue> values) {

@@ -2,7 +2,9 @@ package com.team1.otvoo.feed.service;
 
 import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.Clothes;
+import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
+import com.team1.otvoo.clothes.repository.ClothesImageRepository;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -46,6 +48,7 @@ public class FeedServiceImpl implements FeedService {
   private final UserRepository userRepository;
   private final WeatherForecastRepository weatherForecastRepository;
   private final ClothesRepository clothesRepository;
+  private final ClothesImageRepository clothesImageRepository;
   private final FeedRepository feedRepository;
   private final FeedLikeRepository feedLikeRepository;
   private final FeedClothesRepository feedClothesRepository;
@@ -111,14 +114,27 @@ public class FeedServiceImpl implements FeedService {
     List<FeedClothes> feedClothesList =
         feedClothesRepository.findAllByFeedIdInWithClothesAndSelectedValues(feedIds);
 
+    List<UUID> clothesIds = feedClothesList.stream()
+        .map(fc -> fc.getClothes().getId())
+        .distinct()
+        .toList();
+
+    List<ClothesImage> images = clothesImageRepository.findAllByClothes_IdIn(clothesIds);
+    Map<UUID, String> imageMap = images.stream()
+        .collect(Collectors.toMap(img -> img.getClothes().getId(), ClothesImage::getImageUrl, (a, b) -> a));
+
     // feedId로 그룹핑 후, 연관된 Clothes들을 ootdDto List로 변환
     // Collectors.mapping은 groupingBy로 묶인 각 그룹 내부 요소에만 작동
     Map<UUID, List<OotdDto>> ootdMap = feedClothesList.stream()
         .collect(Collectors.groupingBy(
             fc -> fc.getFeed().getId(),
             Collectors.mapping(
-                fc -> clothesMapper.toOotdDto(fc.getClothes()),
-                    Collectors.toList()
+                fc -> {
+                  Clothes clothes = fc.getClothes();
+                  String imageUrl = imageMap.get(clothes.getId());
+                  return clothesMapper.toOotdDto(clothes, imageUrl);
+                },
+                Collectors.toList()
             )
         ));
 
