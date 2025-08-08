@@ -57,4 +57,8 @@ public class CustomUserDetails implements UserDetails {
   public boolean isEnabled() {
     return true;
   }
+
+  public String getRole() {
+    return user.getRole().name();
+  }
 }

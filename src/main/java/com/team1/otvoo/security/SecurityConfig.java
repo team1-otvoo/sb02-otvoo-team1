@@ -33,9 +33,9 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
     http
         .csrf(csrf -> csrf
-            .ignoringRequestMatchers("/api/auth/**", "/api/users/**"))
+            .ignoringRequestMatchers("/api/auth/**", "/api/users/**", "/ws/**","/ws/info/**"))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**", "/api/users/**", "/", "/index.html", "/vite.svg", "/assets/**").permitAll()
+            .requestMatchers("/api/auth/**", "/api/users/**", "/", "/index.html", "/vite.svg", "/assets/**","/ws/**").permitAll()
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
