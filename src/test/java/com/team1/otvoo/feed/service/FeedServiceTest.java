@@ -2,7 +2,9 @@ package com.team1.otvoo.feed.service;
 
 import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.Clothes;
+import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
+import com.team1.otvoo.clothes.repository.ClothesImageRepository;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
@@ -51,6 +53,8 @@ public class FeedServiceTest {
   WeatherForecastRepository weatherForecastRepository;
   @Mock
   ClothesRepository clothesRepository;
+  @Mock
+  ClothesImageRepository clothesImageRepository;
   @Mock
   ProfileRepository profileRepository;
   @Mock
@@ -263,15 +267,23 @@ public class FeedServiceTest {
     FeedClothes feedClothes = mock(FeedClothes.class);
     Feed feed = mock(Feed.class);
     Clothes clothes = mock(Clothes.class);
+
     given(feed.getId()).willReturn(feedId);
     given(feedClothes.getFeed()).willReturn(feed);
     given(feedClothes.getClothes()).willReturn(clothes);
+    given(clothes.getId()).willReturn(clothesId);
 
     given(feedClothesRepository.findAllByFeedIdInWithClothesAndSelectedValues(List.of(feedId)))
         .willReturn(List.of(feedClothes));
 
+    ClothesImage image = mock(ClothesImage.class);
+    given(image.getClothes()).willReturn(clothes);
+    given(image.getImageUrl()).willReturn("http://img");
+    given(clothesImageRepository.findAllByClothes_IdIn(List.of(clothesId)))
+        .willReturn(List.of(image));
+
     OotdDto ootdDto = mock(OotdDto.class);
-    given(clothesMapper.toOotdDto(clothes)).willReturn(ootdDto);
+    given(clothesMapper.toOotdDto(clothes, "http://img")).willReturn(ootdDto);
 
     // when
     Slice<FeedDto> result = feedService.getFeedsWithCursor(mock(FeedSearchCondition.class));
