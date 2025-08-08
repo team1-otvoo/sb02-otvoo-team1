@@ -216,8 +216,6 @@ public class UserServiceImpl implements UserService {
     String newRawPassword = request.password();
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
-    // 동일한 비밀번호일시 RestException 발행 로직 추가할 것
-
     user.changePassword(newEncodedPassword);
     temporaryPasswordStore.remove(userId);
   }
