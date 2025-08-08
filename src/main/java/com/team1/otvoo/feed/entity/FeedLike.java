@@ -28,8 +28,8 @@ public class FeedLike {
   private UUID id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "comment_id", nullable = false)
-  private FeedComment comment;
+  @JoinColumn(name = "feed_id", nullable = false)
+  private Feed feed;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "liked_by")
@@ -38,8 +38,8 @@ public class FeedLike {
   @Column(name = "created_at")
   private Instant createdAt;
 
-  public FeedLike(FeedComment feedComment, User user) {
-    this.comment = feedComment;
+  public FeedLike(Feed feed, User user) {
+    this.feed = feed;
     this.likedBy = user;
     this.createdAt = Instant.now();
   }

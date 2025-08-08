@@ -1,0 +1,55 @@
+package com.team1.otvoo.feed.service;
+
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.feed.entity.Feed;
+import com.team1.otvoo.feed.entity.FeedLike;
+import com.team1.otvoo.feed.repository.FeedLikeRepository;
+import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.security.CustomUserDetails;
+import com.team1.otvoo.user.entity.User;
+import java.util.Map;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class FeedLikeServiceImpl implements FeedLikeService {
+
+  private final FeedLikeRepository feedLikeRepository;
+  private final FeedRepository feedRepository;
+
+  @Override
+  @Transactional
+  public void create(UUID feedId) {
+    Feed feed = findFeed(feedId);
+    User user = ((CustomUserDetails) SecurityContextHolder.getContext().getAuthentication()
+        .getPrincipal()).getUser();
+
+    FeedLike feedLike = new FeedLike(feed, user);
+
+    feedLikeRepository.save(feedLike);
+    feedRepository.incrementLikeCount(feedId);
+  }
+
+  @Override
+  @Transactional
+  public void delete(UUID feedId) {
+    Feed feed = findFeed(feedId);
+    User user = ((CustomUserDetails) SecurityContextHolder.getContext().getAuthentication()
+        .getPrincipal()).getUser();
+
+    feedLikeRepository.deleteByFeed_IdAndLikedBy_Id(feed.getId(), user.getId());
+    feedRepository.decrementLikerCount(feed.getId());
+  }
+
+  private Feed findFeed(UUID id) {
+    return feedRepository.findById(id).orElseThrow(
+        () -> new RestException(ErrorCode.FEED_NOT_FOUND, Map.of("feedId", id)));
+  }
+}

@@ -14,7 +14,9 @@ import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
 import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
+import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.ProfileImage;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +47,7 @@ public class FeedServiceImpl implements FeedService {
   private final WeatherForecastRepository weatherForecastRepository;
   private final ClothesRepository clothesRepository;
   private final FeedRepository feedRepository;
+  private final FeedLikeRepository feedLikeRepository;
   private final FeedClothesRepository feedClothesRepository;
   private final ProfileRepository profileRepository;
   private final ProfileImageRepository profileImageRepository;
@@ -83,19 +87,22 @@ public class FeedServiceImpl implements FeedService {
     Feed feed = findFeed(id);
     Profile profile = findProfile(feed.getUser().getId());
     ProfileImage profileImage = findProfileImage(feed.getUser().getId(), profile.getId());
+    User user = ((CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUser();
     AuthorDto authorDto = new AuthorDto(feed.getUser().getId(), profile.getName(), profileImage.getImageUrl());
 
     feed.updateFeed(request.content());
 
     feedRepository.save(feed);
-    // likedByMe는 like 구현 후 수정 예정
-    return feedMapper.toDto(feed, authorDto,false);
+
+    return feedMapper.toDto(feed, authorDto,
+        feedLikeRepository.existsFeedLikeByFeed_IdAndLikedBy_Id(id, user.getId()));
   }
 
   @Transactional(readOnly = true)
   @Override
   public Slice<FeedDto> getFeedsWithCursor(FeedSearchCondition searchCondition) {
-    Slice<FeedDto> feeds = feedRepository.searchByCondition(searchCondition);
+    User user = ((CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getUser();
+    Slice<FeedDto> feeds = feedRepository.searchByCondition(searchCondition, user.getId());
 
     List<UUID> feedIds = feeds.stream()
         .map(FeedDto::getId)
