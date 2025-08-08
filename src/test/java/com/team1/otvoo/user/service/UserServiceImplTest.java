@@ -28,6 +28,7 @@ import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserLockUpdateRequest;
+import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Profile;
@@ -247,6 +248,50 @@ class UserServiceImplTest {
   }
 
   @Test
+  @DisplayName("권한 변경 성공 시 리프레시/액세스 토큰 제거 및 블랙리스트 등록")
+  void updateUserRole_success_logoutAndBlacklist() {
+    // given
+    UUID userId = UUID.randomUUID();
+
+    User user = new User("user@example.com", "encoded");
+    TestUtils.setField(user, "id", userId); // User id 설정 (mapper 호출 시 필요할 수 있음)
+
+    // 초기 권한: USER
+    Profile profile = new Profile("홍길동", user);
+
+    given(profileRepository.findByUserIdWithUser(userId)).willReturn(Optional.of(profile));
+
+    String accessToken = "access.token.value";
+    long expiresIn = 3600L;
+    given(accessTokenStore.get(userId)).willReturn(accessToken);
+    given(jwtTokenProvider.getExpirationSecondsLeft(accessToken)).willReturn(expiresIn);
+
+    // mapper 결과
+    UserDto expected = new UserDto(
+        userId,
+        Instant.now(),
+        "user@example.com",
+        "홍길동",
+        Role.ADMIN,
+        List.of(),
+        false
+    );
+    given(userMapper.toUserDto(user, "홍길동")).willReturn(expected);
+
+    // when
+    UserDto result = userService.updateUserRole(userId, new UserRoleUpdateRequest(Role.ADMIN));
+
+    // then
+    assertThat(result).isEqualTo(expected);
+    // 로그아웃 처리(토큰 제거 및 블랙리스트 등록) 검증
+    verify(refreshTokenStore).remove(userId);
+    verify(accessTokenStore).get(userId);
+    verify(jwtTokenProvider).getExpirationSecondsLeft(accessToken);
+    verify(accessTokenStore).blacklistAccessToken(accessToken, expiresIn);
+    verify(accessTokenStore).remove(userId);
+  }
+
+  @Test
   @DisplayName("비밀번호 변경 성공")
   void changePassword_success() {
     UUID userId = UUID.randomUUID();
@@ -414,19 +459,19 @@ class UserServiceImplTest {
     String accessToken = "access.token.value";
     long expiration = 3600L;
 
-    given(accessTokenStore.get(userId.toString())).willReturn(accessToken);
-    given(jwtTokenProvider.getExpiration(accessToken)).willReturn(expiration);
+    given(accessTokenStore.get(userId)).willReturn(accessToken);
+    given(jwtTokenProvider.getExpirationSecondsLeft(accessToken)).willReturn(expiration);
 
     // when
     UUID result = userService.changeLock(userId, new UserLockUpdateRequest(true));
 
     // then
     assertThat(result).isEqualTo(userId);
-    verify(refreshTokenStore).remove(userId.toString());
-    verify(accessTokenStore).get(userId.toString());
-    verify(jwtTokenProvider).getExpiration(accessToken);
+    verify(refreshTokenStore).remove(userId);
+    verify(accessTokenStore).get(userId);
+    verify(jwtTokenProvider).getExpirationSecondsLeft(accessToken);
     verify(accessTokenStore).blacklistAccessToken(accessToken, expiration);
-    verify(accessTokenStore).remove(userId.toString());
+    verify(accessTokenStore).remove(userId);
   }
 
 }

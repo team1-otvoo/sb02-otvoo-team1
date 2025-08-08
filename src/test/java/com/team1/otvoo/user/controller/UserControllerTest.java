@@ -198,6 +198,39 @@ class UserControllerTest {
   }
 
   @Test
+  @DisplayName("유저 권한 변경 성공 시 200 OK")
+  void updateUserRole_success_shouldReturn200() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+
+    UserDto response = new UserDto(
+        userId,
+        Instant.parse("2024-01-01T10:00:00Z"),
+        "user@example.com",
+        "홍길동",
+        Role.ADMIN,          // 변경된 권한
+        List.of(),
+        false
+    );
+
+    given(userService.updateUserRole(Mockito.eq(userId), any())).willReturn(response);
+
+    // when & then
+    mockMvc.perform(patch("/api/users/{userId}/role", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+              {
+                "role": "ADMIN"
+              }
+            """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(userId.toString()))
+        .andExpect(jsonPath("$.email").value("user@example.com"))
+        .andExpect(jsonPath("$.name").value("홍길동"))
+        .andExpect(jsonPath("$.role").value("ADMIN"));
+  }
+
+  @Test
   @DisplayName("비밀번호 변경 성공 시 204 반환")
   void changePassword_success_shouldReturnNoContent() throws Exception {
     // given
