@@ -126,6 +126,33 @@ public class UserServiceImpl implements UserService {
     return userDto;
   }
 
+  @Override
+  public UserDto updateUserRole(UUID userId, UserRoleUpdateRequest request) {
+
+    Profile profile = profileRepository.findByUserIdWithUser(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 profile 을 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("userId", userId));
+        }
+    );
+
+    if (!profile.getUser().getRole().equals(request.role())) {
+      profile.getUser().updateRole(request.role());
+
+      // 권한 변경시 로그아웃
+      refreshTokenStore.remove(userId);
+
+      String accessToken = accessTokenStore.get(userId);
+      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+      accessTokenStore.blacklistAccessToken(accessToken, expiration);
+      accessTokenStore.remove(userId);
+    }
+
+    UserDto userDto = userMapper.toUserDto(profile.getUser(), profile.getName());
+
+    return userDto;
+  }
+
   @Transactional(readOnly = true)
   @Override
   public ProfileDto getUserProfile(UUID userId) {
@@ -189,6 +216,8 @@ public class UserServiceImpl implements UserService {
     String newRawPassword = request.password();
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
+    // 동일한 비밀번호일시 RestException 발행 로직 추가할 것
+
     user.changePassword(newEncodedPassword);
     temporaryPasswordStore.remove(userId);
   }
@@ -205,13 +234,13 @@ public class UserServiceImpl implements UserService {
     user.updateLocked(request.locked());
 
     if (user.isLocked()) {
-      refreshTokenStore.remove(userId.toString());
+      refreshTokenStore.remove(userId);
 
       // 특정 사용자의 access 토큰 redis에서 불러와서 블랙리스트에 추가
-      String accessToken = accessTokenStore.get(userId.toString());
-      long expiration = jwtTokenProvider.getExpiration(accessToken);
+      String accessToken = accessTokenStore.get(userId);
+      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
       accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId.toString());
+      accessTokenStore.remove(userId);
     }
 
     return userId;
