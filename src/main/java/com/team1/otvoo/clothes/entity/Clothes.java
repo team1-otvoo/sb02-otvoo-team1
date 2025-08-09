@@ -64,4 +64,20 @@ public class Clothes {
     value.setClothes(this);
   }
 
+  public void updateName(String newName) {
+    if (newName != null && !newName.isBlank()) {
+      this.name = newName;
+    }
+  }
+  public void updateType(ClothesType newType) {
+    if (newType != null) {
+      this.type = newType;
+    }
+  }
+  public void replaceSelectedValues(List<ClothesSelectedValue> newSelectedValues) {
+    this.selectedValues.clear();
+    for(ClothesSelectedValue value : newSelectedValues) {
+      addSelectedValue(value);
+    }
+  }
 }
