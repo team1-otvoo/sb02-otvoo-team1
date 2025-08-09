@@ -223,7 +223,6 @@ CREATE TABLE feed_comments (
                                feed_id UUID NOT NULL,
                                content TEXT,
                                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                               is_deleted BOOLEAN DEFAULT FALSE,
                                CONSTRAINT fk_feedcomment_user FOREIGN KEY (user_id)
                                    REFERENCES users(id) ON DELETE SET NULL,
                                CONSTRAINT fk_feedcomment_feed FOREIGN KEY (feed_id)

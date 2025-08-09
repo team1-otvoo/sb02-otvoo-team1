@@ -41,14 +41,10 @@ public class FeedComment {
   @Column(name = "created_at")
   private Instant createdAt;
 
-  @Column(name = "is_deleted")
-  private boolean isDeleted;
-
   public FeedComment(User user, Feed feed, String content) {
     this.user = user;
     this.feed = feed;
     this.content = content;
     this.createdAt = Instant.now();
-    this.isDeleted = false;
   }
 }
