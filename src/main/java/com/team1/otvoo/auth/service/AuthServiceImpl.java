@@ -5,14 +5,20 @@ import com.team1.otvoo.auth.dto.SignInResponse;
 import com.team1.otvoo.auth.token.RefreshTokenStore;
 import com.team1.otvoo.auth.token.TemporaryPassword;
 import com.team1.otvoo.auth.token.TemporaryPasswordStore;
+import com.team1.otvoo.config.props.AdminProps;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.security.JwtTokenProvider;
+import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.entity.Profile;
+import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +26,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -27,10 +34,13 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements AuthService {
 
   private final UserRepository userRepository;
+  private final ProfileRepository profileRepository;
   private final JwtTokenProvider jwtTokenProvider;
   private final RefreshTokenStore refreshTokenStore;
   private final EmailService emailService;
   private final TemporaryPasswordStore temporaryPasswordStore;
+  private final AdminProps adminProps;
+  private final PasswordEncoder passwordEncoder;
 
   private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -39,6 +49,30 @@ public class AuthServiceImpl implements AuthService {
   private static final String ALL = UPPER + LOWER + DIGITS + SPECIAL;
 
   private final Random random = new SecureRandom();
+
+  @Transactional
+  @Override
+  public void initAdmin() {
+
+    String email = adminProps.getEmail();
+    String username = adminProps.getName();
+    String rawPassword = adminProps.getPassword();
+    String encodedPassword = passwordEncoder.encode(rawPassword);
+
+    if (userRepository.existsByEmail(email)) {
+      log.info("관리자 계정({})이 이미 존재하여 초기화를 건너뜁니다.", email);
+      return;
+    }
+
+    User admin = new User(email, encodedPassword);
+    admin.updateRole(Role.ADMIN);
+    Profile profile = new Profile(username, admin);
+
+    // 다중 인스턴스 환경일 시 수정 필요(추가 처리 필요)
+    userRepository.save(admin);
+    profileRepository.save(profile);
+    log.info("admin 계정이 초기화 되었습니다.");
+  }
 
   @Override
   public CsrfTokenResponse getCsrfToken(HttpServletRequest request) {

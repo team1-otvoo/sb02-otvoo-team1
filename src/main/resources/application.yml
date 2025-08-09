@@ -63,3 +63,9 @@ profile:
     size: 12345  # 바이트 단위
     width: 300
     height: 300
+
+admin:
+  name: abcde
+  email: abcde@email.com
+  password: abcde123@
+

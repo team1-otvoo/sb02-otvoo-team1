@@ -1,6 +1,6 @@
 package com.team1.otvoo.user.service;
 
-import com.team1.otvoo.config.DefaultProfileImageProperties;
+import com.team1.otvoo.config.props.DefaultProfileImageProperties;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.user.entity.Profile;

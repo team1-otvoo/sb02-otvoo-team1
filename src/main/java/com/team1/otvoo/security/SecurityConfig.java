@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -35,8 +36,10 @@ public class SecurityConfig {
         .csrf(csrf -> csrf
             .ignoringRequestMatchers("/api/auth/**", "/api/users/**", "/ws/**","/ws/info/**"))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**", "/api/users/**", "/", "/index.html", "/vite.svg", "/assets/**","/ws/**").permitAll()
-            .requestMatchers("/admin/**").hasRole("ADMIN")
+            .requestMatchers("/api/auth/**", "/", "/index.html", "/vite.svg", "/assets/**", "/ws/**").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/users").permitAll()                    // 회원가입만 공개
+            .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")               // 목록 조회 ADMIN
+            .requestMatchers(HttpMethod.PATCH, "/api/users/**").hasRole("ADMIN")          // 권한/잠금 변경 ADMIN
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .userDetailsService(customUserDetailsService)

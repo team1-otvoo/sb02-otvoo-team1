@@ -1,10 +1,9 @@
 package com.team1.otvoo.user.resolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-import com.team1.otvoo.config.DefaultProfileImageProperties;
+import com.team1.otvoo.config.props.DefaultProfileImageProperties;
 import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import java.util.Optional;
