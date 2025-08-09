@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 @RequiredArgsConstructor
-public enum ErrorCode implements Code{
+public enum ErrorCode implements Code {
 
   // --- 400 Bad Request ---
   INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
@@ -19,7 +19,7 @@ public enum ErrorCode implements Code{
   MISSING_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "필수 요청 파라미터가 누락되었습니다."),
   SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "기존 비밀번호와 동일한 비밀번호는 사용할 수 없습니다."),
   INVALID_SORT_BY_FIELD(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 필드입니다."),
-  INVALID_SORT_DIRECTION(HttpStatus.BAD_REQUEST,"지원하지 않는 정렬 방향입니다."),
+  INVALID_SORT_DIRECTION(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 방향입니다."),
 
 
   // --- 401 Unauthorized ---
@@ -57,8 +57,11 @@ public enum ErrorCode implements Code{
   EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API가 빈 응답을 반환했습니다."),
 
   // --- Clothes 관련 ErrorCode ---
+  CLOTHES_NOT_FOUND(HttpStatus.NOT_FOUND, "의상이 존재하지 않습니다."),
+  ATTRIBUTE_DEFINITION_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성 정의가 존재하지 않습니다."),
   ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),
-  ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "중복된 속성값이 존재합니다"),
+  ATTRIBUTE_VALUE_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성값이 존재하지 않습니다."),
+  ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성값입니다."),
 
   // --- Feed 관련 ErrorCode ---
   FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),

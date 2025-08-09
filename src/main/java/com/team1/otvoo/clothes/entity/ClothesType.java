@@ -3,8 +3,14 @@ package com.team1.otvoo.clothes.entity;
 public enum ClothesType {
   TOP,
   BOTTOM,
+  DRESS,
   OUTER,
-  ONE_PIECE,
+  UNDERWEAR,
+  ACCESSORY,
   SHOES,
-  ACCESSORY
+  SOCKS,
+  HAT,
+  BAG,
+  SCARF,
+  ETC
 }

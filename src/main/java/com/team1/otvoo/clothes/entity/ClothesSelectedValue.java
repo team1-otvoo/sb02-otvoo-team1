@@ -8,12 +8,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "clothes_selected_values")
+@Table(name = "clothes_selected_values",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"clothes_id", "definition_id"}))
 @Getter
 @NoArgsConstructor
 public class ClothesSelectedValue {
@@ -34,9 +36,8 @@ public class ClothesSelectedValue {
   @JoinColumn(name = "value_id", nullable = false)
   private ClothesAttributeValue value;
 
-  public ClothesSelectedValue(Clothes clothes, ClothesAttributeDefinition definition,
+  public ClothesSelectedValue(ClothesAttributeDefinition definition,
       ClothesAttributeValue value) {
-    this.clothes = clothes;
     this.definition = definition;
     this.value = value;
   }

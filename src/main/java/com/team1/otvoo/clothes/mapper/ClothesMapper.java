@@ -1,9 +1,10 @@
 package com.team1.otvoo.clothes.mapper;
 
+import com.team1.otvoo.clothes.dto.ClothesDto;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.dto.OotdDto;
-import com.team1.otvoo.clothes.entity.ClothesImage;
+import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;
 import java.util.Collections;
 import java.util.List;
@@ -13,11 +14,16 @@ import org.mapstruct.factory.Mappers;
 
 @Mapper(componentModel = "spring")
 public interface ClothesMapper {
+
   ClothesMapper INSTANCE = Mappers.getMapper(ClothesMapper.class);
 
   @Mapping(source = "id", target = "clothesId")
   @Mapping(source = "selectedValues", target = "attributes")
   OotdDto toOotdDto(Clothes clothes);
+
+  @Mapping(source = "clothes.owner.id", target = "ownerId")
+  @Mapping(source = "clothes.selectedValues", target = "attributes")
+  ClothesDto toDto(Clothes clothes, String imageUrl);
 
   @Mapping(source = "definition.id", target = "definitionId")
   @Mapping(source = "definition.name", target = "definitionName")
@@ -26,12 +32,13 @@ public interface ClothesMapper {
   ClothesAttributeWithDefDto toAttributeDefDto(ClothesSelectedValue selectedValue);
 
   default List<String> getSelectableValues(ClothesSelectedValue selectedValue) {
-    if (selectedValue == null || selectedValue.getDefinition() == null || selectedValue.getDefinition().getValues() == null) {
+    if (selectedValue == null || selectedValue.getDefinition() == null
+        || selectedValue.getDefinition().getValues() == null) {
       return Collections.emptyList();
     }
     return selectedValue.getDefinition().getValues()
         .stream()
-        .map(clothesAttributeValue -> clothesAttributeValue.getValue())
+        .map(ClothesAttributeValue::getValue)
         .toList();
   }
 

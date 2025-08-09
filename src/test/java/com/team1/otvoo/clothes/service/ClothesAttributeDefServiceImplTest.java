@@ -251,7 +251,7 @@ class ClothesAttributeDefServiceImplTest {
     // when & then
     assertThatThrownBy(() -> clothesAttributeDefService.update(nonExistentId, request))
         .isInstanceOf(RestException.class)
-        .hasMessage(ErrorCode.NOT_FOUND.getMessage());
+        .hasMessage(ErrorCode.ATTRIBUTE_DEFINITION_NOT_FOUND.getMessage());
 
     verify(clothesAttributeDefRepository).findById(nonExistentId);
     verify(clothesAttributeDefRepository, never()).save(any());

@@ -33,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(ClothesAttributeDefController.class)
-public class ClothesAttributeDefControllerTest {
+class ClothesAttributeDefControllerTest {
 
   @Autowired
   private MockMvc mockMvc;
@@ -161,7 +161,7 @@ public class ClothesAttributeDefControllerTest {
         new ClothesAttributeDefUpdateRequest("사이즈", List.of("S", "M", "L"));
 
     Mockito.when(clothesAttributeDefService.update(Mockito.eq(id), any()))
-        .thenThrow(new RestException(ErrorCode.NOT_FOUND));
+        .thenThrow(new RestException(ErrorCode.ATTRIBUTE_DEFINITION_NOT_FOUND));
 
     // when & then
     mockMvc.perform(patch("/api/clothes/attribute-defs/{definitionId}", id)

@@ -139,6 +139,7 @@ CREATE TABLE clothes_selected_values (
                                          clothes_id UUID NOT NULL,
                                          definition_id UUID NOT NULL,
                                          value_id UUID NOT NULL,
+                                         CONSTRAINT uq_clothes_selected_def UNIQUE (clothes_id, definition_id),
                                          CONSTRAINT fk_clothes_selected_values_clothes FOREIGN KEY (clothes_id)
                                              REFERENCES clothes(id) ON DELETE CASCADE,
                                          CONSTRAINT fk_clothes_selected_values_definition FOREIGN KEY (definition_id)
