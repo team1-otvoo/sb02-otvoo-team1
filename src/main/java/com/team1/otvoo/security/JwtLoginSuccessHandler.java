@@ -37,7 +37,6 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
     String refreshToken = jwtTokenProvider.createRefreshToken(userId, role, email);
 
     long expirationSeconds = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-    accessTokenStore.blacklistAccessToken(accessToken, expirationSeconds);
     accessTokenStore.save(userId, accessToken, expirationSeconds);
 
     Cookie refreshCookie = new Cookie("refresh_token", refreshToken);

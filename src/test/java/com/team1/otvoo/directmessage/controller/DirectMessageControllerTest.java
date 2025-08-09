@@ -3,6 +3,7 @@ package com.team1.otvoo.directmessage.controller;
 import com.team1.otvoo.directmessage.dto.DirectMessageDtoCursorResponse;
 import com.team1.otvoo.directmessage.service.DirectMessageService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -28,6 +29,7 @@ class DirectMessageControllerTest {
   }
 
   @Test
+  @DisplayName("사용자별 다이렉트 메시지 조회 성공")
   void getDirectMessages_ReturnsResponseEntityWithData() {
     // given
     UUID userId = UUID.randomUUID();
@@ -36,7 +38,7 @@ class DirectMessageControllerTest {
     int limit = 5;
 
     DirectMessageDtoCursorResponse expectedResponse = mock(DirectMessageDtoCursorResponse.class);
-    when(directMessageService.getDirectMessageByuserId(userId, cursor, idAfter, limit))
+    when(directMessageService.getDirectMessagesByUserId(userId, cursor, idAfter, limit))
         .thenReturn(expectedResponse);
 
     // when
@@ -48,7 +50,7 @@ class DirectMessageControllerTest {
     assertEquals(200, responseEntity.getStatusCodeValue());
     assertEquals(expectedResponse, responseEntity.getBody());
 
-    verify(directMessageService).getDirectMessageByuserId(userId, cursor, idAfter, limit);
+    verify(directMessageService).getDirectMessagesByUserId(userId, cursor, idAfter, limit);
     verifyNoMoreInteractions(directMessageService);
   }
 }

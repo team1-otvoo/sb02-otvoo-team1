@@ -1,6 +1,7 @@
 package com.team1.otvoo.directmessage.controller;
 
 import com.team1.otvoo.directmessage.dto.DirectMessageCreateRequest;
+import com.team1.otvoo.directmessage.dto.DirectMessageDto;
 import com.team1.otvoo.directmessage.dto.DirectMessageResponse;
 import com.team1.otvoo.directmessage.service.DirectMessageService;
 import com.team1.otvoo.directmessage.util.DmKeyUtil;
@@ -22,9 +23,10 @@ public class DirectMessageWebSocketController {
   public void sendDirectMessage(DirectMessageCreateRequest request) {
     log.info("✅ 웹소켓 메시지 수신: senderId={}, receiverId={}", request.senderId(), request.receiverId());
 
-    DirectMessageResponse response = directMessageService.create(request);
+    DirectMessageDto response = directMessageService.createDto(request);
 
-    String dmKey = DmKeyUtil.generate(response.senderId(), response.receiverId());
+    String dmKey = DmKeyUtil.generate(response.sender().userId(), response.receiver().userId());
+    log.info("✅ 웹소켓 DM Key 생성됨: {}", dmKey);
 
     messagingTemplate.convertAndSend("/sub/direct-messages_" + dmKey, response);
 

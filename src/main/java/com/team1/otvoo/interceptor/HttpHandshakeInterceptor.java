@@ -1,7 +1,8 @@
 package com.team1.otvoo.interceptor;
 
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.security.JwtTokenProvider;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -32,40 +33,49 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
                                  WebSocketHandler wsHandler,
                                  Map<String, Object> attributes) {
 
-    // 쿼리에서 토큰 추출 시도
     String token = extractTokenFromQuery(request.getURI());
 
-    // 쿼리에 없으면 쿠키에서 토큰 추출 시도
     if (token == null) {
       token = extractTokenFromCookies(request);
     }
 
     if (token == null) {
-      log.error("❌ [WebSocket] 토큰이 없음: {}", request.getURI());
-      response.setStatusCode(HttpStatus.UNAUTHORIZED);
-      return false;
+      token = extractTokenFromAuthorizationHeader(request);
+    }
+
+    if (token == null) {
+      log.error("[HandshakeInterceptor] 토큰 없음: {}", request.getURI());
+      throw new RestException(ErrorCode.AUTH_HEADER_MISSING);
     }
 
     try {
       if (!jwtTokenProvider.validateToken(token)) {
-        log.error("❌ [WebSocket] 토큰 검증 실패 (만료/위조): {}", token);
-        response.setStatusCode(HttpStatus.UNAUTHORIZED);
-        response.getHeaders().add("X-Auth-Error", "TOKEN_INVALID");
-        return false;
+        log.error("[HandshakeInterceptor] 토큰 검증 실패 (만료/위조): {}", token);
+        throw new RestException(ErrorCode.INVALID_TOKEN);
       }
     } catch (Exception e) {
-      log.error("❌ [WebSocket] 토큰 검증 중 오류: {}", e.getMessage());
-      response.setStatusCode(HttpStatus.UNAUTHORIZED);
-      response.getHeaders().add("X-Auth-Error", "TOKEN_ERROR");
-      return false;
+      log.error("[HandshakeInterceptor] 토큰 검증 중 오류: {}", e.getMessage());
+      throw new RestException(ErrorCode.INTERNAL_SERVER_ERROR, Map.of("error", e.getMessage()));
     }
 
     UUID userId = jwtTokenProvider.getUserIdFromToken(token);
     attributes.put("userId", userId);
     attributes.put("token", token);
 
-    log.info("✅ [WebSocket] 핸드셰이크 성공 - userId={}", userId);
+    log.info("[HandshakeInterceptor] 핸드셰이크 성공 - userId={}", userId);
     return true;
+  }
+
+  private String extractTokenFromAuthorizationHeader(ServerHttpRequest request) {
+    List<String> authHeaders = request.getHeaders().get("Authorization");
+    if (authHeaders != null) {
+      for (String header : authHeaders) {
+        if (header.toLowerCase().startsWith("bearer ")) {
+          return header.substring(7);
+        }
+      }
+    }
+    return null;
   }
 
   @Override
@@ -74,7 +84,7 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
                              WebSocketHandler wsHandler,
                              Exception exception) {
     if (exception != null) {
-      log.warn("⚠ [WebSocket] 핸드셰이크 후 예외 발생: {}", exception.getMessage());
+      log.warn("[HandshakeInterceptor] 핸드셰이크 후 예외: {}", exception.getMessage());
     }
   }
 
