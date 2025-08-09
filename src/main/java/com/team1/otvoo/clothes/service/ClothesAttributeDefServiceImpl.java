@@ -116,35 +116,48 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     ClothesAttributeDefinition clothesAttributeDefinition = getDefinition(definitionId);
 
-    if (!clothesAttributeDefinition.getName().equals(request.name())) {
+    if (request.name() != null && !clothesAttributeDefinition.getName().equals(request.name())) {
       checkDuplicateName(request.name());
       clothesAttributeDefinition.update(request.name());
     }
 
-    List<String> requestValues = request.selectableValues() == null
-        ? List.of()
-        : request.selectableValues();
-    checkDuplicateValue(requestValues);
+    if (request.selectableValues() != null) {
+      List<String> requestValues = request.selectableValues();
+      checkDuplicateValue(requestValues);
 
-    List<ClothesAttributeValue> existingValues = clothesAttributeDefinition.getValues();
+      List<ClothesAttributeValue> current = clothesAttributeDefinition.getValues();
 
-    if (requestValues.isEmpty()) {
-      if (!existingValues.isEmpty()) {
-        log.info("의상 속성 수정 - 모든 속성값 삭제");
-        existingValues.clear();
+      // 현재 값(문자열) 리스트
+      List<String> currentValues = current.stream()
+          .map(ClothesAttributeValue::getValue)
+          .toList(); // JDK11이면 Collectors.toList()
+
+      // ★ 순서까지 같으면 스킵 (변경 없음)
+      if (!currentValues.equals(requestValues)) {
+        // 기존 값 Map (value -> entity)
+        Map<String, ClothesAttributeValue> curMap = current.stream()
+            .collect(Collectors.toMap(ClothesAttributeValue::getValue, v -> v));
+
+        // 요청 순서대로 재구성 (기존 재사용, 없으면 생성)
+        List<ClothesAttributeValue> newValues = new ArrayList<>();
+        for (String v : requestValues) {
+          ClothesAttributeValue reused = curMap.get(v);
+          if (reused != null) {
+            newValues.add(reused);
+          } else {
+            newValues.add(new ClothesAttributeValue(v));
+          }
+        }
+
+        current.clear();
+        for (ClothesAttributeValue val : newValues) {
+          if (val.getDefinition() == null) {
+            clothesAttributeDefinition.addValue(val);
+          } else {
+            current.add(val);
+          }
+        }
       }
-    } else {
-      // 기존 값 Map (value -> entity) 로 만들어 재사용
-      Map<String, ClothesAttributeValue> existingMap = existingValues.stream()
-          .collect(Collectors.toMap(ClothesAttributeValue::getValue, v -> v));
-
-      // 요청 리스트대로 새 리스트 구성
-      List<ClothesAttributeValue> newValues = requestValues.stream()
-          .map(value -> existingMap.getOrDefault(value, new ClothesAttributeValue(value)))
-          .toList();
-
-      existingValues.clear();
-      existingValues.addAll(newValues);
     }
 
     ClothesAttributeDefinition saved = clothesAttributeDefRepository.save(
@@ -168,7 +181,8 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         .orElseThrow(
             () -> {
               log.warn("해당 속성 정의가 존재하지 않습니다. definitionId = {}", definitionId);
-              return new RestException(ErrorCode.NOT_FOUND, Map.of("definitionId", definitionId));
+              return new RestException(ErrorCode.ATTRIBUTE_DEFINITION_NOT_FOUND,
+                  Map.of("definitionId", definitionId));
             });
   }
 
