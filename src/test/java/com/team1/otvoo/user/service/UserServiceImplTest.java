@@ -11,8 +11,12 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.team1.otvoo.auth.token.AccessTokenStore;
+import com.team1.otvoo.auth.token.RefreshTokenStore;
+import com.team1.otvoo.auth.token.TemporaryPasswordStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileDto;
@@ -23,6 +27,8 @@ import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.dto.UserLockUpdateRequest;
+import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Profile;
@@ -83,6 +89,18 @@ class UserServiceImplTest {
 
   @Mock
   private ProfileImageUrlResolver profileImageUrlResolver;
+
+  @Mock
+  private TemporaryPasswordStore temporaryPasswordStore;
+
+  @Mock
+  private RefreshTokenStore refreshTokenStore;
+
+  @Mock
+  private AccessTokenStore accessTokenStore;
+
+  @Mock
+  private JwtTokenProvider jwtTokenProvider;
 
   private UserCreateRequest request;
 
@@ -227,6 +245,50 @@ class UserServiceImplTest {
     userService.createUser(request);
 
     verify(passwordEncoder).encode("password1234!");
+  }
+
+  @Test
+  @DisplayName("권한 변경 성공 시 리프레시/액세스 토큰 제거 및 블랙리스트 등록")
+  void updateUserRole_success_logoutAndBlacklist() {
+    // given
+    UUID userId = UUID.randomUUID();
+
+    User user = new User("user@example.com", "encoded");
+    TestUtils.setField(user, "id", userId); // User id 설정 (mapper 호출 시 필요할 수 있음)
+
+    // 초기 권한: USER
+    Profile profile = new Profile("홍길동", user);
+
+    given(profileRepository.findByUserIdWithUser(userId)).willReturn(Optional.of(profile));
+
+    String accessToken = "access.token.value";
+    long expiresIn = 3600L;
+    given(accessTokenStore.get(userId)).willReturn(accessToken);
+    given(jwtTokenProvider.getExpirationSecondsLeft(accessToken)).willReturn(expiresIn);
+
+    // mapper 결과
+    UserDto expected = new UserDto(
+        userId,
+        Instant.now(),
+        "user@example.com",
+        "홍길동",
+        Role.ADMIN,
+        List.of(),
+        false
+    );
+    given(userMapper.toUserDto(user, "홍길동")).willReturn(expected);
+
+    // when
+    UserDto result = userService.updateUserRole(userId, new UserRoleUpdateRequest(Role.ADMIN));
+
+    // then
+    assertThat(result).isEqualTo(expected);
+    // 로그아웃 처리(토큰 제거 및 블랙리스트 등록) 검증
+    verify(refreshTokenStore).remove(userId);
+    verify(accessTokenStore).get(userId);
+    verify(jwtTokenProvider).getExpirationSecondsLeft(accessToken);
+    verify(accessTokenStore).blacklistAccessToken(accessToken, expiresIn);
+    verify(accessTokenStore).remove(userId);
   }
 
   @Test
@@ -381,4 +443,35 @@ class UserServiceImplTest {
 
     assertThat(result).isEqualTo(expectedDto);
   }
+
+  @Test
+  @DisplayName("계정 잠금 상태 변경 성공 - 잠금 처리 시 토큰 삭제 및 블랙리스트 등록")
+  void changeLock_success_locked() {
+    // given
+    UUID userId = UUID.randomUUID();
+    User user = mock(User.class); // ✅ mock 처리
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+    // isLocked() == true 인 상태
+    given(user.isLocked()).willReturn(true);
+
+    String accessToken = "access.token.value";
+    long expiration = 3600L;
+
+    given(accessTokenStore.get(userId)).willReturn(accessToken);
+    given(jwtTokenProvider.getExpirationSecondsLeft(accessToken)).willReturn(expiration);
+
+    // when
+    UUID result = userService.changeLock(userId, new UserLockUpdateRequest(true));
+
+    // then
+    assertThat(result).isEqualTo(userId);
+    verify(refreshTokenStore).remove(userId);
+    verify(accessTokenStore).get(userId);
+    verify(jwtTokenProvider).getExpirationSecondsLeft(accessToken);
+    verify(accessTokenStore).blacklistAccessToken(accessToken, expiration);
+    verify(accessTokenStore).remove(userId);
+  }
+
 }

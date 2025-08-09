@@ -15,6 +15,7 @@ import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,8 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
 
   @Autowired
   private EntityManager entityManager;
+
+  UUID userId = UUID.randomUUID();
 
   @BeforeEach
   void setUp() {
@@ -131,7 +134,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(4);
@@ -158,7 +161,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(3);
@@ -185,7 +188,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(3);
@@ -212,7 +215,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
 
     // then
     assertThat(result.getContent().size()).isEqualTo(1);
@@ -231,7 +234,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
       
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
       
     // then
     assertThat(result.hasNext()).isTrue();
@@ -248,7 +251,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
 
     // then
     assertThat(result.hasNext()).isFalse();
@@ -267,7 +270,7 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
         .build();
 
     // when
-    Slice<FeedDto> result = feedRepository.searchByCondition(condition);
+    Slice<FeedDto> result = feedRepository.searchByCondition(condition, userId);
 
     // then
     assertThat(result).isEmpty();

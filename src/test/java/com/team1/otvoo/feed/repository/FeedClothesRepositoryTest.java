@@ -62,7 +62,7 @@ public class FeedClothesRepositoryTest extends AbstractPostgresTest {
     ClothesAttributeDefinition definition = new ClothesAttributeDefinition("두께감", List.of(value));
     clothesAttributeDefRepository.save(definition);
 
-    Clothes clothes = new Clothes(user, "티셔츠", ClothesType.TOP, "image.url", List.of());
+    Clothes clothes = new Clothes(user, "티셔츠", ClothesType.TOP, List.of());
     ClothesSelectedValue selectedValue = new ClothesSelectedValue(clothes, definition, value);
     ReflectionTestUtils.setField(clothes, "selectedValues", List.of(selectedValue));
     clothesRepository.save(clothes);

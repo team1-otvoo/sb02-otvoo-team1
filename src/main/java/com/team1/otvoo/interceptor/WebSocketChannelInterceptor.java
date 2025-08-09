@@ -1,5 +1,6 @@
 package com.team1.otvoo.interceptor;
 
+import java.util.UUID;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -46,49 +47,62 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
   }
 
   private Message<?> handleConnect(StompHeaderAccessor accessor, Message<?> message) {
-    String username = (String) accessor.getSessionAttributes().get("username");
-    if (username == null) {
-      throw new SecurityException("인증되지 않은 연결 시도");
+    Object userIdObj = accessor.getSessionAttributes().get("userId");
+    if (!(userIdObj instanceof UUID)) {
+      throw new SecurityException("인증되지 않은 연결 시도 또는 userId 형식 오류");
     }
+    UUID userId = (UUID) userIdObj;
 
-    log.info("✅ STOMP CONNECT 인증 성공: {}", username);
+    log.info("✅ STOMP CONNECT 인증 성공: {}", userId);
     return message;
   }
 
   private Message<?> handleSubscribe(StompHeaderAccessor accessor, Message<?> message) {
     String destination = accessor.getDestination();
-    String username = (String) accessor.getSessionAttributes().get("username");
+    Object userIdObj = accessor.getSessionAttributes().get("userId");
+    if (!(userIdObj instanceof UUID)) {
+      throw new SecurityException("인증되지 않은 사용자 또는 userId 형식 오류");
+    }
+    UUID userId = (UUID) userIdObj;
 
     if (destination != null && destination.startsWith("/sub/direct-messages_")) {
       String dmKey = extractDmKey(destination);
-      if (dmKey == null || !dmKey.contains(username)) {
+      if (dmKey == null || !dmKey.contains(userId.toString())) {
         throw new SecurityException("DM 구독 대상에 자신이 포함되지 않음");
       }
     }
 
-    log.info("✅ 구독 요청 확인: {} -> {}", username, destination);
+    log.info("✅ 구독 요청 확인: {} -> {}", userId, destination);
     return message;
   }
 
   private Message<?> handleSend(StompHeaderAccessor accessor, Message<?> message) {
     String destination = accessor.getDestination();
-    String username = (String) accessor.getSessionAttributes().get("username");
+    Object userIdObj = accessor.getSessionAttributes().get("userId");
+    if (!(userIdObj instanceof UUID)) {
+      throw new SecurityException("인증되지 않은 사용자 또는 userId 형식 오류");
+    }
+    UUID userId = (UUID) userIdObj;
 
     if (destination == null) return message;
 
     if (destination.startsWith("/pub/direct-messages_send")) {
-      if (username == null || username.trim().isEmpty()) {
+      if (userId == null) {
         throw new SecurityException("인증되지 않은 사용자");
       }
     }
 
-    log.info("✅ 메시지 전송 확인: {} -> {}", username, destination);
+    log.info("✅ 메시지 전송 확인: {} -> {}", userId, destination);
     return message;
   }
 
   private void handleDisconnect(StompHeaderAccessor accessor) {
-    String username = (String) accessor.getSessionAttributes().get("username");
-    log.info("⚠ STOMP 연결 해제: {}", username);
+    Object userIdObj = accessor.getSessionAttributes().get("userId");
+    UUID userId = null;
+    if (userIdObj instanceof UUID) {
+      userId = (UUID) userIdObj;
+    }
+    log.info("⚠ STOMP 연결 해제: {}", userId);
   }
 
   private String extractDmKey(String destination) {

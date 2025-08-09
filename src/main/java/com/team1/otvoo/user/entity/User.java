@@ -93,5 +93,11 @@ public class User{
       this.role = newRole;
     }
   }
+
+  public void updateLocked(boolean locked) {
+    if (this.locked != locked) {
+      this.locked = locked;
+    }
+  }
 }
 

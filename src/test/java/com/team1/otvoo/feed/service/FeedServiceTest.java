@@ -2,7 +2,9 @@ package com.team1.otvoo.feed.service;
 
 import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.Clothes;
+import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
+import com.team1.otvoo.clothes.repository.ClothesImageRepository;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedCreateRequest;
@@ -13,12 +15,11 @@ import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
 import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
+import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
-import com.team1.otvoo.user.entity.Profile;
-import com.team1.otvoo.user.entity.ProfileImage;
+import com.team1.otvoo.security.CustomUserDetails;
+import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
-import com.team1.otvoo.user.repository.ProfileImageRepository;
-import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.List;
@@ -32,6 +33,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.*;
@@ -39,7 +43,6 @@ import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class FeedServiceTest {
-
   @Mock
   UserRepository userRepository;
   @Mock
@@ -47,15 +50,15 @@ public class FeedServiceTest {
   @Mock
   ClothesRepository clothesRepository;
   @Mock
-  ProfileRepository profileRepository;
-  @Mock
-  ProfileImageRepository profileImageRepository;
+  ClothesImageRepository clothesImageRepository;
   @Mock
   FeedClothesRepository feedClothesRepository;
   @Mock
   FeedRepository feedRepository;
   @Mock
   ClothesMapper clothesMapper;
+  @Mock
+  FeedLikeRepository feedLikeRepository;
   @Mock
   FeedMapper feedMapper;
   @InjectMocks
@@ -76,14 +79,10 @@ public class FeedServiceTest {
         .build();
     ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
 
-    Profile profile = new Profile("testProfile", user);
-    ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
-    ProfileImage profileImage = new ProfileImage("test.url", "test", "jpeg", 0L, 1, 1, profile);
+    AuthorDto authorDto = new AuthorDto(user.getId(), "양고기", "image.url");
 
+    given(userRepository.projectionAuthorDtoById(user.getId())).willReturn(authorDto);
     given(userRepository.findById(any(UUID.class))).willReturn(Optional.of(user));
-    given(profileRepository.findByUserId(any(UUID.class))).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(any(UUID.class))).willReturn(
-        Optional.of(profileImage));
     given(weatherForecastRepository.findById(any(UUID.class))).willReturn(mock());
     given(clothesRepository.findAllById(any())).willReturn(List.of());
     given(feedMapper.toDto(any(Feed.class), any(), anyBoolean())).willAnswer(invocation -> {
@@ -136,9 +135,8 @@ public class FeedServiceTest {
         .email("test@test.com")
         .build();
     ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
-    Profile profile = new Profile("testProfile", user);
-    ReflectionTestUtils.setField(profile, "id", UUID.randomUUID());
-    ProfileImage profileImage = new ProfileImage("test.url", "test", "jpeg", 0L, 1, 1, profile);
+
+    AuthorDto authorDto = new AuthorDto(user.getId(), "양고기", "image.url");
 
     UUID feedId = UUID.randomUUID();
     Feed feed = Feed.builder()
@@ -147,16 +145,23 @@ public class FeedServiceTest {
         .build();
     ReflectionTestUtils.setField(feed, "id", feedId);
 
-    given(profileRepository.findByUserId(any(UUID.class))).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(any(UUID.class))).willReturn(
-        Optional.of(profileImage));
+    Authentication authentication = mock(Authentication.class);
+    CustomUserDetails customUserDetails = mock(CustomUserDetails.class);
+
+    given(userRepository.projectionAuthorDtoById(user.getId())).willReturn(authorDto);
     given(feedRepository.findById(feedId)).willReturn(Optional.of(feed));
+    given(authentication.getPrincipal()).willReturn(customUserDetails);
+    given(customUserDetails.getUser()).willReturn(user);
+    given(feedLikeRepository.existsFeedLikeByFeed_IdAndLikedBy_Id(any(),any())).willReturn(true);
     given(feedMapper.toDto(any(Feed.class), any(), anyBoolean())).willAnswer(invocation -> {
       Feed feedArg = invocation.getArgument(0);
       return FeedDto.builder()
           .content(feedArg.getContent())
           .build();
     });
+    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+    securityContext.setAuthentication(authentication);
+    SecurityContextHolder.setContext(securityContext);
 
     FeedUpdateRequest request = new FeedUpdateRequest("update test");
 
@@ -227,21 +232,43 @@ public class FeedServiceTest {
         .content("test")
         .build();
 
+    User user = User.builder()
+        .email("test@test.com")
+        .password("test1234!")
+        .build();
+    ReflectionTestUtils.setField(user,"id", UUID.randomUUID());
+
     Slice<FeedDto> feedSlice = new SliceImpl<>(List.of(feedDto));
-    given(feedRepository.searchByCondition(any())).willReturn(feedSlice);
+    given(feedRepository.searchByCondition(any(),any())).willReturn(feedSlice);
+
+    Authentication authentication = mock(Authentication.class);
+    CustomUserDetails customUserDetails = mock(CustomUserDetails.class);
+    given(authentication.getPrincipal()).willReturn(customUserDetails);
+    given(customUserDetails.getUser()).willReturn(user);
+    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+    securityContext.setAuthentication(authentication);
+    SecurityContextHolder.setContext(securityContext);
 
     FeedClothes feedClothes = mock(FeedClothes.class);
     Feed feed = mock(Feed.class);
     Clothes clothes = mock(Clothes.class);
+
     given(feed.getId()).willReturn(feedId);
     given(feedClothes.getFeed()).willReturn(feed);
     given(feedClothes.getClothes()).willReturn(clothes);
+    given(clothes.getId()).willReturn(clothesId);
 
     given(feedClothesRepository.findAllByFeedIdInWithClothesAndSelectedValues(List.of(feedId)))
         .willReturn(List.of(feedClothes));
 
+    ClothesImage image = mock(ClothesImage.class);
+    given(image.getClothes()).willReturn(clothes);
+    given(image.getImageUrl()).willReturn("http://img");
+    given(clothesImageRepository.findAllByClothes_IdIn(List.of(clothesId)))
+        .willReturn(List.of(image));
+
     OotdDto ootdDto = mock(OotdDto.class);
-    given(clothesMapper.toOotdDto(clothes)).willReturn(ootdDto);
+    given(clothesMapper.toOotdDto(clothes, "http://img")).willReturn(ootdDto);
 
     // when
     Slice<FeedDto> result = feedService.getFeedsWithCursor(mock(FeedSearchCondition.class));

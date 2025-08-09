@@ -1,7 +1,11 @@
 package com.team1.otvoo.user.service;
 
+import com.team1.otvoo.auth.token.AccessTokenStore;
+import com.team1.otvoo.auth.token.RefreshTokenStore;
+import com.team1.otvoo.auth.token.TemporaryPasswordStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.ProfileDto;
 import com.team1.otvoo.user.dto.ProfileUpdateRequest;
@@ -9,6 +13,8 @@ import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.dto.UserLockUpdateRequest;
+import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.ProfileImage;
@@ -47,6 +53,11 @@ public class UserServiceImpl implements UserService {
   private final UserMapper userMapper;
   private final ProfileMapper profileMapper;
   private final ProfileImageUrlResolver profileImageUrlResolver;
+
+  private final TemporaryPasswordStore temporaryPasswordStore;
+  private final JwtTokenProvider jwtTokenProvider;
+  private final RefreshTokenStore refreshTokenStore;
+  private final AccessTokenStore accessTokenStore;
 
   @Transactional(readOnly = true)
   @Override
@@ -115,6 +126,33 @@ public class UserServiceImpl implements UserService {
     return userDto;
   }
 
+  @Override
+  public UserDto updateUserRole(UUID userId, UserRoleUpdateRequest request) {
+
+    Profile profile = profileRepository.findByUserIdWithUser(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 profile 을 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("userId", userId));
+        }
+    );
+
+    if (!profile.getUser().getRole().equals(request.role())) {
+      profile.getUser().updateRole(request.role());
+
+      // 권한 변경시 로그아웃
+      refreshTokenStore.remove(userId);
+
+      String accessToken = accessTokenStore.get(userId);
+      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+      accessTokenStore.blacklistAccessToken(accessToken, expiration);
+      accessTokenStore.remove(userId);
+    }
+
+    UserDto userDto = userMapper.toUserDto(profile.getUser(), profile.getName());
+
+    return userDto;
+  }
+
   @Transactional(readOnly = true)
   @Override
   public ProfileDto getUserProfile(UUID userId) {
@@ -128,14 +166,9 @@ public class UserServiceImpl implements UserService {
 
     UUID profileId = profile.getId();
 
-    ProfileImage profileImage = profileImageRepository.findByProfileId(profileId).orElseThrow(
-        () -> {
-          log.warn("해당 profileId를 가진 profileImage를 찾을 수 없습니다. [{}]", profileId);
-          return new RestException(ErrorCode.NOT_FOUND, Map.of("profileIamge - profileId", profileId));
-        }
-    );
+    String imageUrl = profileImageUrlResolver.resolve(profileId);
 
-    ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl());
+    ProfileDto dto = profileMapper.toProfileDto(userId, profile, imageUrl);
 
     return dto;
   }
@@ -184,5 +217,30 @@ public class UserServiceImpl implements UserService {
     String newEncodedPassword = passwordEncoder.encode(newRawPassword);
 
     user.changePassword(newEncodedPassword);
+    temporaryPasswordStore.remove(userId);
+  }
+
+  @Override
+  public UUID changeLock(UUID userId, UserLockUpdateRequest request) {
+    User user = userRepository.findById(userId).orElseThrow(
+        () -> {
+          log.warn("해당 userId를 가진 User 를 찾을 수 없습니다. - [{}]", userId);
+          return new RestException(ErrorCode.NOT_FOUND, Map.of("id", userId));
+        }
+    );
+
+    user.updateLocked(request.locked());
+
+    if (user.isLocked()) {
+      refreshTokenStore.remove(userId);
+
+      // 특정 사용자의 access 토큰 redis에서 불러와서 블랙리스트에 추가
+      String accessToken = accessTokenStore.get(userId);
+      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+      accessTokenStore.blacklistAccessToken(accessToken, expiration);
+      accessTokenStore.remove(userId);
+    }
+
+    return userId;
   }
 }

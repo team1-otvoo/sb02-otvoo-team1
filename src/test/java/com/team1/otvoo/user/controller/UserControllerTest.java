@@ -10,8 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team1.otvoo.auth.token.AccessTokenStore;
+import com.team1.otvoo.auth.token.RefreshTokenStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.CustomUserDetailsService;
+import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileDto;
@@ -21,6 +25,7 @@ import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserCreateRequest;
 import com.team1.otvoo.user.dto.UserDto;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
+import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.service.UserService;
@@ -51,6 +56,18 @@ class UserControllerTest {
 
   @MockitoBean
   private UserService userService;
+
+  @MockitoBean
+  private JwtTokenProvider jwtTokenProvider;
+
+  @MockitoBean
+  private CustomUserDetailsService customUserDetailsService;
+
+  @MockitoBean
+  private RefreshTokenStore refreshTokenStore;
+
+  @MockitoBean
+  private AccessTokenStore accessTokenStore;
 
   @Resource
   private ObjectMapper objectMapper;
@@ -181,6 +198,39 @@ class UserControllerTest {
   }
 
   @Test
+  @DisplayName("유저 권한 변경 성공 시 200 OK")
+  void updateUserRole_success_shouldReturn200() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+
+    UserDto response = new UserDto(
+        userId,
+        Instant.parse("2024-01-01T10:00:00Z"),
+        "user@example.com",
+        "홍길동",
+        Role.ADMIN,          // 변경된 권한
+        List.of(),
+        false
+    );
+
+    given(userService.updateUserRole(Mockito.eq(userId), any())).willReturn(response);
+
+    // when & then
+    mockMvc.perform(patch("/api/users/{userId}/role", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+              {
+                "role": "ADMIN"
+              }
+            """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(userId.toString()))
+        .andExpect(jsonPath("$.email").value("user@example.com"))
+        .andExpect(jsonPath("$.name").value("홍길동"))
+        .andExpect(jsonPath("$.role").value("ADMIN"));
+  }
+
+  @Test
   @DisplayName("비밀번호 변경 성공 시 204 반환")
   void changePassword_success_shouldReturnNoContent() throws Exception {
     // given
@@ -307,5 +357,22 @@ class UserControllerTest {
         .andExpect(jsonPath("$.profileImageUrl").value("http://image.url/profile.jpg"));
   }
 
+  @Test
+  @DisplayName("유저 잠금 상태 변경 성공 시 200 OK")
+  void lockUser_success_shouldReturn200() throws Exception {
+    // given
+    UUID userId = UUID.randomUUID();
+    UserLockUpdateRequest request = new UserLockUpdateRequest(true);
+
+    given(userService.changeLock(Mockito.eq(userId), any(UserLockUpdateRequest.class)))
+        .willReturn(userId);
+
+    // when & then
+    mockMvc.perform(patch("/api/users/{userId}/lock", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").value(userId.toString()));
+  }
 
 }

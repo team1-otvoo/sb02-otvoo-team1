@@ -3,13 +3,17 @@ package com.team1.otvoo.user.repository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserSlice;
+import com.team1.otvoo.user.entity.QProfile;
+import com.team1.otvoo.user.entity.QProfileImage;
 import com.team1.otvoo.user.entity.QUser;
 import com.team1.otvoo.user.entity.User;
 import jakarta.persistence.EntityManager;
@@ -23,12 +27,32 @@ import java.util.UUID;
 
 @Slf4j
 @Repository
-public class UserQueryDslRepositoryImpl implements UserQueryDslRepository {
+public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
 
-  public UserQueryDslRepositoryImpl(EntityManager em) {
+  public UserRepositoryCustomImpl(EntityManager em) {
     this.queryFactory = new JPAQueryFactory(em);
+  }
+
+  @Override
+  public AuthorDto projectionAuthorDtoById(UUID userId) {
+    QUser user = QUser.user;
+    QProfile profile = QProfile.profile;
+    QProfileImage profileImage = QProfileImage.profileImage;
+
+    return queryFactory
+        .select(Projections.constructor(
+            AuthorDto.class,
+            user.id,
+            profile.name,
+            profileImage.imageUrl
+        ))
+        .from(user)
+        .leftJoin(profile).on(profile.user.eq(user))
+        .leftJoin(profileImage).on(profileImage.profile.eq(profile))
+        .where(user.id.eq(userId))
+        .fetchOne();
   }
 
   @Override

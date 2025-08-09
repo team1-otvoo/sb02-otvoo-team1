@@ -42,6 +42,17 @@ public interface ClothesMapper {
         .toList();
   }
 
+  default OotdDto toOotdDto(Clothes clothes, String imageUrl) {
+    if (clothes == null) return null;
+    return OotdDto.builder()
+        .clothesId(clothes.getId())
+        .name(clothes.getName())
+        .imageUrl(imageUrl)
+        .type(clothes.getType())
+        .attributes(toDtoList(clothes.getSelectedValues()))
+        .build();
+  }
+
   default List<ClothesAttributeWithDefDto> toDtoList(List<ClothesSelectedValue> values) {
     if (values == null) {
       return Collections.emptyList();

@@ -2,6 +2,7 @@ package com.team1.otvoo.security;
 
 import com.team1.otvoo.auth.token.AccessTokenStore;
 import com.team1.otvoo.auth.token.RedisRefreshTokenStore;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -25,28 +27,29 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                       Authentication authentication) throws IOException {
     CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-    String username = userDetails.getUsername();
+    UUID userId = userDetails.getUser().getId();
+    String role = userDetails.getRole();
+    String email = userDetails.getUser().getEmail();
 
-    log.info("🔐 로그인 성공: username={}", username);
+    log.info("🔐 로그인 성공: userId={}", userId);
 
-    boolean isUsingTemporaryPassword = userDetails.isUsingTemporaryPassword();
+    String accessToken = jwtTokenProvider.createAccessToken(userId, role, email);
+    String refreshToken = jwtTokenProvider.createRefreshToken(userId, role, email);
 
-    String accessToken = jwtTokenProvider.createAccessToken(username);
-    String refreshToken = jwtTokenProvider.createRefreshToken(username);
+    long expirationSeconds = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+    accessTokenStore.blacklistAccessToken(accessToken, expirationSeconds);
+    accessTokenStore.save(userId, accessToken, expirationSeconds);
 
-    long accessTokenExp = jwtTokenProvider.getExpiration(accessToken);
-    accessTokenStore.save(username, accessToken, accessTokenExp);
-    log.debug("💾 AccessToken Redis 저장: key=access_token:{}, 만료시간={}", username, accessTokenExp);
+    Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
+    refreshCookie.setHttpOnly(true);
+    refreshCookie.setSecure(false);
+    refreshCookie.setPath("/");
+    refreshCookie.setMaxAge((int) jwtTokenProvider.getRefreshTokenValidityInSeconds());
+    response.addCookie(refreshCookie);
 
-    refreshTokenStore.save(username, refreshToken);
-    log.debug("💾 RefreshToken Redis 저장: key=refreshToken:{}, 만료시간={}", username, jwtTokenProvider.getExpiration(refreshToken));
+    response.setContentType("application/json;charset=UTF-8");
+    response.getWriter().write("\"" + accessToken + "\"");
 
-    response.setContentType("text/plain");
-    response.setCharacterEncoding("UTF-8");
-    response.getWriter().write(String.format(
-        "accessToken=%s&refreshToken=%s&isUsingTemporaryPassword=%b",
-        accessToken, refreshToken, isUsingTemporaryPassword));
-
-    log.debug("✅ 로그인 응답 전송 완료");
+    log.debug("✅ 로그인 응답 전송 완료: accessToken={}, refreshToken(COOKIE)", accessToken);
   }
 }

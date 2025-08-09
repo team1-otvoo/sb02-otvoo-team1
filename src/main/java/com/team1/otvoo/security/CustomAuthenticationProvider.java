@@ -35,7 +35,7 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
           return new BadCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다.");
         });
 
-    TemporaryPassword tempPassword = temporaryPasswordStore.get(email);
+    TemporaryPassword tempPassword = temporaryPasswordStore.get(user.getId());
     boolean usingTempPassword = false;
 
     if (tempPassword != null) {

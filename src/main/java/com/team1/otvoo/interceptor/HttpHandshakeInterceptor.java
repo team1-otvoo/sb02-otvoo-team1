@@ -12,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -30,7 +32,13 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
                                  WebSocketHandler wsHandler,
                                  Map<String, Object> attributes) {
 
+    // 쿼리에서 토큰 추출 시도
     String token = extractTokenFromQuery(request.getURI());
+
+    // 쿼리에 없으면 쿠키에서 토큰 추출 시도
+    if (token == null) {
+      token = extractTokenFromCookies(request);
+    }
 
     if (token == null) {
       log.error("❌ [WebSocket] 토큰이 없음: {}", request.getURI());
@@ -52,7 +60,7 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
       return false;
     }
 
-    String userId = jwtTokenProvider.getUserIdFromToken(token);
+    UUID userId = jwtTokenProvider.getUserIdFromToken(token);
     attributes.put("userId", userId);
     attributes.put("token", token);
 
@@ -80,6 +88,25 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
             return URLDecoder.decode(param.substring(6), StandardCharsets.UTF_8);
           } catch (Exception e) {
             return param.substring(6);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  private String extractTokenFromCookies(ServerHttpRequest request) {
+    List<String> cookies = request.getHeaders().get("Cookie");
+    if (cookies != null) {
+      for (String cookie : cookies) {
+        for (String c : cookie.split(";")) {
+          String[] keyValue = c.trim().split("=");
+          if (keyValue.length == 2 && keyValue[0].equals("refresh_token")) {
+            try {
+              return URLDecoder.decode(keyValue[1], StandardCharsets.UTF_8);
+            } catch (Exception e) {
+              return keyValue[1];
+            }
           }
         }
       }
