@@ -28,11 +28,9 @@ public class DirectMessageController {
       @RequestParam(required = false, defaultValue = "10") int limit) {
 
     log.info("✅ DM API 요청: userId={}, cursor={}, idAfter={}, limit={}", userId, cursor, idAfter, limit);
-
-    DirectMessageDtoCursorResponse response = directMessageService.getDirectMessageByuserId(userId, cursor, idAfter, limit);
+    DirectMessageDtoCursorResponse response = directMessageService.getDirectMessagesByUserId(userId, cursor, idAfter, limit);
 
     log.info("✅ DM API 응답: dataCount={}, hasNext={}, nextCursor={}, nextIdAfter={}", response.data().size(), response.hasNext(), response.nextCursor(), response.nextIdAfter());
-
     return ResponseEntity.ok(response);
   }
 }
