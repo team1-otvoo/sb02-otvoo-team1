@@ -1,9 +1,11 @@
 package com.team1.otvoo.directmessage.controller;
 
 import com.team1.otvoo.directmessage.dto.DirectMessageCreateRequest;
-import com.team1.otvoo.directmessage.dto.DirectMessageResponse;
+import com.team1.otvoo.directmessage.dto.DirectMessageDto;
+import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.directmessage.service.DirectMessageService;
 import com.team1.otvoo.directmessage.util.DmKeyUtil;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -30,16 +32,25 @@ public class DirectMessageWebSocketControllerTest {
   private DirectMessageWebSocketController controller;
 
   @Test
+  @DisplayName("sendDirectMessage - 웹소켓 메시지 정상 발송 테스트")
   public void sendDirectMessage_shouldSendMessageToCorrectDestination() {
     // given
     UUID senderId = UUID.randomUUID();
     UUID receiverId = UUID.randomUUID();
 
-    DirectMessageCreateRequest request = new DirectMessageCreateRequest(senderId, receiverId, "hello");
+    DirectMessageCreateRequest request = new DirectMessageCreateRequest(senderId, receiverId, "안녕");
 
-    DirectMessageResponse response = new DirectMessageResponse(senderId, receiverId, "hello", null);
+    DirectMessageDto response = mock(DirectMessageDto.class);
+    UserSummary senderSummary = mock(UserSummary.class);
+    UserSummary receiverSummary = mock(UserSummary.class);
 
-    when(directMessageService.create(any(DirectMessageCreateRequest.class))).thenReturn(response);
+    when(senderSummary.userId()).thenReturn(senderId);
+    when(receiverSummary.userId()).thenReturn(receiverId);
+
+    when(response.sender()).thenReturn(senderSummary);
+    when(response.receiver()).thenReturn(receiverSummary);
+
+    when(directMessageService.createDto(any(DirectMessageCreateRequest.class))).thenReturn(response);
 
     // when
     controller.sendDirectMessage(request);
@@ -48,7 +59,7 @@ public class DirectMessageWebSocketControllerTest {
     String expectedDestination = "/sub/direct-messages_" + expectedDmKey;
 
     // then
-    verify(directMessageService).create(request);
+    verify(directMessageService).createDto(request);
     verify(messagingTemplate).convertAndSend(eq(expectedDestination), eq(response));
   }
 }
