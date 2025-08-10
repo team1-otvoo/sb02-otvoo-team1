@@ -30,10 +30,10 @@ public class WeatherHumidity {
   @Column(nullable = false)
   private double current;
 
-  @Column(name = "compared_to_day_before", nullable = false)
-  private double comparedToDayBefore;
+  @Column(name = "compared_to_day_before")
+  private Double comparedToDayBefore;
 
-  public WeatherHumidity(WeatherForecast forecast, double current, double comparedToDayBefore) {
+  public WeatherHumidity(WeatherForecast forecast, double current, Double comparedToDayBefore) {
     this.forecast = forecast;
     this.forecastId = forecast.getId();
     this.current = current;
