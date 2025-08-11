@@ -20,7 +20,6 @@ import java.util.UUID;
 public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
   private final JwtTokenProvider jwtTokenProvider;
-  private final RedisRefreshTokenStore refreshTokenStore;
   private final AccessTokenStore accessTokenStore;
 
   @Override
