@@ -8,7 +8,10 @@ import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefDtoCur
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefSearchCondition;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.service.ClothesAttributeDefService;
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +57,27 @@ public class ClothesAttributeDefController {
       @RequestParam(required = false) String keywordLike) {
     log.info("의상 속성 목록 조회 요청");
 
+    if (limit <= 0) {
+      throw new RestException(ErrorCode.INVALID_INPUT_VALUE,
+          Map.of("limit", limit));
+    }
+
     SortBy sortByEnum = SortBy.from(sortBy);
+    switch (sortByEnum) {
+      case NAME -> {
+        if (cursor == null && idAfter != null) {
+          throw new RestException(ErrorCode.MISSING_REQUEST_PARAMETER,
+              Map.of("cursor", cursor, "idAfter", idAfter));
+        }
+      }
+      case CREATED_AT -> {
+        if (cursor == null ^ idAfter == null) {
+          throw new RestException(ErrorCode.MISSING_REQUEST_PARAMETER,
+              Map.of("cursor", cursor, "idAfter", idAfter));
+        }
+      }
+    }
+
     SortDirection sortDirectionEnum = SortDirection.from(sortDirection);
 
     ClothesAttributeDefSearchCondition condition = new ClothesAttributeDefSearchCondition(
