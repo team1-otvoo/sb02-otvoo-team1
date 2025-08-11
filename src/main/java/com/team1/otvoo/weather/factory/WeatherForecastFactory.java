@@ -12,6 +12,7 @@ import com.team1.otvoo.weather.entity.WeatherWindSpeed;
 import com.team1.otvoo.weather.entity.WindStrength;
 import com.team1.otvoo.weather.util.FcstItemUtils;
 import com.team1.otvoo.weather.util.ForecastParsingUtils;
+import com.team1.otvoo.weather.util.WeatherComparisonUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,8 +71,18 @@ public class WeatherForecastFactory {
       Double tmn = FcstItemUtils.parseDoubleByCategory(group, "TMN", parsingUtils);
       Double tmx = FcstItemUtils.parseDoubleByCategory(group, "TMX", parsingUtils);
 
+      // 온도(TMP) 전일 대비 계산
+      Double tmpDiff = WeatherComparisonUtils.calculateDifferenceForDate(
+          items, key.fcstDate(), key.fcstTime(), "TMP", parsingUtils
+      );
+
       // 습도
       Double reh = FcstItemUtils.parseDoubleByCategory(group, "REH", parsingUtils);
+
+      // 카드별 fcstDate/fcstTime으로 전일대비 계산
+      Double rehDiff = WeatherComparisonUtils.calculateDifferenceForDate(
+          items, key.fcstDate(), key.fcstTime(), "REH", parsingUtils
+      );
 
       // 풍속
       Double wsd = FcstItemUtils.parseDoubleByCategory(group, "WSD", parsingUtils);
@@ -116,10 +127,10 @@ public class WeatherForecastFactory {
       );
       forecast.setLocation(location);
 
-      WeatherTemperature temperature = new WeatherTemperature(forecast, tmp, tmn, tmx, 0.0);
+      WeatherTemperature temperature = new WeatherTemperature(forecast, tmp, tmn, tmx, tmpDiff);
       forecast.setTemperature(temperature);
 
-      WeatherHumidity humidity = new WeatherHumidity(forecast, reh, 0.0);
+      WeatherHumidity humidity = new WeatherHumidity(forecast, reh, rehDiff);
       forecast.setHumidity(humidity);
 
       WeatherPrecipitation precipitation = new WeatherPrecipitation(forecast, precipitationType, pcp, pop);
