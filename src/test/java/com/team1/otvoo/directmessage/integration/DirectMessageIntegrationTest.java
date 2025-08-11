@@ -8,6 +8,7 @@ import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepository;
 import com.team1.otvoo.directmessage.service.DirectMessageService;
+import com.team1.otvoo.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ public class DirectMessageIntegrationTest {
 
   private User sender;
   private User receiver;
+  private CustomUserDetails senderDetails;
 
   @BeforeEach
   void setup() {
@@ -54,6 +56,8 @@ public class DirectMessageIntegrationTest {
         .password("password")
         .build();
     receiver = userRepository.save(receiver);
+
+    senderDetails = new CustomUserDetails(sender);
   }
 
   @Test
@@ -86,7 +90,7 @@ public class DirectMessageIntegrationTest {
 
     // 5. 컨트롤러를 통한 메시지 조회 API 호출
     ResponseEntity<DirectMessageDtoCursorResponse> entityResponse =
-        directMessageController.getDirectMessages(sender.getId(), null, null, 10);
+        directMessageController.getDirectMessages(senderDetails, receiver.getId(), null, null, 10);
 
     // 6. API 응답 검증
     assertThat(entityResponse.getStatusCodeValue()).isEqualTo(200);

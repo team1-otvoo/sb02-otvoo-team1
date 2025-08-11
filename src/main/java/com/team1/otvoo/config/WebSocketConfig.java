@@ -46,13 +46,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   @Override
   public void configureClientInboundChannel(ChannelRegistration registration) {
-    registration.interceptors(channelInterceptor)
-        .taskExecutor(inboundExecutor());
+    registration.interceptors(channelInterceptor);
   }
 
   @Override
   public void configureClientOutboundChannel(ChannelRegistration registration) {
-    registration.taskExecutor(outboundExecutor());
   }
 
   @Override
@@ -74,33 +72,5 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         System.err.println("WebSocket scheduler error: " + error.getMessage()));
     scheduler.initialize();
     return scheduler;
-  }
-
-  @Bean
-  public ThreadPoolTaskExecutor inboundExecutor() {
-    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setThreadNamePrefix("ws-inbound-");
-    executor.setCorePoolSize(8);
-    executor.setMaxPoolSize(16);
-    executor.setQueueCapacity(1000);
-    executor.setWaitForTasksToCompleteOnShutdown(true);
-    executor.setAwaitTerminationSeconds(10);
-    executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
-    executor.initialize();
-    return executor;
-  }
-
-  @Bean
-  public ThreadPoolTaskExecutor outboundExecutor() {
-    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-    executor.setThreadNamePrefix("ws-outbound-");
-    executor.setCorePoolSize(8);
-    executor.setMaxPoolSize(16);
-    executor.setQueueCapacity(1000);
-    executor.setWaitForTasksToCompleteOnShutdown(true);
-    executor.setAwaitTerminationSeconds(10);
-    executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
-    executor.initialize();
-    return executor;
   }
 }

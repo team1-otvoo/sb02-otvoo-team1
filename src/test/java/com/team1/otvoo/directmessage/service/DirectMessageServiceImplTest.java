@@ -131,9 +131,8 @@ class DirectMessageServiceImplTest {
 
   @Test
   @DisplayName("다이렉트 메시지 조회 성공")
-  void getDirectMessageByUserId_Success() {
+  void getDirectMessagesBetweenUsers_Success() {
     // given
-    UUID userId = senderId;
     String cursorStr = null;
     String idAfterStr = null;
     int limit = 2;
@@ -151,12 +150,14 @@ class DirectMessageServiceImplTest {
 
     List<DirectMessageDto> dmDtoList = List.of(dmDto);
 
-    when(userRepository.findById(userId)).thenReturn(Optional.of(sender));
-    when(directMessageRepositoryCustom.findDirectMessagesWithCursor(userId, null, null, limit + 1)).thenReturn(dmDtoList);
-    when(directMessageRepositoryCustom.countDirectMessagesByUserId(userId)).thenReturn(1L);
+    when(userRepository.findById(senderId)).thenReturn(Optional.of(sender));
+    when(userRepository.findById(receiverId)).thenReturn(Optional.of(receiver));
+    when(directMessageRepositoryCustom.findDirectMessagesBetweenUsersWithCursor(senderId, receiverId, null, null, limit + 1))
+        .thenReturn(dmDtoList);
+    when(directMessageRepositoryCustom.countDirectMessagesBetweenUsers(senderId, receiverId)).thenReturn(1L);
 
     // when
-    DirectMessageDtoCursorResponse response = directMessageService.getDirectMessagesByUserId(userId, cursorStr, idAfterStr, limit);
+    DirectMessageDtoCursorResponse response = directMessageService.getDirectMessagesBetweenUsers(senderId, receiverId, cursorStr, idAfterStr, limit);
 
     // then
     assertNotNull(response);
@@ -164,23 +165,38 @@ class DirectMessageServiceImplTest {
     assertFalse(response.hasNext());
     assertEquals(dmId, response.data().get(0).id());
 
-    verify(userRepository).findById(userId);
-    verify(directMessageRepositoryCustom).findDirectMessagesWithCursor(userId, null, null, limit + 1);
-    verify(directMessageRepositoryCustom).countDirectMessagesByUserId(userId);
+    verify(userRepository).findById(senderId);
+    verify(userRepository).findById(receiverId);
+    verify(directMessageRepositoryCustom).findDirectMessagesBetweenUsersWithCursor(senderId, receiverId, null, null, limit + 1);
+    verify(directMessageRepositoryCustom).countDirectMessagesBetweenUsers(senderId, receiverId);
   }
 
   @Test
-  @DisplayName("다이렉트 메시지 조회 실패 - 사용자 없음")
-  void getDirectMessageByUserId_UserNotFound() {
+  @DisplayName("다이렉트 메시지 조회 실패 - 발신자 없음")
+  void getDirectMessagesBetweenUsers_SenderNotFound() {
     // given
-    UUID userId = UUID.randomUUID();
-
-    when(userRepository.findById(userId)).thenReturn(Optional.empty());
+    when(userRepository.findById(senderId)).thenReturn(Optional.empty());
 
     // when & then
-    assertThrows(RestException.class, () -> directMessageService.getDirectMessagesByUserId(userId, null, null, 5));
+    assertThrows(RestException.class, () -> directMessageService.getDirectMessagesBetweenUsers(senderId, receiverId, null, null, 5));
 
-    verify(userRepository).findById(userId);
+    verify(userRepository).findById(senderId);
+    verify(userRepository, never()).findById(receiverId);
+    verifyNoMoreInteractions(directMessageRepositoryCustom);
+  }
+
+  @Test
+  @DisplayName("다이렉트 메시지 조회 실패 - 수신자 없음")
+  void getDirectMessagesBetweenUsers_ReceiverNotFound() {
+    // given
+    when(userRepository.findById(senderId)).thenReturn(Optional.of(sender));
+    when(userRepository.findById(receiverId)).thenReturn(Optional.empty());
+
+    // when & then
+    assertThrows(RestException.class, () -> directMessageService.getDirectMessagesBetweenUsers(senderId, receiverId, null, null, 5));
+
+    verify(userRepository).findById(senderId);
+    verify(userRepository).findById(receiverId);
     verifyNoMoreInteractions(directMessageRepositoryCustom);
   }
 }
