@@ -2,9 +2,15 @@ package com.team1.otvoo.clothes.controller;
 
 import com.team1.otvoo.clothes.dto.ClothesCreateRequest;
 import com.team1.otvoo.clothes.dto.ClothesDto;
+import com.team1.otvoo.clothes.dto.ClothesDtoCursorResponse;
+import com.team1.otvoo.clothes.dto.ClothesSearchCondition;
 import com.team1.otvoo.clothes.dto.ClothesUpdateRequest;
+import com.team1.otvoo.clothes.entity.ClothesType;
 import com.team1.otvoo.clothes.service.ClothesService;
+import com.team1.otvoo.exception.ErrorCode;
+import com.team1.otvoo.exception.RestException;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,10 +18,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,6 +50,40 @@ public class ClothesController {
 
     return ResponseEntity
         .status(HttpStatus.CREATED)
+        .body(result);
+  }
+
+  @GetMapping
+  public ResponseEntity<ClothesDtoCursorResponse> getClothes(
+      @RequestParam(required = false) String cursor,
+      @RequestParam(required = false) UUID idAfter,
+      @RequestParam(defaultValue = "20") int limit,
+      @RequestParam String typeEqual,
+      @RequestParam UUID ownerId
+  ) {
+    log.info("의상 목록 조회 요청");
+
+    if (limit <= 0) {
+      throw new RestException(ErrorCode.INVALID_INPUT_VALUE,
+          Map.of("limit", limit));
+    }
+    if (cursor == null ^ idAfter == null) {
+      throw new RestException(ErrorCode.MISSING_REQUEST_PARAMETER,
+          Map.of("cursor", cursor, "idAfter", idAfter));
+    }
+    ClothesType type = ClothesType.fromString(typeEqual);
+
+    ClothesSearchCondition condition = new ClothesSearchCondition(
+        cursor,
+        idAfter,
+        limit,
+        type,
+        ownerId
+    );
+    ClothesDtoCursorResponse result = clothesService.getClothes(condition);
+
+    return ResponseEntity
+        .status(HttpStatus.OK)
         .body(result);
   }
 

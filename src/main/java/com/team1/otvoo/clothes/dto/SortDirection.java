@@ -2,7 +2,6 @@ package com.team1.otvoo.clothes.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonCreator.Mode;
-import com.fasterxml.jackson.annotation.JsonValue;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import java.util.Map;
@@ -24,10 +23,5 @@ public enum SortDirection {
           Map.of("sortDirection", value)
       );
     };
-  }
-
-  @JsonValue
-  public String toValue() {
-    return this.name().toLowerCase();
   }
 }
