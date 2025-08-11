@@ -34,8 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       String bearerValue = authHeader.substring(7).trim();
       String accessToken = extractAccessToken(bearerValue);
 
-      if (accessToken != null && jwtService.validateToken(accessToken)
-          && !accessTokenStore.isBlacklisted(accessToken)) {
+      if (jwtService.validateToken(accessToken) && !accessTokenStore.isBlacklisted(accessToken)) {
 
         String username = jwtService.getEmailFromToken(accessToken);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -51,15 +50,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   }
 
   private String extractAccessToken(String bearerValue) {
-    if (bearerValue.contains("accessToken=")) {
-      for (String pair : bearerValue.split("&")) {
-        if (pair.startsWith("accessToken=")) {
-          return pair.substring("accessToken=".length());
-        }
-      }
-      return null;
-    }
-
     return bearerValue;
   }
 }
