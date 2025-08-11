@@ -5,6 +5,8 @@ import static org.mockito.BDDMockito.*;
 
 import com.team1.otvoo.clothes.dto.ClothesCreateRequest;
 import com.team1.otvoo.clothes.dto.ClothesDto;
+import com.team1.otvoo.clothes.dto.ClothesDtoCursorResponse;
+import com.team1.otvoo.clothes.dto.ClothesSearchCondition;
 import com.team1.otvoo.clothes.dto.ClothesUpdateRequest;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDto;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
@@ -186,6 +188,104 @@ class ClothesServiceImplTest {
   }
 
   @Test
+  @DisplayName("의상 목록 조회 성공")
+  void getClothes_Success() {
+    // given
+    int limit = 2;
+    String cursor = null;
+    UUID idAfter = null;
+
+    ClothesSearchCondition condition = new ClothesSearchCondition(
+        cursor,
+        idAfter,
+        limit,
+        ClothesType.TOP,
+        ownerId
+    );
+
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
+    UUID id3 = UUID.randomUUID();
+
+    Clothes c1 = new Clothes(owner, "티셔츠1", ClothesType.TOP, List.of(
+        new ClothesSelectedValue(colorDef, blueVal),
+        new ClothesSelectedValue(thicknessDef, normalVal)
+    ));
+    Clothes c2 = new Clothes(owner, "티셔츠2", ClothesType.TOP, List.of(
+        new ClothesSelectedValue(colorDef, greenVal),
+        new ClothesSelectedValue(thicknessDef, thinVal)
+    ));
+    Clothes c3 = new Clothes(owner, "티셔츠3", ClothesType.TOP, List.of(
+        new ClothesSelectedValue(colorDef, redVal),
+        new ClothesSelectedValue(thicknessDef, thickVal)
+    ));
+
+    Instant t1 = Instant.parse("2025-01-03T00:00:00Z");
+    Instant t2 = Instant.parse("2025-01-02T00:00:00Z");
+    Instant t3 = Instant.parse("2025-01-01T00:00:00Z");
+
+    ReflectionTestUtils.setField(c1, "id", id1);
+    ReflectionTestUtils.setField(c1, "createdAt", t1);
+    ReflectionTestUtils.setField(c2, "id", id2);
+    ReflectionTestUtils.setField(c2, "createdAt", t2);
+    ReflectionTestUtils.setField(c3, "id", id3);
+    ReflectionTestUtils.setField(c3, "createdAt", t3);
+
+    given(clothesRepository.searchWithCursor(condition)).willReturn(List.of(c1, c2, c3));
+    given(clothesRepository.countWithCondition(condition)).willReturn(10L);
+
+    ClothesDto d1 = new ClothesDto(
+        id1, ownerId, "티셔츠1", null, ClothesType.TOP,
+        List.of(
+            new ClothesAttributeWithDefDto(colorDefId, "색상", List.of("빨강", "파랑", "초록"), "파랑"),
+            new ClothesAttributeWithDefDto(thicknessDefId, "두께감", List.of("얇음", "보통", "두꺼움"), "보통")
+        ),
+        t1
+    );
+    ClothesDto d2 = new ClothesDto(
+        id2, ownerId, "티셔츠2", null, ClothesType.TOP,
+        List.of(
+            new ClothesAttributeWithDefDto(colorDefId, "색상", List.of("빨강", "파랑", "초록"), "초록"),
+            new ClothesAttributeWithDefDto(thicknessDefId, "두께감", List.of("얇음", "보통", "두꺼움"), "얇음")
+        ),
+        t2
+    );
+
+    given(clothesMapper.toDto(c1, null)).willReturn(d1);
+    given(clothesMapper.toDto(c2, null)).willReturn(d2);
+
+    // when
+    ClothesDtoCursorResponse result = clothesServiceImpl.getClothes(condition);
+
+    // then
+    assertThat(result).isNotNull();
+    assertThat(result.hasNext()).isTrue();
+    assertThat(result.totalCount()).isEqualTo(10L);
+    assertThat(result.data()).hasSize(2);
+
+    assertThat(result.data().get(0).name()).isEqualTo("티셔츠1");
+    assertThat(result.data().get(0).attributes()).extracting(ClothesAttributeWithDefDto::definitionName)
+        .containsExactlyInAnyOrder("색상", "두께감");
+    assertThat(result.data().get(0).attributes().stream()
+        .anyMatch(a -> a.definitionName().equals("색상") && a.value().equals("파랑"))).isTrue();
+    assertThat(result.data().get(0).attributes().stream()
+        .anyMatch(a -> a.definitionName().equals("두께감") && a.value().equals("보통"))).isTrue();
+
+    assertThat(result.data().get(1).name()).isEqualTo("티셔츠2");
+    assertThat(result.data().get(1).attributes().stream()
+        .anyMatch(a -> a.definitionName().equals("색상") && a.value().equals("초록"))).isTrue();
+    assertThat(result.data().get(1).attributes().stream()
+        .anyMatch(a -> a.definitionName().equals("두께감") && a.value().equals("얇음"))).isTrue();
+
+    assertThat(result.nextCursor()).isEqualTo(t2.toString());
+    assertThat(result.nextIdAfter()).isEqualTo(id2);
+
+    then(clothesMapper).should().toDto(c1, null);
+    then(clothesMapper).should().toDto(c2, null);
+    then(clothesMapper).should(never()).toDto(c3, null);
+  }
+
+  @Test
   @DisplayName("의상 수정 성공")
   void updateClothes_Success() {
     // given: 기존 의상(색상=파랑, 두께감=보통)
@@ -325,6 +425,7 @@ class ClothesServiceImplTest {
     then(clothesRepository).should().findById(clothesId);
     then(clothesRepository).should().delete(clothes);
   }
+
   @Test
   @DisplayName("의상 삭제 실패_존재하지 않는 clothesId")
   void deleteClothes_Fail_NotFound() {

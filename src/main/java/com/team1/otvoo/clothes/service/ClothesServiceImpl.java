@@ -2,7 +2,11 @@ package com.team1.otvoo.clothes.service;
 
 import com.team1.otvoo.clothes.dto.ClothesCreateRequest;
 import com.team1.otvoo.clothes.dto.ClothesDto;
+import com.team1.otvoo.clothes.dto.ClothesDtoCursorResponse;
+import com.team1.otvoo.clothes.dto.ClothesSearchCondition;
 import com.team1.otvoo.clothes.dto.ClothesUpdateRequest;
+import com.team1.otvoo.clothes.dto.SortBy;
+import com.team1.otvoo.clothes.dto.SortDirection;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDto;
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
@@ -73,6 +77,40 @@ public class ClothesServiceImpl implements ClothesService {
     }
 
     return clothesMapper.toDto(saved, imageUrl);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public ClothesDtoCursorResponse getClothes(ClothesSearchCondition condition) {
+    List<Clothes> clothesList = clothesRepository.searchWithCursor(condition);
+
+    boolean hasNext = clothesList.size() > condition.limit();
+    List<Clothes> page = hasNext ? clothesList.subList(0, condition.limit()) : clothesList;
+
+    String nextCursor = null;
+    UUID nextIdAfter = null;
+
+    if (hasNext) {
+      Clothes last = page.get(page.size() - 1);
+      nextCursor = last.getCreatedAt().toString();
+      nextIdAfter = last.getId();
+    }
+
+    long totalCount = clothesRepository.countWithCondition(condition);
+
+    List<ClothesDto> data = page.stream()
+        .map(clothes -> clothesMapper.toDto(clothes, null))
+        .toList();
+
+    return new ClothesDtoCursorResponse(
+        data,
+        nextCursor,
+        nextIdAfter,
+        hasNext,
+        totalCount,
+        SortBy.CREATED_AT,
+        SortDirection.DESCENDING
+    );
   }
 
   @Override

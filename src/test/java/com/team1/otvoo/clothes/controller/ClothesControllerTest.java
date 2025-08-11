@@ -2,6 +2,7 @@ package com.team1.otvoo.clothes.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -10,7 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.otvoo.clothes.dto.ClothesCreateRequest;
 import com.team1.otvoo.clothes.dto.ClothesDto;
+import com.team1.otvoo.clothes.dto.ClothesDtoCursorResponse;
+import com.team1.otvoo.clothes.dto.ClothesSearchCondition;
 import com.team1.otvoo.clothes.dto.ClothesUpdateRequest;
+import com.team1.otvoo.clothes.dto.SortBy;
+import com.team1.otvoo.clothes.dto.SortDirection;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDto;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.ClothesType;
@@ -87,6 +92,65 @@ class ClothesControllerTest {
         .andExpect(jsonPath("$.ownerId").value(ownerId.toString()))
         .andExpect(jsonPath("$.type").value(ClothesType.TOP.name()))
         .andExpect(jsonPath("$.attributes[0].definitionName").value("색상"));
+  }
+
+  @Test
+  @DisplayName("의상 목록 조회 성공")
+  void getClothes_Success() throws Exception {
+    // given
+    UUID ownerId = UUID.randomUUID();
+    int limit = 2;
+
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
+    Instant t1 = Instant.parse("2025-01-03T00:00:00Z");
+    Instant t2 = Instant.parse("2025-01-02T00:00:00Z");
+
+    ClothesDto dto1 = new ClothesDto(
+        id1, ownerId, "티셔츠1", null, ClothesType.TOP,
+        List.of(
+            new ClothesAttributeWithDefDto(UUID.randomUUID(), "색상", List.of("빨강", "파랑", "초록"), "파랑")
+        ),
+        t1
+    );
+    ClothesDto dto2 = new ClothesDto(
+        id2, ownerId, "티셔츠2", null, ClothesType.TOP,
+        List.of(
+            new ClothesAttributeWithDefDto(UUID.randomUUID(), "두께감", List.of("얇음", "보통", "두꺼움"),
+                "얇음")
+        ),
+        t2
+    );
+
+    ClothesDtoCursorResponse responseDto = new ClothesDtoCursorResponse(
+        List.of(dto1, dto2),
+        t2.toString(),
+        id2,
+        true,
+        10L,
+        SortBy.CREATED_AT,
+        SortDirection.DESCENDING
+    );
+
+    Mockito.when(clothesService.getClothes(Mockito.any(ClothesSearchCondition.class)))
+        .thenReturn(responseDto);
+
+    // when & then
+    mockMvc.perform(get("/api/clothes")
+            .param("ownerId", ownerId.toString())
+            .param("typeEqual", "TOP")
+            .param("limit", String.valueOf(limit))
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hasNext").value(true))
+        .andExpect(jsonPath("$.totalCount").value(10))
+        .andExpect(jsonPath("$.data", hasSize(2)))
+        .andExpect(jsonPath("$.data[0].name").value("티셔츠1"))
+        .andExpect(jsonPath("$.data[1].name").value("티셔츠2"))
+        .andExpect(jsonPath("$.nextCursor").value(t2.toString()))
+        .andExpect(jsonPath("$.nextIdAfter").value(id2.toString()))
+        .andExpect(jsonPath("$.sortBy").value("createdAt"))
+        .andExpect(jsonPath("$.sortDirection").value("DESCENDING"));
   }
 
   @Test

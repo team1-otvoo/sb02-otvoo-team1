@@ -9,8 +9,8 @@ public record ClothesDtoCursorResponse(
     UUID nextIdAfter,
     boolean hasNext,
     long totalCount,
-    String sortBy,
-    String sortDirection
+    SortBy sortBy,
+    SortDirection sortDirection
 ) {
 
 }
