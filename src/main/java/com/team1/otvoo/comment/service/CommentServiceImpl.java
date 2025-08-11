@@ -1,6 +1,7 @@
 package com.team1.otvoo.comment.service;
 
 import com.team1.otvoo.comment.dto.CommentCreateRequest;
+import com.team1.otvoo.comment.dto.CommentCursor;
 import com.team1.otvoo.comment.dto.CommentDto;
 import com.team1.otvoo.comment.entity.FeedComment;
 import com.team1.otvoo.comment.mapper.CommentMapper;
@@ -13,9 +14,12 @@ import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class CommentServiceImpl implements CommentService{
   private final CommentMapper commentMapper;
 
   @Override
+  @Transactional
   public CommentDto create(CommentCreateRequest request) {
     Feed feed = feedRepository.findById(request.feedId()).orElseThrow(
         () -> new RestException(ErrorCode.FEED_NOT_FOUND, Map.of("feedId", request.feedId()))
@@ -40,7 +45,14 @@ public class CommentServiceImpl implements CommentService{
 
     FeedComment comment = new FeedComment(user, feed, request.content());
     commentRepository.save(comment);
+    feedRepository.incrementCommentCount(feed.getId());
 
     return commentMapper.toDto(comment, authorDto);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Slice<CommentDto> getCommentsWithCursor(CommentCursor cursor, UUID feedId) {
+      return commentRepository.findCommentsWithCursor(cursor, feedId);
   }
 }
