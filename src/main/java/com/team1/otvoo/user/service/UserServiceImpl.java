@@ -15,6 +15,7 @@ import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.ProfileImage;
@@ -29,7 +30,6 @@ import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,32 +62,26 @@ public class UserServiceImpl implements UserService {
   @Transactional(readOnly = true)
   @Override
   public UserDtoCursorResponse getUsers(UserDtoCursorRequest request) {
+    UserSlice<UserRow> slice = userRepository.searchUserRowWithCursor(request);
+    List<UserRow> rows = slice.content();
 
-    UserSlice slice = userRepository.searchUsersWithCursor(request);
-    List<User> users = slice.content();
-
-
-    List<UUID> userIds = users.stream().map(User::getId).toList();
-    Map<UUID, String> nameMap = profileRepository.findUserNamesByUserIds(userIds).stream()
-        .collect(Collectors.toMap(UserNameView::getUserId, UserNameView::getName));
-
-
-    List<UserDto> dtos = users.stream()
-        .map(user -> {
-          String name = nameMap.get(user.getId());
-          return userMapper.toUserDto(user, name);
-        })
+    // Row → API DTO 매핑 (이 단계에서 플레이스홀더 처리 등 가능)
+    List<UserDto> dtos = rows.stream()
+        .map(userRow -> userMapper.toUserDtoFromUserRow(
+            userRow,
+            List.of()
+        ))
         .toList();
 
     String nextCursor = null;
     UUID nextIdAfter = null;
 
     if (slice.hasNext()) {
-      User last = users.get(users.size() - 1);
-      nextIdAfter = last.getId();
+      UserRow last = rows.get(rows.size() - 1);
+      nextIdAfter = last.id();
       nextCursor = switch (request.sortBy()) {
-        case EMAIL -> last.getEmail();
-        case CREATED_AT -> last.getCreatedAt().toString();
+        case EMAIL     -> last.email();
+        case CREATED_AT-> last.createdAt().toString();
       };
     }
 
