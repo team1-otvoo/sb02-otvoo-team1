@@ -24,7 +24,7 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
   private final JPAQueryFactory queryFactory;
 
   @Override
-  public List<DirectMessageDto> findDirectMessagesWithCursor(UUID userId, Instant cursor, UUID idAfter, int limit) {
+  public List<DirectMessageDto> findDirectMessagesBetweenUsersWithCursor(UUID userId1, UUID userId2, Instant cursor, UUID idAfter, int limit) {
     QDirectMessage dm = QDirectMessage.directMessage;
 
     QUser sender = QUser.user;
@@ -36,7 +36,11 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
     QProfileImage receiverProfileImage = new QProfileImage("receiverProfileImage");
 
     BooleanBuilder where = new BooleanBuilder();
-    where.and(dm.sender.id.eq(userId).or(dm.receiver.id.eq(userId)));
+
+    where.and(
+        (dm.sender.id.eq(userId1).and(dm.receiver.id.eq(userId2)))
+            .or(dm.sender.id.eq(userId2).and(dm.receiver.id.eq(userId1)))
+    );
 
     if (cursor != null && idAfter != null) {
       where.and(
@@ -47,7 +51,7 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
       where.and(dm.createdAt.lt(cursor));
     }
 
-    List<DirectMessageDto> results = queryFactory
+    return queryFactory
         .select(Projections.constructor(
             DirectMessageDto.class,
             dm.id,
@@ -77,8 +81,22 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
         .orderBy(dm.createdAt.desc(), dm.id.desc())
         .limit(limit)
         .fetch();
+  }
 
-    return results;
+  @Override
+  public long countDirectMessagesBetweenUsers(UUID userId1, UUID userId2) {
+    QDirectMessage dm = QDirectMessage.directMessage;
+
+    Long count = queryFactory
+        .select(dm.count())
+        .from(dm)
+        .where(
+            (dm.sender.id.eq(userId1).and(dm.receiver.id.eq(userId2)))
+                .or(dm.sender.id.eq(userId2).and(dm.receiver.id.eq(userId1)))
+        )
+        .fetchOne();
+
+    return Optional.ofNullable(count).orElse(0L);
   }
 
   @Override
@@ -119,20 +137,5 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
         .leftJoin(receiverProfileImage).on(receiverProfileImage.profile.id.eq(receiverProfile.id))
         .where(dm.id.eq(id))
         .fetchOne();
-  }
-
-  @Override
-  public long countDirectMessagesByUserId(UUID userId) {
-    QDirectMessage dm = QDirectMessage.directMessage;
-
-    Long count = queryFactory
-        .select(dm.count())
-        .from(dm)
-        .where(
-            dm.sender.id.eq(userId).or(dm.receiver.id.eq(userId))
-        )
-        .fetchOne();
-
-    return Optional.ofNullable(count).orElse(0L);
   }
 }

@@ -62,22 +62,34 @@ class DirectMessageRepositoryCustomImplTest {
   }
 
   @Test
-  @DisplayName("커서 기반 다이렉트 메시지 조회")
-  void testFindDirectMessagesWithCursor() {
+  @DisplayName("커서 기반 다이렉트 메시지 조회 Between Two Users")
+  void testFindDirectMessagesBetweenUsersWithCursor() {
+    // given
+    UUID userId1 = testUserId;
+    UUID userId2 = testUserId;
+
+    Instant cursor = null;
+    UUID idAfter = null;
+    int limit = 10;
+
     // when
-    List<DirectMessageDto> messages = directMessageRepositoryCustom.findDirectMessagesWithCursor(testUserId, null, null, 10);
+    List<DirectMessageDto> messages = directMessageRepositoryCustom.findDirectMessagesBetweenUsersWithCursor(userId1, userId2, cursor, idAfter, limit);
 
     // then
     assertThat(messages).isNotEmpty();
-    assertThat(messages.size()).isLessThanOrEqualTo(10);
+    assertThat(messages.size()).isLessThanOrEqualTo(limit);
     assertThat(messages.get(0).content()).isNotNull();
   }
 
   @Test
-  @DisplayName("사용자별 다이렉트 메시지 총 개수 조회")
-  void testCountDirectMessagesByUserId() {
+  @DisplayName("사용자 간 다이렉트 메시지 총 개수 조회")
+  void testCountDirectMessagesBetweenUsers() {
+    // given
+    UUID userId1 = testUserId;
+    UUID userId2 = testUserId;
+
     // when
-    long count = directMessageRepositoryCustom.countDirectMessagesByUserId(testUserId);
+    long count = directMessageRepositoryCustom.countDirectMessagesBetweenUsers(userId1, userId2);
 
     // then
     assertThat(count).isGreaterThan(0);
