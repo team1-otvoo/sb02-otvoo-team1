@@ -69,35 +69,30 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         clothesAttributeDefRepository.searchWithCursor(condition);
 
     boolean hasNext = clothesAttributeDefs.size() > condition.limit();
-    ClothesAttributeDefinition last = null;
-    int limit = condition.limit();
-
-    if (hasNext) {
-      last = clothesAttributeDefs.get(limit - 1);
-      clothesAttributeDefs = clothesAttributeDefs.subList(0, limit);
-    } else if (!clothesAttributeDefs.isEmpty()) {
-      last = clothesAttributeDefs.get(clothesAttributeDefs.size() - 1);
-    }
+    List<ClothesAttributeDefinition> page =
+        hasNext ? clothesAttributeDefs.subList(0, condition.limit()) : clothesAttributeDefs;
 
     String nextCursor = null;
     UUID nextIdAfter = null;
 
-    if (last != null && hasNext) {
-      switch (condition.sortBy()) {
-        case NAME -> nextCursor = last.getName();
-        case CREATED_AT -> nextCursor = last.getCreatedAt().toString();
-      }
+    if (hasNext) {
+      ClothesAttributeDefinition last = page.get(page.size() - 1);
+      nextCursor =
+          switch (condition.sortBy()) {
+            case NAME -> last.getName();
+            case CREATED_AT -> last.getCreatedAt().toString();
+          };
       nextIdAfter = last.getId();
     }
 
     long totalCount = clothesAttributeDefRepository.countWithCondition(condition);
 
-    List<ClothesAttributeDefDto> dtos = clothesAttributeDefs.stream()
+    List<ClothesAttributeDefDto> data = page.stream()
         .map(clothesAttributeDefMapper::toDto)
         .toList();
 
     return new ClothesAttributeDefDtoCursorResponse(
-        dtos,
+        data,
         nextCursor,
         nextIdAfter,
         hasNext,
