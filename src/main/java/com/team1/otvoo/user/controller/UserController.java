@@ -93,11 +93,11 @@ public class UserController {
       @PathVariable UUID userId,
       @Valid @RequestBody UserRoleUpdateRequest userRoleUpdateRequest
   ) {
-    log.info("PATCH /api/users/{userId}/role} - 유저 권한 수정 요청: userId={}", userId);
+    log.info("PATCH /api/users/{userId}/role - 유저 권한 수정 요청: userId={}", userId);
 
     UserDto userDto = userService.updateUserRole(userId, userRoleUpdateRequest);
 
-    log.info("PATCH /api/users/{userId}/role} - 유저 권한 수정 요청: userId={}", userId);
+    log.info("유저 권한 수정 완료: userId={}", userId);
 
     return ResponseEntity
         .status(HttpStatus.OK)
@@ -130,7 +130,7 @@ public class UserController {
       @RequestPart("request") ProfileUpdateRequest request,
       @RequestPart(value = "image", required = false) MultipartFile imageFile
   ) {
-    log.info("PATCH /api/users/{userId}/profiles} - 프로필 업데이트 요청: userId={}", userId);
+    log.info("PATCH /api/users/{userId}/profiles - 프로필 업데이트 요청: userId={}", userId);
 
     ProfileDto dto = userService.updateProfile(userId, request, imageFile);
 
