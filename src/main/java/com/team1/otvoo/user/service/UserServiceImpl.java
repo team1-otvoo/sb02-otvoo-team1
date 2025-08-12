@@ -18,10 +18,8 @@ import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
 import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
-import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.mapper.ProfileMapper;
-import com.team1.otvoo.user.projection.UserNameView;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -179,20 +177,9 @@ public class UserServiceImpl implements UserService {
     );
 
     profile.updateProfile(profileUpdateRequest);
-    UUID profileId = profile.getId();
 
-    if (profileImageFile != null) {
-      profileImageRepository.findByProfileId(profileId)
-          .ifPresent(image -> {
-            profileImageService.deleteProfileImage(image);
-            profileImageRepository.delete(image);
-          });
+    String profileImageUrl = profileImageService.replaceProfileImageAndGetUrl(profile, profileImageFile);
 
-      ProfileImage newProfileImage = profileImageService.createProfileImage(profileImageFile, profile);
-      profileImageRepository.save(newProfileImage);
-    }
-
-    String profileImageUrl = profileImageUrlResolver.resolve(profileId);
     ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImageUrl);
 
     return dto;
