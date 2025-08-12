@@ -10,6 +10,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.team1.otvoo.auth.token.AccessTokenStore;
 import com.team1.otvoo.auth.token.RefreshTokenStore;
@@ -191,7 +192,6 @@ class UserServiceImplTest {
     assertThat(resp.sortDirection()).isEqualTo(SortDirection.DESCENDING);
   }
 
-
   @Test
   @DisplayName("이메일 중복 시 예외 던짐")
   void createUser_with_duplicate_email() {
@@ -314,7 +314,7 @@ class UserServiceImplTest {
     then(userRepository).shouldHaveNoMoreInteractions();
   }
 
-  @DisplayName("프로필 업데이트 성공 - 이미지 포함")
+  @DisplayName("프로필 업데이트 성공 - 이미지 포함 (서비스 변경 반영)")
   @Test
   void updateProfile_success_withImage() {
     // given
@@ -327,32 +327,30 @@ class UserServiceImplTest {
     Profile profile = new Profile("홍길동", user);
     TestUtils.setField(profile, "id", profileId);
 
-    // 기존 이미지
-    ProfileImage oldImage = mock(ProfileImage.class);
-    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(profileId)).willReturn(Optional.of(oldImage));
-
-    // 새 이미지 저장
     MultipartFile newImageFile = mock(MultipartFile.class);
-    ProfileImage newImage = mock(ProfileImage.class);
 
+    // 서비스는 이제 repository 직접 접근 없이 service 메서드로 URL만 받음
+    String resolvedUrl = "https://cdn.example.com/newImage.png";
     ProfileDto expectedDto = mock(ProfileDto.class);
 
-    given(profileImageService.createProfileImage(newImageFile, profile)).willReturn(newImage);
-    given(profileImageUrlResolver.resolve(profileId)).willReturn("https://cdn.example.com/newImage.png");
-    given(profileMapper.toProfileDto(userId, profile, "https://cdn.example.com/newImage.png")).willReturn(expectedDto);
+    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
+    given(profileImageService.replaceProfileImageAndGetUrl(profile, newImageFile)).willReturn(resolvedUrl);
+    given(profileMapper.toProfileDto(userId, profile, resolvedUrl)).willReturn(expectedDto);
 
     // when
-    ProfileDto result = userService.updateProfile(userId, new ProfileUpdateRequest("홍길동", Gender.MALE, LocalDate.now(), null, 1), newImageFile);
+    ProfileDto result = userService.updateProfile(
+        userId,
+        new ProfileUpdateRequest("홍길동", Gender.MALE, LocalDate.now(), null, 1),
+        newImageFile
+    );
 
     // then
-    verify(profileImageService).deleteProfileImage(oldImage);
-    verify(profileImageRepository).delete(oldImage);
-    verify(profileImageRepository).save(newImage);
-    verify(profileImageService).createProfileImage(newImageFile, profile);
-    verify(profileMapper).toProfileDto(userId, profile, "https://cdn.example.com/newImage.png");
-
     assertThat(result).isEqualTo(expectedDto);
+    verify(profileImageService).replaceProfileImageAndGetUrl(profile, newImageFile);
+    verify(profileMapper).toProfileDto(userId, profile, resolvedUrl);
+
+    // 더 이상 ProfileImageRepository와의 상호작용이 없어야 함
+    verifyNoInteractions(profileImageRepository);
   }
 
   @Test
