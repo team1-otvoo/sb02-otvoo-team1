@@ -8,6 +8,11 @@ spring:
     password: otvoo_pass
     driver-class-name: org.postgresql.Driver
 
+  data:
+    redis:
+      port: 6379
+      host: localhost
+
   jpa:
     hibernate:
       ddl-auto: none
@@ -16,9 +21,15 @@ spring:
   profiles:
     active:
       - dev
+
   sql:
     init:
       mode: never
+
+  #임시
+  batch:
+    jdbc:
+      initialize-schema: always
 
   config:
     import: optional:file:.env[.properties]
@@ -34,11 +45,6 @@ spring:
           auth: true
           starttls:
             enable: true
-
-data:
-  redis:
-    port: 6379
-    host: localhost
 
 logging:
   level:
@@ -69,3 +75,6 @@ admin:
   email: abcde@email.com
   password: abcde123@
 
+sse:
+  timeout: 300_000
+  event-ttl-seconds: 300
