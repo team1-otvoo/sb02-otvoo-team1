@@ -135,9 +135,14 @@ public class UserServiceImpl implements UserService {
       refreshTokenStore.remove(userId);
 
       String accessToken = accessTokenStore.get(userId);
-      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-      accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId);
+      if (accessToken != null && !accessToken.isBlank()) {
+        long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+
+        if (expiration > 0) {
+          accessTokenStore.blacklistAccessToken(accessToken, expiration);
+        }
+        accessTokenStore.remove(userId);
+      }
     }
 
     UserDto userDto = userMapper.toUserDto(profile.getUser(), profile.getName());
@@ -217,9 +222,14 @@ public class UserServiceImpl implements UserService {
 
       // 특정 사용자의 access 토큰 redis에서 불러와서 블랙리스트에 추가
       String accessToken = accessTokenStore.get(userId);
-      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-      accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId);
+      if (accessToken != null && !accessToken.isBlank()) {
+        long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+
+        if (expiration > 0) {
+          accessTokenStore.blacklistAccessToken(accessToken, expiration);
+        }
+        accessTokenStore.remove(userId);
+      }
     }
 
     return userId;
