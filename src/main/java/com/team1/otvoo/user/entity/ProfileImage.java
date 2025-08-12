@@ -68,4 +68,27 @@ public class ProfileImage{
     this.profile = profile;
   }
 
+  // ProfileImage 엔티티 내부
+  public void updateFrom(ProfileImage src) {
+    if (src == null) {
+      return;
+    }
+    // 동일 프로필에 대한 교체만 허용 (안전장치)
+    if (this.getProfile() == null || src.getProfile() == null
+        || !this.getProfile().getId().equals(src.getProfile().getId())) {
+      return;
+    }
+
+    // 식별자(id)와 연관(profile)은 유지하고, 메타데이터만 교체
+    this.imageUrl = src.getImageUrl();
+    this.originalFilename = src.getOriginalFilename();
+    this.contentType = src.getContentType();
+    this.size = src.getSize();
+    this.width = src.getWidth();
+    this.height = src.getHeight();
+    this.uploadedAt = Instant.now();
+
+    // JPA Auditing을 쓰신다면 @LastModifiedDate 로 갱신되므로 별도 처리 불필요
+    // (직접 관리한다면 여기서 updatedAt = Instant.now();)
+  }
 }
