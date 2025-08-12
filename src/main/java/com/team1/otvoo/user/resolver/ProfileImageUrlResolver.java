@@ -15,8 +15,7 @@ public class ProfileImageUrlResolver {
   private final DefaultProfileImageProperties defaultProfileImageProperties;
 
   public String resolve(UUID profileId) {
-    return profileImageRepository.findByProfileId(profileId)
-        .map(ProfileImage::getImageUrl)
+    return profileImageRepository.findUrlByProfileId(profileId)
         .orElse(defaultProfileImageProperties.getUrl());
   }
 }
