@@ -7,8 +7,13 @@ import lombok.Data;
 @Data
 public class VilageFcstResponse {
 
-  private ResponseHeader header;
-  private ResponseBody body;
+  private Response response; // 기상청 응답 최상위의 response 매핑
+
+  @Data
+  public static class Response {
+    private ResponseHeader header;
+    private ResponseBody body;
+  }
 
   @Data
   public static class ResponseHeader {

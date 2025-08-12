@@ -58,7 +58,8 @@ public class WeatherItemReader implements ItemReader<List<FcstItem>> {
         baseDate, baseTime, x, y);
 
     // 2) 응답 DTO -> FcstItem 변환
-    List<FcstItem> items = apiResponse.getBody()
+    List<FcstItem> items = apiResponse.getResponse()
+        .getBody()
         .getItems()
         .getItem()
         .stream()

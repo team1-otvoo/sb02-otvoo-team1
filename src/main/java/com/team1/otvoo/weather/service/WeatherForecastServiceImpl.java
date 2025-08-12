@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -61,9 +62,13 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
     String baseDate = WeatherTimeCalculator.calculateBaseDate();
     String baseTime = WeatherTimeCalculator.calculateBaseTime();
 
+    log.info("기상청 API 호출 파라미터 - baseDate={}, baseTime={}, x={}, y={}",
+        baseDate, baseTime, x, y);
+
     // 3. 기상청 OpenAPI 호출
     List<VilageFcstResponse.FcstItem> items =
         weatherClient.getForecast(baseDate, baseTime, x, y)
+            .getResponse()
             .getBody()
             .getItems()
             .getItem();
@@ -110,6 +115,7 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
         .collect(Collectors.toList());
 
     return filtered.stream()
+        .sorted(Comparator.comparing(WeatherForecast::getForecastAt)) // 날짜 오름차순
         .map(weatherMapper::toDto)
         .collect(Collectors.toList());
   }
