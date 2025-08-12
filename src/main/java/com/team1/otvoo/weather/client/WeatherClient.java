@@ -23,10 +23,10 @@ public class WeatherClient {
   @Value("${weather.api.service-key}")
   private String serviceKey;
 
-  public VilageFcstResponse getForecast(String baseDate, String baseTime, int nx, int ny, int numOfRows) {
+  public VilageFcstResponse getForecast(String baseDate, String baseTime, int nx, int ny) {
     URI uri = UriComponentsBuilder.fromUriString(baseUrl)
         .queryParam("serviceKey", serviceKey)
-        .queryParam("numOfRows", numOfRows)
+        .queryParam("numOfRows", 1000)
         .queryParam("pageNo", 1)
         .queryParam("dataType", "JSON")
         .queryParam("base_date", baseDate)

@@ -55,8 +55,7 @@ public class WeatherItemReader implements ItemReader<List<FcstItem>> {
 
     // 1) 기상청 API 호출
     VilageFcstResponse apiResponse = weatherClient.getForecast(
-        baseDate, baseTime, x, y, numOfRows
-    );
+        baseDate, baseTime, x, y);
 
     // 2) 응답 DTO -> FcstItem 변환
     List<FcstItem> items = apiResponse.getBody()
