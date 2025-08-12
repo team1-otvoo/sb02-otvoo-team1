@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -105,9 +104,11 @@ public class UserController {
         .body(userDto);
   }
 
+  // 경로에 포함된 userId 와 principal.id 가 같은 지 확인 필요
+  @PreAuthorize("#userId == principal.user.id")
   @GetMapping("/{userId}/profiles")
   ResponseEntity<ProfileDto> getUserProfile(@PathVariable UUID userId) {
-    log.info("GET /api/users/{userId}/profiles} - 프로필 조회 요청: userId={}", userId);
+    log.info("GET /api/users/{userId}/profiles - 프로필 조회 요청: userId={}", userId);
 
     ProfileDto dto = userService.getUserProfile(userId);
 
@@ -118,6 +119,8 @@ public class UserController {
         .body(dto);
   }
 
+  // 경로에 포함된 userId 와 principal.id 가 같은 지 확인 필요
+  @PreAuthorize("#userId == principal.user.id")
   @PatchMapping(
       value = "/{userId}/profiles",
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -138,6 +141,8 @@ public class UserController {
         .body(dto);
   }
 
+  // 경로에 포함된 userId 와 principal.id 가 같은 지 확인 필요
+  @PreAuthorize("#userId == principal.user.id")
   @PatchMapping("/{userId}/password")
   ResponseEntity<Void> changePassword(
       @PathVariable UUID userId,
