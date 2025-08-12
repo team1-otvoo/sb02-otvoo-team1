@@ -10,6 +10,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.team1.otvoo.auth.token.AccessTokenStore;
 import com.team1.otvoo.auth.token.RefreshTokenStore;
@@ -29,6 +30,7 @@ import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Profile;
@@ -38,7 +40,6 @@ import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.mapper.ProfileMapper;
 import com.team1.otvoo.user.mapper.TestUtils;
 import com.team1.otvoo.user.mapper.UserMapper;
-import com.team1.otvoo.user.projection.UserNameView;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -113,92 +114,82 @@ class UserServiceImplTest {
     );
   }
 
+  @DisplayName("커서 기반 사용자 조회 - 다음 페이지가 있는 경우")
   @Test
-  @DisplayName("사용자 목록 조회 성공 - 커서 포함 응답 생성")
-  void getUsers_success() {
+  void getUsers_hasNext_true() {
     // given
-    UUID id1 = UUID.randomUUID();
+    UserDtoCursorRequest request = mock(UserDtoCursorRequest.class);
+    given(request.sortBy()).willReturn(SortBy.EMAIL);
+    given(request.sortDirection()).willReturn(SortDirection.ASCENDING);
+
+    // rows: 마지막 row(row2)의 id/email만 필요
+    UserRow row1 = mock(UserRow.class);
+    UserRow row2 = mock(UserRow.class);
     UUID id2 = UUID.randomUUID();
-    Instant createdAt1 = Instant.parse("2024-01-01T10:00:00Z");
-    Instant createdAt2 = Instant.parse("2024-01-01T11:00:00Z");
+    given(row2.id()).willReturn(id2);
+    given(row2.email()).willReturn("bob@example.com");
 
-    User user1 = new User("alice@example.com", "pw1");
-    User user2 = new User("bob@example.com", "pw2");
+    @SuppressWarnings("unchecked")
+    UserSlice<UserRow> slice = mock(UserSlice.class);
+    given(slice.content()).willReturn(List.of(row1, row2));
+    given(slice.hasNext()).willReturn(true);
+    given(slice.totalCount()).willReturn(42L);
 
-    TestUtils.setField(user1, "id", id1);
-    TestUtils.setField(user2, "id", id2);
-    TestUtils.setField(user1, "createdAt", createdAt1);
-    TestUtils.setField(user2, "createdAt", createdAt2);
+    given(userRepository.searchUserRowWithCursor(request)).willReturn(slice);
 
-    List<User> userList = List.of(user1, user2);
-    long totalCount = 100L;
-    boolean hasNext = true;
-
-    UserDtoCursorRequest request = new UserDtoCursorRequest(
-        null,
-        null,
-        10,
-        SortBy.EMAIL,
-        SortDirection.ASCENDING,
-        null,
-        null,
-        null
-    );
-
-    // 프로젝션 결과 Mock
-    UserNameView view1 = mock(UserNameView.class);
-    UserNameView view2 = mock(UserNameView.class);
-    given(view1.getUserId()).willReturn(id1);
-    given(view1.getName()).willReturn("Alice");
-    given(view2.getUserId()).willReturn(id2);
-    given(view2.getName()).willReturn("Bob");
-
-    given(userRepository.searchUsersWithCursor(request)).willReturn(new UserSlice(userList, hasNext, totalCount));
-    given(profileRepository.findUserNamesByUserIds(List.of(id1, id2))).willReturn(List.of(view1, view2));
-
-    UserDto dto1 = new UserDto(id1, createdAt1, "alice@example.com", "Alice", Role.USER, List.of(), false);
-    UserDto dto2 = new UserDto(id2, createdAt2, "bob@example.com", "Bob", Role.USER, List.of(), false);
-
-    given(userMapper.toUserDto(user1, "Alice")).willReturn(dto1);
-    given(userMapper.toUserDto(user2, "Bob")).willReturn(dto2);
+    // mapper 결과 (row의 내부 필드 접근 안 하므로 추가 stubbing 불필요)
+    Instant now = Instant.now();
+    UserDto dto1 = new UserDto(UUID.randomUUID(), now.minusSeconds(1), "alice@example.com", "Alice", Role.USER, List.of(), false);
+    UserDto dto2 = new UserDto(id2, now, "bob@example.com", "Bob", Role.USER, List.of(), false);
+    given(userMapper.toUserDtoFromUserRow(row1, List.of())).willReturn(dto1);
+    given(userMapper.toUserDtoFromUserRow(row2, List.of())).willReturn(dto2);
 
     // when
-    UserDtoCursorResponse response = userService.getUsers(request);
+    UserDtoCursorResponse resp = userService.getUsers(request);
 
     // then
-    assertThat(response.data()).containsExactly(dto1, dto2);
-    assertThat(response.hasNext()).isTrue();
-    assertThat(response.totalCount()).isEqualTo(totalCount);
-    assertThat(response.nextIdAfter()).isEqualTo(id2);
-    assertThat(response.nextCursor()).isEqualTo(user2.getEmail());
-    assertThat(response.sortBy()).isEqualTo(SortBy.EMAIL);
-    assertThat(response.sortDirection()).isEqualTo(SortDirection.ASCENDING);
+    assertThat(resp.data()).containsExactly(dto1, dto2);
+    assertThat(resp.hasNext()).isTrue();
+    assertThat(resp.totalCount()).isEqualTo(42L);
+    assertThat(resp.nextCursor()).isEqualTo("bob@example.com"); // EMAIL 기준 → 마지막 row email
+    assertThat(resp.nextIdAfter()).isEqualTo(id2);
+    assertThat(resp.sortBy()).isEqualTo(SortBy.EMAIL);
+    assertThat(resp.sortDirection()).isEqualTo(SortDirection.ASCENDING);
   }
 
+  @DisplayName("커서 기반 사용자 조회 - 다음 페이지가 없는 경우")
   @Test
-  @DisplayName("사용자 목록이 비어 있을 경우 - 커서 없음")
-  void getUsers_emptyList() {
-    UserDtoCursorRequest request = new UserDtoCursorRequest(
-        null,
-        null,
-        10,
-        SortBy.CREATED_AT,
-        SortDirection.DESCENDING,
-        null,
-        null,
-        null
-    );
+  void getUsers_hasNext_false() {
+    // given
+    UserDtoCursorRequest request = mock(UserDtoCursorRequest.class);
+    given(request.sortBy()).willReturn(SortBy.CREATED_AT);
+    given(request.sortDirection()).willReturn(SortDirection.DESCENDING);
 
-    given(userRepository.searchUsersWithCursor(request))
-        .willReturn(new UserSlice(List.of(), false, 0L));
+    UserRow row = mock(UserRow.class);
 
-    UserDtoCursorResponse response = userService.getUsers(request);
+    @SuppressWarnings("unchecked")
+    UserSlice<UserRow> slice = mock(UserSlice.class);
+    given(slice.content()).willReturn(List.of(row));
+    given(slice.hasNext()).willReturn(false);
+    given(slice.totalCount()).willReturn(1L);
 
-    assertThat(response.data()).isEmpty();
-    assertThat(response.hasNext()).isFalse();
-    assertThat(response.totalCount()).isEqualTo(0);
-    assertThat(response.nextIdAfter()).isNull();
-    assertThat(response.nextCursor()).isNull();
+    given(userRepository.searchUserRowWithCursor(request)).willReturn(slice);
+
+    Instant createdAt = Instant.parse("2024-01-01T00:00:00Z");
+    UserDto dto = new UserDto(UUID.randomUUID(), createdAt, "solo@example.com", "Solo", Role.USER, List.of(), false);
+    given(userMapper.toUserDtoFromUserRow(row, List.of())).willReturn(dto);
+
+    // when
+    UserDtoCursorResponse resp = userService.getUsers(request);
+
+    // then
+    assertThat(resp.data()).containsExactly(dto);
+    assertThat(resp.hasNext()).isFalse();
+    assertThat(resp.totalCount()).isEqualTo(1L);
+    assertThat(resp.nextCursor()).isNull();
+    assertThat(resp.nextIdAfter()).isNull();
+    assertThat(resp.sortBy()).isEqualTo(SortBy.CREATED_AT);
+    assertThat(resp.sortDirection()).isEqualTo(SortDirection.DESCENDING);
   }
 
   @Test
@@ -323,7 +314,7 @@ class UserServiceImplTest {
     then(userRepository).shouldHaveNoMoreInteractions();
   }
 
-  @DisplayName("프로필 업데이트 성공 - 이미지 포함")
+  @DisplayName("프로필 업데이트 성공 - 이미지 포함 (서비스 변경 반영)")
   @Test
   void updateProfile_success_withImage() {
     // given
@@ -336,32 +327,30 @@ class UserServiceImplTest {
     Profile profile = new Profile("홍길동", user);
     TestUtils.setField(profile, "id", profileId);
 
-    // 기존 이미지
-    ProfileImage oldImage = mock(ProfileImage.class);
-    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(profileId)).willReturn(Optional.of(oldImage));
-
-    // 새 이미지 저장
     MultipartFile newImageFile = mock(MultipartFile.class);
-    ProfileImage newImage = mock(ProfileImage.class);
 
+    // 서비스는 이제 repository 직접 접근 없이 service 메서드로 URL만 받음
+    String resolvedUrl = "https://cdn.example.com/newImage.png";
     ProfileDto expectedDto = mock(ProfileDto.class);
 
-    given(profileImageService.createProfileImage(newImageFile, profile)).willReturn(newImage);
-    given(profileImageUrlResolver.resolve(profileId)).willReturn("https://cdn.example.com/newImage.png");
-    given(profileMapper.toProfileDto(userId, profile, "https://cdn.example.com/newImage.png")).willReturn(expectedDto);
+    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
+    given(profileImageService.replaceProfileImageAndGetUrl(profile, newImageFile)).willReturn(resolvedUrl);
+    given(profileMapper.toProfileDto(userId, profile, resolvedUrl)).willReturn(expectedDto);
 
     // when
-    ProfileDto result = userService.updateProfile(userId, new ProfileUpdateRequest("홍길동", Gender.MALE, LocalDate.now(), null, 1), newImageFile);
+    ProfileDto result = userService.updateProfile(
+        userId,
+        new ProfileUpdateRequest("홍길동", Gender.MALE, LocalDate.now(), null, 1),
+        newImageFile
+    );
 
     // then
-    verify(profileImageService).deleteProfileImage(oldImage);
-    verify(profileImageRepository).delete(oldImage);
-    verify(profileImageRepository).save(newImage);
-    verify(profileImageService).createProfileImage(newImageFile, profile);
-    verify(profileMapper).toProfileDto(userId, profile, "https://cdn.example.com/newImage.png");
-
     assertThat(result).isEqualTo(expectedDto);
+    verify(profileImageService).replaceProfileImageAndGetUrl(profile, newImageFile);
+    verify(profileMapper).toProfileDto(userId, profile, resolvedUrl);
+
+    // 더 이상 ProfileImageRepository와의 상호작용이 없어야 함
+    verifyNoInteractions(profileImageRepository);
   }
 
   @Test
@@ -400,30 +389,15 @@ class UserServiceImplTest {
     Profile profile = new Profile(username, user);
     TestUtils.setField(profile, "id", profileId);
 
+    // 서비스는 resolver를 사용하므로 이 부분을 스텁해야 합니다.
     String profileImageUrl = "imageUrl";
-    ProfileImage profileImage = new ProfileImage(
-        profileImageUrl,
-        "original.png",
-        "image/png",
-        100L,
-        100,
-        100,
-        profile
-    );
 
-    double latitude = 37.5665;
-    double longitude = 126.9780;
-    int x = 3;
-    int y = 4;
-    List<String> locationNames = List.of("서울특별시", "강남구", "역삼동");
-    Location location = new Location(
-        latitude,
-        longitude,
-        x,
-        y,
-        locationNames
-    );
+    // given
+    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
+    given(profileImageUrlResolver.resolve(profileId)).willReturn(profileImageUrl);
 
+    // mapper 결과를 기대값으로 고정
+    Location location = new Location(37.5665, 126.9780, 3, 4, List.of("서울특별시", "강남구", "역삼동"));
     ProfileDto expectedDto = new ProfileDto(
         userId,
         username,
@@ -433,16 +407,15 @@ class UserServiceImplTest {
         1,
         profileImageUrl
     );
+    given(profileMapper.toProfileDto(userId, profile, profileImageUrl)).willReturn(expectedDto);
 
-    given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
-    given(profileImageRepository.findByProfileId(profileId)).willReturn(Optional.of(profileImage));
-    given(profileMapper.toProfileDto(userId, profile, profileImage.getImageUrl()))
-        .willReturn(expectedDto);
-
+    // when
     ProfileDto result = userService.getUserProfile(userId);
 
+    // then
     assertThat(result).isEqualTo(expectedDto);
   }
+
 
   @Test
   @DisplayName("계정 잠금 상태 변경 성공 - 잠금 처리 시 토큰 삭제 및 블랙리스트 등록")

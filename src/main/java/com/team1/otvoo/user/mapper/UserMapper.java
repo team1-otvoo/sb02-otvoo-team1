@@ -2,8 +2,10 @@ package com.team1.otvoo.user.mapper;
 
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.User;
+import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -23,4 +25,7 @@ public interface UserMapper {
   @Mapping(source = "name", target = "name")
   @Mapping(source = "profileImageUrl", target = "profileImageUrl")
   AuthorDto toAuthorDto(User user, String name, String profileImageUrl);
+
+  @Mapping(source = "linkedOAuthProviders", target = "linkedOAuthProviders")
+  UserDto toUserDtoFromUserRow(UserRow userRow, List<String> linkedOAuthProviders);
 }

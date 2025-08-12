@@ -1,10 +1,9 @@
 package com.team1.otvoo.user.dto;
 
-import com.team1.otvoo.user.entity.User;
 import java.util.List;
 
-public record UserSlice(
-    List<User> content,
+public record UserSlice<T>(
+    List<T> content,
     boolean hasNext,
     long totalCount
 ) {

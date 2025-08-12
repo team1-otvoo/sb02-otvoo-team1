@@ -24,6 +24,7 @@ class ProfileImageUrlResolverTest {
 
   @Mock
   private ProfileImageRepository profileImageRepository;
+
   @Mock
   private DefaultProfileImageProperties defaultImageProperties;
 
@@ -33,9 +34,10 @@ class ProfileImageUrlResolverTest {
     // given
     UUID profileId = UUID.randomUUID();
     String imageUrl = "https://cdn.example.com/profile.jpg";
-    ProfileImage profileImage = Mockito.mock(ProfileImage.class);
-    when(profileImage.getImageUrl()).thenReturn(imageUrl);
-    when(profileImageRepository.findByProfileId(profileId)).thenReturn(Optional.of(profileImage));
+
+    // Optional<String> 을 반환하도록 스텁
+    when(profileImageRepository.findUrlByProfileId(profileId))
+        .thenReturn(Optional.of(imageUrl));
 
     // when
     String result = resolver.resolve(profileId);
@@ -51,7 +53,8 @@ class ProfileImageUrlResolverTest {
     UUID profileId = UUID.randomUUID();
     String defaultUrl = "https://cdn.example.com/default.png";
 
-    when(profileImageRepository.findByProfileId(profileId)).thenReturn(Optional.empty());
+    when(profileImageRepository.findUrlByProfileId(profileId))
+        .thenReturn(Optional.empty());
     when(defaultImageProperties.getUrl()).thenReturn(defaultUrl);
 
     // when

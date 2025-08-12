@@ -39,7 +39,8 @@ public class SecurityConfig {
             .requestMatchers("/api/auth/**", "/", "/index.html", "/vite.svg", "/assets/**", "/ws/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/users").permitAll()                    // 회원가입만 공개
             .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")               // 목록 조회 ADMIN
-            .requestMatchers(HttpMethod.PATCH, "/api/users/**").hasRole("ADMIN")          // 권한/잠금 변경 ADMIN
+            .requestMatchers(HttpMethod.PATCH, "/api/users/*/lock").hasRole("ADMIN")          // 잠금 변경 ADMIN
+            .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasRole("ADMIN")          // 권한 변경 ADMIN
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .userDetailsService(customUserDetailsService)

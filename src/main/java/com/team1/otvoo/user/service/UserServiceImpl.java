@@ -15,12 +15,11 @@ import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
-import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.mapper.ProfileMapper;
-import com.team1.otvoo.user.projection.UserNameView;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -29,7 +28,6 @@ import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,32 +60,26 @@ public class UserServiceImpl implements UserService {
   @Transactional(readOnly = true)
   @Override
   public UserDtoCursorResponse getUsers(UserDtoCursorRequest request) {
+    UserSlice<UserRow> slice = userRepository.searchUserRowWithCursor(request);
+    List<UserRow> rows = slice.content();
 
-    UserSlice slice = userRepository.searchUsersWithCursor(request);
-    List<User> users = slice.content();
-
-
-    List<UUID> userIds = users.stream().map(User::getId).toList();
-    Map<UUID, String> nameMap = profileRepository.findUserNamesByUserIds(userIds).stream()
-        .collect(Collectors.toMap(UserNameView::getUserId, UserNameView::getName));
-
-
-    List<UserDto> dtos = users.stream()
-        .map(user -> {
-          String name = nameMap.get(user.getId());
-          return userMapper.toUserDto(user, name);
-        })
+    // Row → API DTO 매핑 (이 단계에서 플레이스홀더 처리 등 가능)
+    List<UserDto> dtos = rows.stream()
+        .map(userRow -> userMapper.toUserDtoFromUserRow(
+            userRow,
+            List.of()
+        ))
         .toList();
 
     String nextCursor = null;
     UUID nextIdAfter = null;
 
     if (slice.hasNext()) {
-      User last = users.get(users.size() - 1);
-      nextIdAfter = last.getId();
+      UserRow last = rows.get(rows.size() - 1);
+      nextIdAfter = last.id();
       nextCursor = switch (request.sortBy()) {
-        case EMAIL -> last.getEmail();
-        case CREATED_AT -> last.getCreatedAt().toString();
+        case EMAIL     -> last.email();
+        case CREATED_AT-> last.createdAt().toString();
       };
     }
 
@@ -143,9 +135,14 @@ public class UserServiceImpl implements UserService {
       refreshTokenStore.remove(userId);
 
       String accessToken = accessTokenStore.get(userId);
-      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-      accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId);
+      if (accessToken != null && !accessToken.isBlank()) {
+        long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+
+        if (expiration > 0) {
+          accessTokenStore.blacklistAccessToken(accessToken, expiration);
+        }
+        accessTokenStore.remove(userId);
+      }
     }
 
     UserDto userDto = userMapper.toUserDto(profile.getUser(), profile.getName());
@@ -185,20 +182,9 @@ public class UserServiceImpl implements UserService {
     );
 
     profile.updateProfile(profileUpdateRequest);
-    UUID profileId = profile.getId();
 
-    if (profileImageFile != null) {
-      profileImageRepository.findByProfileId(profileId)
-          .ifPresent(image -> {
-            profileImageService.deleteProfileImage(image);
-            profileImageRepository.delete(image);
-          });
+    String profileImageUrl = profileImageService.replaceProfileImageAndGetUrl(profile, profileImageFile);
 
-      ProfileImage newProfileImage = profileImageService.createProfileImage(profileImageFile, profile);
-      profileImageRepository.save(newProfileImage);
-    }
-
-    String profileImageUrl = profileImageUrlResolver.resolve(profileId);
     ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImageUrl);
 
     return dto;
@@ -236,9 +222,14 @@ public class UserServiceImpl implements UserService {
 
       // 특정 사용자의 access 토큰 redis에서 불러와서 블랙리스트에 추가
       String accessToken = accessTokenStore.get(userId);
-      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-      accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId);
+      if (accessToken != null && !accessToken.isBlank()) {
+        long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+
+        if (expiration > 0) {
+          accessTokenStore.blacklistAccessToken(accessToken, expiration);
+        }
+        accessTokenStore.remove(userId);
+      }
     }
 
     return userId;
