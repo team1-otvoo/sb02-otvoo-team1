@@ -104,6 +104,10 @@ public class WeatherForecastFactory {
 
       // 예보 시각 계산
       FcstItem first = group.get(0);
+      log.info(">>> group.get(0) fcstDate={}, fcstTime={}, baseDate={}, baseTime={}",
+          first.getFcstDate(), first.getFcstTime(),
+          first.getBaseDate(), first.getBaseTime());
+
       Instant forecastedAt = LocalDateTime.of(
           LocalDate.parse(first.getBaseDate(), DATE_FORMAT),
           LocalTime.parse(first.getBaseTime(), TIME_FORMAT)

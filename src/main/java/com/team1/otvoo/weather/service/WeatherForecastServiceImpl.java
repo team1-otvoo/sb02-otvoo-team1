@@ -3,6 +3,7 @@ package com.team1.otvoo.weather.service;
 import com.team1.otvoo.weather.client.KakaoLocalClient;
 import com.team1.otvoo.weather.client.WeatherClient;
 import com.team1.otvoo.weather.dto.VilageFcstResponse;
+import com.team1.otvoo.weather.dto.VilageFcstResponse.FcstItem;
 import com.team1.otvoo.weather.dto.WeatherAPILocation;
 import com.team1.otvoo.weather.dto.WeatherDto;
 import com.team1.otvoo.weather.entity.WeatherForecast;
@@ -86,6 +87,11 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
     List<VilageFcstResponse.FcstItem> filteredItems = items.stream()
         .filter(i -> selectedFcstTime.equals(i.getFcstTime()))
         .collect(Collectors.toList());
+
+    log.info("selectedFcstTime={}, filteredItems fcstTimes={}",
+        selectedFcstTime,
+        filteredItems.stream().map(FcstItem::getFcstTime).distinct().toList()
+    );
 
     // 4. Kakao API로 locationNames 조회
     List<String> locationNames = kakaoLocalClient.getRegionNames(latitude,longitude);
