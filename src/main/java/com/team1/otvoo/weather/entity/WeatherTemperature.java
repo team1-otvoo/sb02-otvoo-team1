@@ -31,10 +31,10 @@ public class WeatherTemperature {
   private Double min;
   private Double max;
 
-  @Column(name = "compared_to_day_before", nullable = false)
-  private double comparedToDayBefore;
+  @Column(name = "compared_to_day_before")
+  private Double comparedToDayBefore;
 
-  public WeatherTemperature(WeatherForecast forecast, double current, Double min, Double max, double comparedToDayBefore) {
+  public WeatherTemperature(WeatherForecast forecast, double current, Double min, Double max, Double comparedToDayBefore) {
     this.forecast = forecast;
     this.forecastId = forecast.getId();
     this.current = current;

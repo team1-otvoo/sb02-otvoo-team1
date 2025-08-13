@@ -89,7 +89,7 @@ CREATE TABLE weather_temperatures (
                                       current DOUBLE PRECISION NOT NULL,
                                       min DOUBLE PRECISION,
                                       max DOUBLE PRECISION,
-                                      compared_to_day_before DOUBLE PRECISION NOT NULL,
+                                      compared_to_day_before DOUBLE PRECISION,
                                       CONSTRAINT fk_weather_temperatures_forecast FOREIGN KEY (forecast_id)
                                           REFERENCES weather_forecasts(id) ON DELETE CASCADE
 );
@@ -108,7 +108,7 @@ CREATE TABLE weather_precipitations (
 CREATE TABLE weather_humidities (
                                     forecast_id UUID PRIMARY KEY,
                                     current DOUBLE PRECISION NOT NULL,
-                                    compared_to_day_before DOUBLE PRECISION NOT NULL,
+                                    compared_to_day_before DOUBLE PRECISION,
                                     CONSTRAINT fk_weather_humidities_forecast FOREIGN KEY (forecast_id)
                                         REFERENCES weather_forecasts(id) ON DELETE CASCADE
 );
