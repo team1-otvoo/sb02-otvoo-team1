@@ -49,7 +49,9 @@ public class WeatherForecastFactory {
       double longitude,
       int x,
       int y,
-      String locationNames
+      String locationNames,
+      Map<String, Double> tmxMap,
+      Map<String, Double> tmnMap
   ) {
     log.debug("Factory 입력 데이터 개수: {}", items.size());
 
@@ -70,6 +72,14 @@ public class WeatherForecastFactory {
       Double tmp = FcstItemUtils.parseDoubleByCategory(group, "TMP", parsingUtils);
       Double tmn = FcstItemUtils.parseDoubleByCategory(group, "TMN", parsingUtils);
       Double tmx = FcstItemUtils.parseDoubleByCategory(group, "TMX", parsingUtils);
+
+      // group에서 TMX/TMN이 없으면 파라미터로 받은 Map에서 가져오기
+      if (tmn == null) {
+        tmn = tmnMap.getOrDefault(key.fcstDate(), null);
+      }
+      if (tmx == null) {
+        tmx = tmxMap.getOrDefault(key.fcstDate(), null);
+      }
 
       // 온도(TMP) 전일 대비 계산
       Double tmpDiff = WeatherComparisonUtils.calculateDifferenceForDate(
