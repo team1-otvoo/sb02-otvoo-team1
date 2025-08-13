@@ -72,7 +72,7 @@ public class FollowController {
 
   @GetMapping("/followers")
   public ResponseEntity<FollowListResponse> getFollowerList(
-      @RequestParam("followerId") UUID followeeId,
+      @RequestParam("followeeId") UUID followeeId,
       @RequestParam(value = "cursor", required = false) String cursor,
       @RequestParam(value = "idAfter", required = false) UUID idAfter,
       @RequestParam(value = "limit", defaultValue = "20") int limit,
