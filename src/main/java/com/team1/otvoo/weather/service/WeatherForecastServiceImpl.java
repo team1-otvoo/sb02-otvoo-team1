@@ -9,9 +9,11 @@ import com.team1.otvoo.weather.dto.VilageFcstResponse.FcstItem;
 import com.team1.otvoo.weather.dto.WeatherAPILocation;
 import com.team1.otvoo.weather.dto.WeatherDto;
 import com.team1.otvoo.weather.entity.WeatherForecast;
+import com.team1.otvoo.weather.entity.WeatherLocation;
 import com.team1.otvoo.weather.factory.WeatherForecastFactory;
 import com.team1.otvoo.weather.mapper.WeatherMapper;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
+import com.team1.otvoo.weather.repository.WeatherLocationRepository;
 import com.team1.otvoo.weather.util.GridCoordConverter;
 import com.team1.otvoo.weather.util.WeatherTimeCalculator;
 import java.time.LocalDate;
@@ -39,6 +41,7 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
   private final WeatherForecastFactory weatherForecastFactory;
   private final WeatherMapper weatherMapper;
   private final WeatherForecastRepository weatherForecastRepository;
+  private final WeatherLocationRepository weatherLocationRepository;
 
   @Override
   public WeatherAPILocation getLocation(double longitude, double latitude) {
@@ -82,11 +85,11 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
       return Collections.emptyList();
     }
 
-    // 날짜별 TMX/TMN 추출
+    // 4. TMX/TMN 맵 추출
     Map<String, Double> tmxMap = extractValueByDate(items, "TMX");
     Map<String, Double> tmnMap = extractValueByDate(items, "TMN");
 
-    // 첫 번째 아이템의 fcstTime을 기준으로 사용
+    // 5. 선택된 fcstTime 필터링
     String selectedFcstTime = items.get(0).getFcstTime();
     log.debug("선택된 fcstTime: {}", selectedFcstTime);
 
@@ -100,24 +103,28 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
         filteredItems.stream().map(FcstItem::getFcstTime).distinct().toList()
     );
 
-    // 4. Kakao API로 locationNames 조회
+    // 6. Kakao API로 locationNames 조회
     List<String> locationNames = kakaoLocalClient.getRegionNames(latitude,longitude);
 
-    // 5. WeatherForecastFactory로 엔티티 변환
+    // 위치 엔티티 재사용 로직 추가
+    WeatherLocation location = weatherLocationRepository
+        .findByXAndY(x, y)
+        .orElseGet(() -> weatherLocationRepository.save(
+            new WeatherLocation(x, y, latitude, longitude, locationNames)
+        ));
+
+    // 7. Factory로 엔티티 변환
     List<WeatherForecast> forecasts = weatherForecastFactory.createForecasts(
         filteredItems,
-        latitude,
-        longitude,
-        x, y,
-        String.join(",", locationNames),
+        location, // location 객체 전달
         tmxMap,
         tmnMap
     );
 
-    // 6. DB 저장
+    // 8. DB 저장
     weatherForecastRepository.saveAll(forecasts);
 
-    // 7. UI 에 표시할 날짜 필터링 (오늘 이전 데이터 제외)
+    // 9. UI 에 표시할 날짜 필터링 (오늘 이전 데이터 제외)
     String today = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     List<WeatherForecast> filtered = forecasts.stream()
         .filter(f -> {
@@ -127,12 +134,12 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
               .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
           return fcstDate.compareTo(today) >= 0; // 오늘 이후만
         })
-        .collect(Collectors.toList());
+        .sorted(Comparator.comparing(WeatherForecast::getForecastAt))
+        .toList();
 
     return filtered.stream()
-        .sorted(Comparator.comparing(WeatherForecast::getForecastAt)) // 날짜 오름차순
         .map(weatherMapper::toDto)
-        .collect(Collectors.toList());
+        .toList();
   }
 
   private Map<String, Double> extractValueByDate(List<VilageFcstResponse.FcstItem> items, String category) {

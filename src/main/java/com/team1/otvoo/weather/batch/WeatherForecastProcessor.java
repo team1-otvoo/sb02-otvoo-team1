@@ -3,7 +3,9 @@ package com.team1.otvoo.weather.batch;
 
 import com.team1.otvoo.weather.dto.VilageFcstResponse.FcstItem;
 import com.team1.otvoo.weather.entity.WeatherForecast;
+import com.team1.otvoo.weather.entity.WeatherLocation;
 import com.team1.otvoo.weather.factory.WeatherForecastFactory;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -50,14 +52,16 @@ public class WeatherForecastProcessor implements
     Map<String, Double> tmxMap = Collections.emptyMap();
     Map<String, Double> tmnMap = Collections.emptyMap();
 
+    // 임시 WeatherLocation 생성
+    WeatherLocation dummyLocation = new WeatherLocation(
+        x, y, latitude, longitude,
+        locationNames != null ? Arrays.asList(locationNames.split(",")) : Collections.emptyList()
+    );
+
     log.debug("Processor 입력 데이터 개수: {}", items.size());
     return weatherForecastFactory.createForecasts(
         items,
-        latitude,
-        longitude,
-        x,
-        y,
-        locationNames,
+        dummyLocation, // 변경된 시그니처에 맞춰 전달
         tmxMap,
         tmnMap
     );
