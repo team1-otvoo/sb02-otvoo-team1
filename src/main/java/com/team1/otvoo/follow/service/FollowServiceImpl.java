@@ -3,13 +3,13 @@ package com.team1.otvoo.follow.service;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.follow.dto.FollowCreateRequest;
+import com.team1.otvoo.follow.dto.FollowCursorDto;
 import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
 import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
-import com.team1.otvoo.notification.service.NotificationService;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.time.Instant;
@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,7 @@ public class FollowServiceImpl implements FollowService {
   private final FollowRepository followRepository;
   private final UserRepository userRepository;
   private final FollowMapper followMapper;
-  private final NotificationService notificationService;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   @Override
@@ -60,8 +61,7 @@ public class FollowServiceImpl implements FollowService {
     followee.increaseFollowerCount();
     follower.increaseFollowingCount();
 
-    // 알림 생성
-    //notificationService.sendFollowNotification(follower, followee);
+    //eventPublisher.publishEvent(new FollowEvent(follower, followee));
 
     return followMapper.toDto(createdFollow);
   }
@@ -114,10 +114,10 @@ public class FollowServiceImpl implements FollowService {
     }
 
     // hasNext 판별 위해 limit+1 개로 조회
-    List<Follow> followees = followRepository.findFollowingsWithCursor(followerId, cursorInstant, idAfter, limit+1, nameLike);
+    List<FollowCursorDto> followees = followRepository.findFollowingsWithCursor(followerId, cursorInstant, idAfter, limit+1, nameLike);
 
     boolean hasNext = followees.size() > limit;
-    List<Follow> followingList = hasNext ? followees.subList(0, limit) : followees;
+    List<FollowCursorDto> followingList = hasNext ? followees.subList(0, limit) : followees;
 
     // 조회 결과가 없을 때
     if (followingList.isEmpty()) {
@@ -130,12 +130,15 @@ public class FollowServiceImpl implements FollowService {
       );
     }
 
-    List<FollowDto> data = followMapper.toDtoList(followingList);
     long totalCount = followRepository.countByFollowerId(followerId);
 
-    Follow lastFollow = followingList.get(followingList.size() - 1);
-    String nextCursor = lastFollow.getCreatedAt().toString();
-    UUID nextIdAfter = lastFollow.getId();
+    FollowCursorDto last = followingList.get(followingList.size() - 1);
+    String nextCursor = last.createdAt().toString();
+    UUID nextIdAfter = last.id();
+
+    List<FollowDto> data = followingList.stream()
+        .map(fc -> new FollowDto(fc.id(), fc.followee(), fc.follower()))
+        .toList();
 
     return new FollowListResponse(
         data,
@@ -161,10 +164,10 @@ public class FollowServiceImpl implements FollowService {
     }
 
     // hasNext 판별 위해 limit+1 개로 조회
-    List<Follow> followers = followRepository.findFollowersWithCursor(followeeId, cursorInstant, idAfter, limit+1, nameLike);
+    List<FollowCursorDto> followers = followRepository.findFollowersWithCursor(followeeId, cursorInstant, idAfter, limit+1, nameLike);
 
     boolean hasNext = followers.size() > limit;
-    List<Follow> followerList = hasNext ? followers.subList(0, limit) : followers;
+    List<FollowCursorDto> followerList = hasNext ? followers.subList(0, limit) : followers;
 
     // 조회 결과가 없을 때
     if (followerList.isEmpty()) {
@@ -177,12 +180,15 @@ public class FollowServiceImpl implements FollowService {
       );
     }
 
-    List<FollowDto> data = followMapper.toDtoList(followerList);
     long totalCount = followRepository.countByFolloweeId(followeeId);
 
-    Follow lastFollow = followerList.get(followerList.size() - 1);
-    String nextCursor = lastFollow.getCreatedAt().toString();
-    UUID nextIdAfter = lastFollow.getId();
+    FollowCursorDto last = followerList.get(followerList.size() - 1);
+    String nextCursor = last.createdAt().toString();
+    UUID nextIdAfter = last.id();
+
+    List<FollowDto> data = followerList.stream()
+        .map(fc -> new FollowDto(fc.id(), fc.followee(), fc.follower()))
+        .toList();
 
     return new FollowListResponse(
         data,
