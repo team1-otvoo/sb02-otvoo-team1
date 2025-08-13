@@ -1,5 +1,7 @@
 package com.team1.otvoo.weather.service;
 
+import static java.lang.Double.parseDouble;
+
 import com.team1.otvoo.weather.client.KakaoLocalClient;
 import com.team1.otvoo.weather.client.WeatherClient;
 import com.team1.otvoo.weather.dto.VilageFcstResponse;
@@ -18,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -79,6 +82,10 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
       return Collections.emptyList();
     }
 
+    // 날짜별 TMX/TMN 추출
+    Map<String, Double> tmxMap = extractValueByDate(items, "TMX");
+    Map<String, Double> tmnMap = extractValueByDate(items, "TMN");
+
     // 첫 번째 아이템의 fcstTime을 기준으로 사용
     String selectedFcstTime = items.get(0).getFcstTime();
     log.debug("선택된 fcstTime: {}", selectedFcstTime);
@@ -102,7 +109,9 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
         latitude,
         longitude,
         x, y,
-        String.join(",", locationNames)
+        String.join(",", locationNames),
+        tmxMap,
+        tmnMap
     );
 
     // 6. DB 저장
@@ -124,5 +133,15 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
         .sorted(Comparator.comparing(WeatherForecast::getForecastAt)) // 날짜 오름차순
         .map(weatherMapper::toDto)
         .collect(Collectors.toList());
+  }
+
+  private Map<String, Double> extractValueByDate(List<VilageFcstResponse.FcstItem> items, String category) {
+    return items.stream()
+        .filter(i -> category.equals(i.getCategory()))
+        .collect(Collectors.toMap(
+            VilageFcstResponse.FcstItem::getFcstDate,
+            i -> parseDouble(i.getFcstValue()),
+            (v1, v2) -> v1 // 중복 날짜 발생 시 첫 값 유지
+        ));
   }
 }
