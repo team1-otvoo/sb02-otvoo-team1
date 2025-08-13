@@ -26,7 +26,7 @@ public class WeatherClient {
   public VilageFcstResponse getForecast(String baseDate, String baseTime, int nx, int ny) {
     URI uri = UriComponentsBuilder.fromUriString(baseUrl)
         .queryParam("serviceKey", serviceKey)
-        .queryParam("numOfRows", 1000)
+        .queryParam("numOfRows", 2000)
         .queryParam("pageNo", 1)
         .queryParam("dataType", "JSON")
         .queryParam("base_date", baseDate)

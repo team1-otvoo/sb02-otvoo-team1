@@ -41,18 +41,19 @@ public final class WeatherTimeCalculator {
 
   /**
    * 현재 시간보다 가장 가까운 과거의 발표 시간(baseTime)을 반환
-   * (02, 05, 08, 11, 14, 17, 20, 23 중 선택)
+   * (02, 05, 08, 11, 14, 17, 20, 23 중 선택) -> 20 으로 고정(변경)
    */
   public static String calculateBaseTime() {
-    LocalTime currentTime = LocalTime.now(ZONE);
-    LocalTime selected = BASE_TIMES.get(0);
-
-    for (LocalTime baseTime : BASE_TIMES) {
-      if (!currentTime.isBefore(baseTime)) {
-        selected = baseTime;
-      }
-    }
-    return selected.format(TIME_FORMAT);
+//    LocalTime currentTime = LocalTime.now(ZONE);
+//    LocalTime selected = BASE_TIMES.get(0);
+//
+//    for (LocalTime baseTime : BASE_TIMES) {
+//      if (!currentTime.isBefore(baseTime)) {
+//        selected = baseTime;
+//      }
+//    }
+//    return selected.format(TIME_FORMAT);
+    return "2000";
   }
 
   /**

@@ -92,6 +92,9 @@ public class WeatherForecastFactory {
 
       // 강수 확률
       Double pop = FcstItemUtils.parseDoubleByCategory(group, "POP", parsingUtils);
+      if (pop != null) {
+        pop = pop / 100.0;
+      }
 
       // 강수 형태 & 양
       int ptyCode = FcstItemUtils.parseIntByCategory(group, "PTY", parsingUtils);
@@ -134,7 +137,7 @@ public class WeatherForecastFactory {
       WeatherTemperature temperature = new WeatherTemperature(forecast, tmp, tmn, tmx, tmpDiff);
       forecast.setTemperature(temperature);
 
-      WeatherHumidity humidity = new WeatherHumidity(forecast, reh, rehDiff);
+      WeatherHumidity humidity = reh == null  && rehDiff == null ? new WeatherHumidity(forecast, 0, 0.0) : new WeatherHumidity(forecast, reh, rehDiff);
       forecast.setHumidity(humidity);
 
       WeatherPrecipitation precipitation = new WeatherPrecipitation(forecast, precipitationType, pcp, pop);
