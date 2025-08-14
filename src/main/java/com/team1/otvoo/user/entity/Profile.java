@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
@@ -47,8 +48,8 @@ public class Profile{
   @JoinColumn(name = "user_id", unique = true)
   private User user;
 
-  @OneToOne(cascade = CascadeType.ALL)
-  @JoinColumn(name = "weather_location_id", unique = true)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "weather_location_id")
   private WeatherLocation location;
 
   public Profile (String name, User user) {
@@ -71,18 +72,6 @@ public class Profile{
 
     if (request.birthDate() != null && !request.birthDate().equals(this.birth)) {
       this.birth = request.birthDate();
-    }
-
-    if (request.location() != null && this.location != null) {
-      Location requestLocation = request.location();
-      this.location.updateCoordinates(
-          requestLocation.latitude(),
-          requestLocation.longitude(),
-          requestLocation.x(),
-          requestLocation.y()
-      );
-      String result = String.join(",", requestLocation.locationNames());
-      this.location.updateLocationNames(result);
     }
 
     if (request.temperatureSensitivity() != null && !request.temperatureSensitivity().equals(this.temperatureSensitivity)) {

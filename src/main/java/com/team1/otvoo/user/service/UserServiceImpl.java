@@ -196,14 +196,21 @@ public class UserServiceImpl implements UserService {
         }
     );
 
-    // --- WeatherLocation 중복 방지 로직 ---
+    // 1. 프로필 기본 정보 업데이트 (location 제외)
+    profile.updateProfile(profileUpdateRequest);
+
+    // 2. WeatherLocation 중복 방지 로직 + 연결
     if (profileUpdateRequest.location() != null) {
       int x = profileUpdateRequest.location().x();
       int y = profileUpdateRequest.location().y();
 
+      // DB에서 동일한 x,y 좌표의 WeatherLocation row가 있는지 찾음
       weatherLocationRepository.findByXAndY(x, y)
           .ifPresentOrElse(
               profile::setLocation,
+
+              // 동일좌표 없다면 -> 새로운 Location row 생성 후,
+              // 기존 profile 테이블의 location_id를 새로 생성된 row의 id로 교체
               () -> profile.setLocation(
                   new WeatherLocation(
                       x,
@@ -216,8 +223,7 @@ public class UserServiceImpl implements UserService {
           );
     }
 
-    profile.updateProfile(profileUpdateRequest);
-
+    // 3. 프로필 이미지 교체
     String profileImageUrl = profileImageService.replaceProfileImageAndGetUrl(profile, profileImageFile);
 
     ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImageUrl);

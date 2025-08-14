@@ -45,14 +45,4 @@ public class WeatherLocation {
     this.locationNames = String.join(",", locationNames);
   }
 
-  public void updateCoordinates(double latitude, double longitude, int x, int y) {
-    this.latitude = latitude;
-    this.longitude = longitude;
-    this.x = x;
-    this.y = y;
-  }
-
-  public void updateLocationNames(String locationNames) {
-    this.locationNames = locationNames;
-  }
 }
