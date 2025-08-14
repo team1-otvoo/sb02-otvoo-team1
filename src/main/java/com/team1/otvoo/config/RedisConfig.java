@@ -1,7 +1,9 @@
 package com.team1.otvoo.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.team1.otvoo.sse.event.RedisSubscriber;
-import com.team1.otvoo.sse.model.SseMessage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -42,9 +44,18 @@ public class RedisConfig {
     RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
     redisTemplate.setConnectionFactory(connectionFactory);
 
-    // SseMessage 객체를 JSON 형태로 직렬화
+    // ObjectMapper 커스터마이징 (Java 8 날짜/시간 지원)
+    ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.registerModule(new JavaTimeModule());
+    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    // Key / Value Serializer 설정
+    Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(objectMapper, Object.class);
+
     redisTemplate.setKeySerializer(new StringRedisSerializer());
-    redisTemplate.setValueSerializer(new Jackson2JsonRedisSerializer<>(SseMessage.class));
+    redisTemplate.setValueSerializer(serializer);
+    redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+    redisTemplate.setHashValueSerializer(serializer);
 
     return redisTemplate;
   }

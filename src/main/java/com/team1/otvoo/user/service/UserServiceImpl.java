@@ -18,7 +18,9 @@ import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
 import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
+import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.event.UserRoleEvent;
 import com.team1.otvoo.user.mapper.ProfileMapper;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
@@ -30,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +59,8 @@ public class UserServiceImpl implements UserService {
   private final JwtTokenProvider jwtTokenProvider;
   private final RefreshTokenStore refreshTokenStore;
   private final AccessTokenStore accessTokenStore;
+
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional(readOnly = true)
   @Override
@@ -128,7 +133,9 @@ public class UserServiceImpl implements UserService {
         }
     );
 
-    if (!profile.getUser().getRole().equals(request.role())) {
+    Role previousRole = profile.getUser().getRole();
+
+    if (!previousRole.equals(request.role())) {
       profile.getUser().updateRole(request.role());
 
       // 권한 변경시 로그아웃
@@ -146,6 +153,8 @@ public class UserServiceImpl implements UserService {
     }
 
     UserDto userDto = userMapper.toUserDto(profile.getUser(), profile.getName());
+
+    eventPublisher.publishEvent(new UserRoleEvent(previousRole, profile.getUser()));
 
     return userDto;
   }

@@ -1,6 +1,7 @@
 package com.team1.otvoo.follow.repository;
 
 import com.team1.otvoo.follow.entity.Follow;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +20,6 @@ public interface FollowRepository extends JpaRepository<Follow, UUID>, FollowRep
   long countByFolloweeId(@Param("followeeId") UUID followeeId);
 
   Optional<Follow> findByFolloweeIdAndFollowerId(UUID followeeId, UUID followerId);
+
+  List<Follow> findByFolloweeId(UUID followeeId);
 }

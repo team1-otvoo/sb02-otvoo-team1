@@ -1,4 +1,4 @@
-package com.team1.otvoo.notification;
+package com.team1.otvoo.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -18,7 +18,6 @@ import com.team1.otvoo.notification.entity.Notification;
 import com.team1.otvoo.notification.entity.NotificationLevel;
 import com.team1.otvoo.notification.mapper.NotificationMapper;
 import com.team1.otvoo.notification.repository.NotificationRepository;
-import com.team1.otvoo.notification.service.NotificationServiceImpl;
 import com.team1.otvoo.user.entity.User;
 import java.time.Instant;
 import java.util.Collections;
