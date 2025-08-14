@@ -9,10 +9,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
+@Slf4j
 @RequiredArgsConstructor
 @Repository
 public class SseEventRepository {
@@ -34,6 +36,14 @@ public class SseEventRepository {
 
     String eventDataKey = EVENT_DATA_KEY_PREFIX + eventId;
     redisTemplate.opsForValue().set(eventDataKey, sseMessage, eventTilSeconds, TimeUnit.SECONDS);
+
+    // 로그
+    Object storedMessage = redisTemplate.opsForValue().get(eventDataKey);
+    Set<Object> sortedSetMembers = redisTemplate.opsForZSet().range(EVENT_STREAM_KEY, 0, -1);
+
+    log.info("Redis 저장소에 저장 Saved eventId: {}", eventId);
+    log.info("Redis 저장소에 저장 Sorted Set [{}] members: {}", EVENT_STREAM_KEY, sortedSetMembers);
+    log.info("Redis 저장소에 저장 Stored SseMessage: {}", storedMessage);
   }
 
   // 유실된 데이터 조회

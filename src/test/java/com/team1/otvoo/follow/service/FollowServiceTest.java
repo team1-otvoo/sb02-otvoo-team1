@@ -18,6 +18,7 @@ import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
 import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.user.dto.UserSummary;
@@ -35,9 +36,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +57,9 @@ public class FollowServiceTest {
 
   @Mock
   private FollowMapper followMapper;
+
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   private UUID followeeId;
   private UUID followerId;
@@ -121,6 +127,13 @@ public class FollowServiceTest {
       then(userRepository).should().findById(followerId);
       then(followRepository).should().save(any(Follow.class));
       then(followMapper).should().toDto(follow);
+
+      ArgumentCaptor<FollowEvent> eventCaptor = ArgumentCaptor.forClass(FollowEvent.class);
+      then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+      FollowEvent publishedEvent = eventCaptor.getValue();
+      assertThat(publishedEvent.follower()).isEqualTo(follower);
+      assertThat(publishedEvent.followee()).isEqualTo(followee);
     }
 
     @Test
@@ -141,6 +154,8 @@ public class FollowServiceTest {
       then(followRepository).shouldHaveNoInteractions();
       then(userRepository).shouldHaveNoInteractions();
       then(followMapper).should(never()).toDto(follow);
+
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
     @Test
@@ -162,6 +177,8 @@ public class FollowServiceTest {
       then(followRepository).should().existsByFolloweeIdAndFollowerId(followeeId, followerId);
       then(userRepository).shouldHaveNoInteractions();
       then(followMapper).should(never()).toDto(follow);
+
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
     @Test
@@ -184,6 +201,8 @@ public class FollowServiceTest {
       then(userRepository).should(never()).findById(followerId);
       then(followRepository).should(never()).save(any(Follow.class));
       then(followMapper).should(never()).toDto(follow);
+
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
   }

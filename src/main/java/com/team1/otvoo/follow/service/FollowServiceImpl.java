@@ -8,6 +8,7 @@ import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
 import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.user.entity.User;
@@ -61,7 +62,9 @@ public class FollowServiceImpl implements FollowService {
     followee.increaseFollowerCount();
     follower.increaseFollowingCount();
 
-    //eventPublisher.publishEvent(new FollowEvent(follower, followee));
+    log.info("팔로우 대상: {}, 팔로워: {}", followee.getFollowerCount(), follower.getFollowingCount());
+
+    eventPublisher.publishEvent(new FollowEvent(follower, followee));
 
     return followMapper.toDto(createdFollow);
   }

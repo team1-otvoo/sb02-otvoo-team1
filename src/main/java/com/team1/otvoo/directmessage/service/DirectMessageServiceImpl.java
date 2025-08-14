@@ -4,6 +4,7 @@ import com.team1.otvoo.directmessage.dto.DirectMessageCreateRequest;
 import com.team1.otvoo.directmessage.dto.DirectMessageDto;
 import com.team1.otvoo.directmessage.dto.DirectMessageDtoCursorResponse;
 import com.team1.otvoo.directmessage.entity.DirectMessage;
+import com.team1.otvoo.directmessage.event.DirectMessageEvent;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepositoryCustom;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -12,6 +13,7 @@ import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
   private final UserRepository userRepository;
   private final DirectMessageRepository directMessageRepository;
   private final DirectMessageRepositoryCustom directMessageRepositoryCustom;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
@@ -55,10 +58,12 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         .createdAt(Instant.now())
         .build();
 
-    directMessageRepository.save(directMessage);
+    DirectMessage savedDirectMessage = directMessageRepository.save(directMessage);
 
     log.info("✅ DM 저장 완료: DM ID={}, senderId={}, receiverId={}",
         directMessage.getId(), sender.getId(), receiver.getId());
+
+    eventPublisher.publishEvent(new DirectMessageEvent(savedDirectMessage));
 
     return directMessageRepositoryCustom.findByIdWithUserSummaries(directMessage.getId());
   }
