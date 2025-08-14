@@ -74,14 +74,18 @@ public class SseServiceImpl implements SseService {
   public void sendEvent(SseMessage sseMessage) {
     // 특정 사용자에게만 보내야 하는 경우
     if (!sseMessage.isBroadcast()) {
+      log.info("sendEvent: 특정 사용자 알림, receiverIds={}, eventName={}", sseMessage.getReceiverIds(), sseMessage.getEventName());
       sseMessage.getReceiverIds().forEach(receiverId -> {
         // 이 서버에 연결된 SseEmitter가 있는지 확인
         List<SseEmitterWrapper> wrappers = sseEmitterRepository.findAllByReceiverId(receiverId);
+        log.info("receiverId={} 에 연결된 emitter 수: {}", receiverId, wrappers.size());
         wrappers.forEach(wrapper -> sendToEmitter(receiverId, wrapper, sseMessage));
       });
     } else { // 브로드캐스트인 경우
       // 이 서버에 연결된 모든 Emitter에 전송
+      log.info("sendEvent: 브로드캐스트 알림, eventName={}", sseMessage.getEventName());
       sseEmitterRepository.forEach((receiverId, wrapper) -> {
+        log.info("broadcast 전송: receiverId={}, emitterId={}", receiverId, wrapper.getEmitterId());
         sendToEmitter(receiverId, wrapper, sseMessage);
       });
 
@@ -91,6 +95,7 @@ public class SseServiceImpl implements SseService {
   private void sendToEmitter(UUID receiverId, SseEmitterWrapper wrapper, SseMessage message) {
     try {
       wrapper.getEmitter().send(message.toSseEventBuilder());
+      log.info("SSE 전송 성공: receiverId={}, emitterId={}, message={}", receiverId, wrapper.getEmitterId(), message.getEventData());
     } catch (IOException e) {
       log.error("SSE 이벤트 전송 중 오류 발생: receiverId={}, emitterId={}", receiverId, wrapper.getEmitterId(), e);
       // SseEmitter 상태를 '완료'로 변경 후 onError 콜백 실행: sseEmitterRepository.delete를 처리하도록 위임
