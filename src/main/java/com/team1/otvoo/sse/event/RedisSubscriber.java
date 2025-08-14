@@ -15,9 +15,14 @@ public class RedisSubscriber {
   private final ObjectMapper objectMapper;
   private final SseService sseService;
 
-  public void handleMessage(SseMessage sseMessage) {
-      log.info("Redis Subscribed Message: {}", sseMessage.getEventData());
-      sseService.sendEvent(sseMessage);
+  public void handleMessage(String messageJson) {
+    try {
+      SseMessage message = objectMapper.readValue(messageJson, SseMessage.class);
+      log.info("Redis Subscribed Message: {}", message.getEventData());
+      sseService.sendEvent(message);
+    } catch (Exception e) {
+      log.error("Failed to parse message", e);
+    }
   }
 
 }
