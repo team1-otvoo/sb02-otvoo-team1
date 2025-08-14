@@ -14,6 +14,7 @@ import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
+import com.team1.otvoo.feed.event.FeedEvent;
 import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
@@ -31,6 +32,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Slice;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,7 @@ public class FeedServiceImpl implements FeedService {
   private final FeedClothesRepository feedClothesRepository;
   private final FeedMapper feedMapper;
   private final ClothesMapper clothesMapper;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   @Override
@@ -71,7 +74,9 @@ public class FeedServiceImpl implements FeedService {
         .toList();
 
     createdFeed.updateFeedClothes(feedClothesList);
-    feedRepository.save(createdFeed);
+    Feed savedFeed = feedRepository.save(createdFeed);
+
+    eventPublisher.publishEvent(new FeedEvent(savedFeed));
 
     return feedMapper.toDto(createdFeed, authorDto,false);
   }
