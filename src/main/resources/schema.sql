@@ -5,20 +5,20 @@ CREATE TABLE weather_forecasts (
                                    forecast_at TIMESTAMP NOT NULL,
                                    sky_status VARCHAR(30) NOT NULL,
                                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                                   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                                   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                                   weather_location_id UUID NOT NULL, -- N:1 매핑을 위한 FK
+                                   CONSTRAINT fk_weather_forecasts_location FOREIGN KEY (weather_location_id)
+                                       REFERENCES weather_locations(id) ON DELETE CASCADE
 );
 
 -- weather_locations 테이블
 CREATE TABLE weather_locations (
                                    id UUID PRIMARY KEY,
-                                   forecast_id UUID NOT NULL,
                                    latitude DOUBLE PRECISION NOT NULL,
                                    longitude DOUBLE PRECISION NOT NULL,
                                    x INT NOT NULL,
                                    y INT NOT NULL,
-                                   location_names TEXT,
-                                   CONSTRAINT fk_weather_locations_forecast FOREIGN KEY (forecast_id)
-                                       REFERENCES weather_forecasts(id) ON DELETE CASCADE
+                                   location_names TEXT
 );
 
 -- users 테이블

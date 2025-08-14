@@ -20,8 +20,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,11 +43,7 @@ public class WeatherForecastFactory {
    */
   public List<WeatherForecast> createForecasts(
       List<FcstItem> items,
-      double latitude,
-      double longitude,
-      int x,
-      int y,
-      String locationNames,
+      WeatherLocation location, // 위치 엔티티 직접 받음
       Map<String, Double> tmxMap,
       Map<String, Double> tmnMap
   ) {
@@ -132,22 +126,16 @@ public class WeatherForecastFactory {
 
       // 엔티티 생성
       WeatherForecast forecast = WeatherForecast.of(forecastedAt, forecastAt, skyStatus);
-      List<String> regions = (locationNames != null && !locationNames.isBlank())
-          ? Arrays.asList(locationNames.split(","))
-          : Collections.emptyList();
 
-      WeatherLocation location = new WeatherLocation(
-          forecast,
-          x, y,
-          latitude, longitude,
-          regions
-      );
+      //  N:1 관계에서 위치를 그대로 참조
       forecast.setLocation(location);
 
       WeatherTemperature temperature = new WeatherTemperature(forecast, tmp, tmn, tmx, tmpDiff);
       forecast.setTemperature(temperature);
 
-      WeatherHumidity humidity = reh == null  && rehDiff == null ? new WeatherHumidity(forecast, 0, 0.0) : new WeatherHumidity(forecast, reh, rehDiff);
+      WeatherHumidity humidity = (reh == null && rehDiff == null)
+          ? new WeatherHumidity(forecast, 0, 0.0)
+          : new WeatherHumidity(forecast, reh, rehDiff);
       forecast.setHumidity(humidity);
 
       WeatherPrecipitation precipitation = new WeatherPrecipitation(forecast, precipitationType, pcp, pop);

@@ -27,6 +27,8 @@ import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.user.mapper.UserMapper;
 import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
+import com.team1.otvoo.weather.entity.WeatherLocation;
+import com.team1.otvoo.weather.repository.WeatherLocationRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -60,7 +62,11 @@ public class UserServiceImpl implements UserService {
   private final RefreshTokenStore refreshTokenStore;
   private final AccessTokenStore accessTokenStore;
 
+
+  private final WeatherLocationRepository weatherLocationRepository;
+
   private final ApplicationEventPublisher eventPublisher;
+
 
   @Transactional(readOnly = true)
   @Override
@@ -189,6 +195,26 @@ public class UserServiceImpl implements UserService {
           return new RestException(ErrorCode.NOT_FOUND, Map.of("profile-userId", userId));
         }
     );
+
+    // --- WeatherLocation 중복 방지 로직 ---
+    if (profileUpdateRequest.location() != null) {
+      int x = profileUpdateRequest.location().x();
+      int y = profileUpdateRequest.location().y();
+
+      weatherLocationRepository.findByXAndY(x, y)
+          .ifPresentOrElse(
+              profile::setLocation,
+              () -> profile.setLocation(
+                  new WeatherLocation(
+                      x,
+                      y,
+                      profileUpdateRequest.location().latitude(),
+                      profileUpdateRequest.location().longitude(),
+                      profileUpdateRequest.location().locationNames()
+                  )
+              )
+          );
+    }
 
     profile.updateProfile(profileUpdateRequest);
 

@@ -3,6 +3,7 @@ package com.team1.otvoo.user.entity;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.weather.entity.WeatherLocation;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -46,13 +47,17 @@ public class Profile{
   @JoinColumn(name = "user_id", unique = true)
   private User user;
 
-  @OneToOne
+  @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name = "weather_location_id", unique = true)
   private WeatherLocation location;
 
   public Profile (String name, User user) {
     this.name = name;
     this.user = user;
+  }
+
+  public void setLocation(WeatherLocation location) {
+    this.location = location;
   }
 
   public Profile updateProfile(ProfileUpdateRequest request) {
@@ -68,17 +73,15 @@ public class Profile{
       this.birth = request.birthDate();
     }
 
-    if (request.location() != null) {
+    if (request.location() != null && this.location != null) {
       Location requestLocation = request.location();
-
       this.location.updateCoordinates(
           requestLocation.latitude(),
           requestLocation.longitude(),
           requestLocation.x(),
           requestLocation.y()
       );
-
-      String result = String.join(", ", requestLocation.locationNames());
+      String result = String.join(",", requestLocation.locationNames());
       this.location.updateLocationNames(result);
     }
 
