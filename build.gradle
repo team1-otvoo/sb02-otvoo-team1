@@ -45,6 +45,7 @@ dependencies {
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310' // Java 8 날짜/시간 지원
 
     // Email
     implementation 'org.springframework.boot:spring-boot-starter-mail'
