@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class WeatherItemWriter implements ItemWriter<List<WeatherForecast>> {
+public class WeatherForecastWriter implements ItemWriter<List<WeatherForecast>> {
 
   private final WeatherForecastRepository weatherForecastRepository;
 
