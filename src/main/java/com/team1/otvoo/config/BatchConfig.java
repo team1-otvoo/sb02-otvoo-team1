@@ -27,17 +27,17 @@ public class BatchConfig {
   private final WeatherForecastProcessor weatherForecastProcessor;
   private final WeatherForecastWriter weatherForecastWriter;
 
-  // Job 정의: weatherBatchJob
+  // Job 정의: weatherForecastJob
   @Bean
-  public Job weatherBatchJob() {
-    return new JobBuilder("weatherBatchJob", jobRepository)
+  public Job weatherForecastJob() {
+    return new JobBuilder("weatherForecastJob", jobRepository)
         .start(weatherForecastStep())  // Step을 연결
         .build();
   }
 
   // Step 정의: weatherForecastStep
   // Reader -> WeatherLocation 반환
-  // Processor -> WeatherForecast 반환
+  // Processor -> List<WeatherForecast> 반환
   @Bean
   public Step weatherForecastStep() {
     return new StepBuilder("weatherForecastStep", jobRepository)
