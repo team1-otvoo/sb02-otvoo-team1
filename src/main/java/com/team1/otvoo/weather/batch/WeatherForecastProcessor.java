@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 
 @Slf4j
 @Component
@@ -32,7 +32,8 @@ public class WeatherForecastProcessor implements
   private final WeatherForecastFactory weatherForecastFactory;
   private final WeatherForecastRepository weatherForecastRepository;
 
-  private static final String BASE_TIME = "2300";
+  @Value("${weather.batch.base-time:2300}")
+  private String baseTime;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
   private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
@@ -41,12 +42,12 @@ public class WeatherForecastProcessor implements
     String baseDate = LocalDate.now(ZONE).format(DATE_FORMAT);
 
     log.info("배치 Processor 시작 - locationId={}, x={}, y={}, baseDate={}, baseTime={}",
-        location.getId(), location.getX(), location.getY(), baseDate, BASE_TIME);
+        location.getId(), location.getX(), location.getY(), baseDate, baseTime);
 
     // 1. 기상청 API 호출
     List<FcstItem> items;
     try {
-      VilageFcstResponse response = weatherClient.getForecast(baseDate, BASE_TIME,
+      VilageFcstResponse response = weatherClient.getForecast(baseDate, baseTime,
           location.getX(), location.getY());
       items = Optional.ofNullable(response)
           .map(r -> r.getResponse().getBody().getItems().getItem())
