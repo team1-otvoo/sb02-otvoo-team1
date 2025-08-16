@@ -44,9 +44,12 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/**", "/", "/index.html", "/vite.svg", "/assets/**", "/ws/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/users").permitAll()                    // 회원가입만 공개
-            .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")               // 목록 조회 ADMIN
-            .requestMatchers(HttpMethod.PATCH, "/api/users/*/lock").hasRole("ADMIN")          // 잠금 변경 ADMIN
-            .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasRole("ADMIN")          // 권한 변경 ADMIN
+            .requestMatchers(HttpMethod.GET, "/api/users").hasAuthority("ROLE_ADMIN")               // 목록 조회 ADMIN
+            .requestMatchers(HttpMethod.PATCH, "/api/users/*/lock").hasAuthority("ROLE_ADMIN")          // 잠금 변경 ADMIN
+            .requestMatchers(HttpMethod.PATCH, "/api/users/*/role").hasAuthority("ROLE_ADMIN")          // 권한 변경 ADMIN
+            .requestMatchers(HttpMethod.POST, "/api/clothes/attribute-defs").hasAuthority("ROLE_ADMIN")   // 의상 속성 등록
+            .requestMatchers(HttpMethod.PATCH, "/api/clothes/attribute-defs/*").hasAuthority("ROLE_ADMIN")    // 의상 속성 수정
+            .requestMatchers(HttpMethod.DELETE, "/api/clothes/attribute-defs/*").hasAuthority("ROLE_ADMIN")   // 의상 속성 삭제
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .userDetailsService(customUserDetailsService)
