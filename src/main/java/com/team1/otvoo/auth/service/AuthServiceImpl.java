@@ -109,6 +109,13 @@ public class AuthServiceImpl implements AuthService {
     String role = user.getRole().name();
     String name = user.getEmail();
 
+    if (user.isLocked()) {
+      // 저장된 리프레시 토큰을 삭제하여 더 이상 사용할 수 없게 만듭니다.
+      refreshTokenStore.remove(userId);
+      log.warn("❌ 잠긴 사용자에 대한 토큰 재발급 시도: {}", user.getEmail());
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "계정이 잠겨있어 토큰을 재발급할 수 없습니다."));
+    }
+
     return jwtTokenProvider.createAccessToken(userId, role, user.getEmail());
   }
 
@@ -131,6 +138,13 @@ public class AuthServiceImpl implements AuthService {
     User user = userRepository.findById(userId).orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("reason", "사용자를 찾을 수 없습니다.")));
     String role = user.getRole().name();
     String name = user.getEmail();
+
+    if (user.isLocked()) {
+      // 저장된 리프레시 토큰을 삭제하여 더 이상 사용할 수 없게 만듭니다.
+      refreshTokenStore.remove(userId);
+      log.warn("❌ 잠긴 사용자에 대한 토큰 재발급 시도: {}", user.getEmail());
+      throw new RestException(ErrorCode.UNAUTHORIZED, Map.of("reason", "계정이 잠겨있어 토큰을 재발급할 수 없습니다."));
+    }
 
     String newAccessToken = jwtTokenProvider.createAccessToken(userId, role, user.getEmail());
     String newRefreshToken = jwtTokenProvider.createRefreshToken(userId, role, user.getEmail());

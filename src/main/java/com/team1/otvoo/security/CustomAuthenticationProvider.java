@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.CredentialsExpiredException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -60,7 +61,12 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
       }
     }
 
+    // 비밀번호 검증이 끝났으니, 계정 자체의 상태를 검사
     CustomUserDetails userDetails = new CustomUserDetails(user, usingTempPassword);
+
+    if (!userDetails.isAccountNonLocked()) {
+      throw new LockedException("사용자 계정이 잠겨 있습니다.");
+    }
 
     log.info("✅ 인증 성공: {}", email);
 
