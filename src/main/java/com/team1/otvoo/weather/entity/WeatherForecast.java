@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -20,7 +21,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "weather_forecasts")
+@Table(
+    name = "weather_forecasts",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"weather_location_id", "forecast_at", "forecasted_at"})
+    }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class WeatherForecast {
@@ -30,10 +36,10 @@ public class WeatherForecast {
   private UUID id;
 
   @Column(name = "forecasted_at", nullable = false)
-  private Instant forecastedAt;
+  private Instant forecastedAt; // 발표 시각 (baseDate+baseTime)
 
   @Column(name = "forecast_at", nullable = false)
-  private Instant forecastAt;
+  private Instant forecastAt;  // 실제 예보 시각 (fcstDate+fcstTime)
 
   @Enumerated(EnumType.STRING)
   @Column(name = "sky_status", nullable = false)

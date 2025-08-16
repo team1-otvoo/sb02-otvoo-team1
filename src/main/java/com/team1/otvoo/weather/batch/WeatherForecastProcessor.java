@@ -73,10 +73,12 @@ public class WeatherForecastProcessor implements
         tmnMap
     );
 
-    // 4. 중복 필터링 (같은 forecast_at이 이미 저장되어있다면 제외)
+    // 4. 중복 필터링 (같은 location + forecast_at + forecasted_at 조합이 이미 저장되어 있다면 제외)
     List<WeatherForecast> newForecasts = forecasts.stream()
         .filter(f ->
-            !weatherForecastRepository.existsByLocationAndForecastAt(location, f.getForecastAt()))
+            !weatherForecastRepository.existsByLocationAndForecastAtAndForecastedAt(
+                f.getLocation(), f.getForecastAt(), f.getForecastedAt())
+        )
         .collect(Collectors.toList());
 
     log.info("변환된 예보 수: {}, 중복 제거 후 저장 대상: {}", forecasts.size(), newForecasts.size());
