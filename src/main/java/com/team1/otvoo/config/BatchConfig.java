@@ -5,6 +5,7 @@ import com.team1.otvoo.weather.batch.WeatherLocationReader;
 import com.team1.otvoo.weather.batch.WeatherForecastWriter;
 import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.entity.WeatherLocation;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -40,7 +41,7 @@ public class BatchConfig {
   @Bean
   public Step weatherForecastStep() {
     return new StepBuilder("weatherForecastStep", jobRepository)
-        .<WeatherLocation, WeatherForecast>chunk(10, transactionManager) // 10개의 위치 단위로 처리 후 Writer 실행
+        .<WeatherLocation, List<WeatherForecast>>chunk(10, transactionManager) // 10개의 위치 단위로 처리 후 Writer 실행
         .reader(weatherLocationReader)
         .processor(weatherForecastProcessor)
         .writer(weatherForecastWriter)

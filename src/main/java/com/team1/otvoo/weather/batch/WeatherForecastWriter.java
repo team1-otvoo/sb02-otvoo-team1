@@ -10,11 +10,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-/**
- * Writer: Processor에서 생성된 WeatherForecast 엔티티 리스트를 DB에 저장
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -23,13 +19,16 @@ public class WeatherForecastWriter implements ItemWriter<List<WeatherForecast>> 
   private final WeatherForecastRepository weatherForecastRepository;
 
   @Override
-  public void write(Chunk<? extends List<WeatherForecast>> items) throws Exception {
-    // List<List<WeatherForecast>> 형태의 items를 단일 List로 변환
-    List<WeatherForecast> forecasts = items.getItems().stream()
+  public void write(Chunk<? extends List<WeatherForecast>> chunk) {
+    List<WeatherForecast> flatList = chunk.getItems().stream()
+        .filter(list -> list != null && !list.isEmpty())
         .flatMap(List::stream)
-        .collect(Collectors.toList());
+        .toList();
 
-    // 저장 (CascadeType.ALL 로 하위 연관 엔티티도 함께 저장)
-    weatherForecastRepository.saveAll(forecasts);
+    if (!flatList.isEmpty()) {
+      weatherForecastRepository.saveAll(flatList);
+      log.info("Writer 저장 완료 - forecasts 총 {}건", flatList.size());
+    }
+
   }
 }
