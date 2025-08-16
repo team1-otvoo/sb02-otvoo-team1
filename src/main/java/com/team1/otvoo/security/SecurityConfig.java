@@ -16,6 +16,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -34,7 +37,10 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
     http
         .csrf(csrf -> csrf
-            .ignoringRequestMatchers("/api/auth/**", "/api/users/**", "/ws/**","/ws/info/**"))
+            .ignoringRequestMatchers("/api/auth/**", "/api/users/**", "/ws/**","/ws/info/**")
+            .csrfTokenRequestHandler(requestHandler())
+            .csrfTokenRepository(tokenRepository())
+            .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/**", "/", "/index.html", "/vite.svg", "/assets/**", "/ws/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/users").permitAll()                    // 회원가입만 공개
@@ -77,5 +83,21 @@ public class SecurityConfig {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  @Bean
+  public CookieCsrfTokenRepository tokenRepository() {
+    CookieCsrfTokenRepository repository =
+        CookieCsrfTokenRepository.withHttpOnlyFalse(); // 프론트엔드(JS)에서 토큰을 헤더에 포함할 수 있도록 함. (따로 띄우지 않았으므로 CORS는 필요 X)
+    repository.setCookieName("XSRF-TOKEN");
+    repository.setHeaderName("X-XSRF-TOKEN");
+
+    return repository;
+  }
+  @Bean
+  public CsrfTokenRequestAttributeHandler requestHandler() {
+    CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+    requestHandler.setCsrfRequestAttributeName("_csrf");
+    return requestHandler;
   }
 }
