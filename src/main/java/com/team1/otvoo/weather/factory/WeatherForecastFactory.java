@@ -98,6 +98,8 @@ public class WeatherForecastFactory {
       Double pop = FcstItemUtils.parseDoubleByCategory(group, "POP", parsingUtils);
       if (pop != null) {
         pop = pop / 100.0;
+      } else {
+        pop = 0.0; // 기본값: 0%
       }
 
       // 강수 형태 & 양
@@ -141,7 +143,7 @@ public class WeatherForecastFactory {
       WeatherPrecipitation precipitation = new WeatherPrecipitation(forecast, precipitationType, pcp, pop);
       forecast.setPrecipitation(precipitation);
 
-      WeatherWindSpeed windSpeed = new WeatherWindSpeed(forecast, wsd, windStrength);
+      WeatherWindSpeed windSpeed = new WeatherWindSpeed(forecast, (wsd != null ? wsd : 0.0), windStrength);
       forecast.setWindSpeed(windSpeed);
 
       results.add(forecast);

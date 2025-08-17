@@ -28,4 +28,7 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
   Optional<Profile> findByUserIdWithUser(@Param("userId") UUID userId);
 
   Optional<Profile> findByUserId(UUID userId);
+
+  @Query("SELECT DISTINCT p.location.id FROM Profile p WHERE p.location IS NOT NULL")
+  List<UUID> findDistinctWeatherLocationIds();
 }

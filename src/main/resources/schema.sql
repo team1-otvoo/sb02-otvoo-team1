@@ -8,7 +8,11 @@ CREATE TABLE weather_forecasts (
                                    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
                                    weather_location_id UUID NOT NULL, -- N:1 매핑을 위한 FK
                                    CONSTRAINT fk_weather_forecasts_location FOREIGN KEY (weather_location_id)
-                                       REFERENCES weather_locations(id) ON DELETE CASCADE
+                                       REFERENCES weather_locations(id) ON DELETE CASCADE,
+
+                                    -- 중복 방지: 같은 지역 + 같은 예보시각 + 같은 발표시각 조합은 단 하나만 존재
+                                   CONSTRAINT uq_weather_forecasts_location_time
+                                       UNIQUE (weather_location_id, forecast_at, forecasted_at)
 );
 
 -- weather_locations 테이블
