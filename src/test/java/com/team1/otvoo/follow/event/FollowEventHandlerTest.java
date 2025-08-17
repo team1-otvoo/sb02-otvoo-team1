@@ -50,7 +50,7 @@ public class FollowEventHandlerTest {
   class HandleFollowEventTests {
 
     @Test
-    @DisplayName("성공 - 팔로우 이벤트 발생 시 알림 서비스를 호출한다")
+    @DisplayName("성공_팔로우 이벤트 발생 시 알림 서비스 호출")
     void handleEvent_Success_ShouldCallNotificationService() {
       // when
       followEventHandler.handleEvent(followEvent);
@@ -60,15 +60,14 @@ public class FollowEventHandlerTest {
     }
 
     @Test
-    @DisplayName("성공 - 알림 서비스에서 예외 발생 시에도 이벤트 처리가 완료된다")
-    void handleEvent_Success_ShouldCompleteEvenWhenNotificationServiceThrows() {
+    @DisplayName("실패_알림 서비스에서 예외 발생 시에도 핸들러는 정상 종료")
+    void handleEvent_Failure_ShouldCompleteEvenWhenNotificationServiceThrows() {
       // given
       doThrow(new RuntimeException("알림 전송 실패"))
           .when(sendNotificationService).sendFollowNotification(follower, followee);
 
       // when & then
       assertDoesNotThrow(() -> followEventHandler.handleEvent(followEvent));
-
       then(sendNotificationService).should().sendFollowNotification(follower, followee);
     }
   }

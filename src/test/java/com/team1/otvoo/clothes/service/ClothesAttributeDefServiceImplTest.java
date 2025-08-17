@@ -12,10 +12,12 @@ import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefSearch
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
+import com.team1.otvoo.clothes.event.ClothesAttributeEvent;
 import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.follow.event.FollowEvent;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -24,9 +26,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +40,8 @@ class ClothesAttributeDefServiceImplTest {
   private ClothesAttributeDefRepository clothesAttributeDefRepository;
   @Mock
   private ClothesAttributeDefMapper clothesAttributeDefMapper;
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks
   private ClothesAttributeDefServiceImpl clothesAttributeDefService;
@@ -89,6 +95,13 @@ class ClothesAttributeDefServiceImplTest {
     assertThat(result).isNotNull();
     assertThat(result.name()).isEqualTo(name);
     assertThat(result.selectableValues()).containsExactlyElementsOf(selectableValues);
+
+    ArgumentCaptor<ClothesAttributeEvent> eventCaptor = ArgumentCaptor.forClass(ClothesAttributeEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+    ClothesAttributeEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.methodType()).isEqualTo("CREATE");
+    assertThat(publishedEvent.savedClothesAttributeDefinition()).isEqualTo(clothesAttributeDefinition);
   }
 
   @Test
@@ -107,6 +120,7 @@ class ClothesAttributeDefServiceImplTest {
         .hasMessage(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE.getMessage());
 
     then(clothesAttributeDefRepository).should(never()).save(any());
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test
@@ -125,6 +139,7 @@ class ClothesAttributeDefServiceImplTest {
         .hasMessage(ErrorCode.ATTRIBUTE_VALUE_DUPLICATE.getMessage());
 
     then(clothesAttributeDefRepository).should(never()).save(any());
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test
@@ -232,6 +247,13 @@ class ClothesAttributeDefServiceImplTest {
 
     verify(clothesAttributeDefRepository).findById(definitionId);
     verify(clothesAttributeDefRepository).save(clothesAttributeDefinition);
+
+    ArgumentCaptor<ClothesAttributeEvent> eventCaptor = ArgumentCaptor.forClass(ClothesAttributeEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+    ClothesAttributeEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.methodType()).isEqualTo("UPDATE");
+    assertThat(publishedEvent.savedClothesAttributeDefinition()).isEqualTo(clothesAttributeDefinition);
   }
 
   @Test
@@ -255,6 +277,7 @@ class ClothesAttributeDefServiceImplTest {
 
     verify(clothesAttributeDefRepository).findById(nonExistentId);
     verify(clothesAttributeDefRepository, never()).save(any());
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test

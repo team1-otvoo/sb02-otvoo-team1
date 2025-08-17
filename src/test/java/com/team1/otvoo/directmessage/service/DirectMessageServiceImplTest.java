@@ -4,9 +4,11 @@ import com.team1.otvoo.directmessage.dto.DirectMessageCreateRequest;
 import com.team1.otvoo.directmessage.dto.DirectMessageDto;
 import com.team1.otvoo.directmessage.dto.DirectMessageDtoCursorResponse;
 import com.team1.otvoo.directmessage.entity.DirectMessage;
+import com.team1.otvoo.directmessage.event.DirectMessageEvent;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepository;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepositoryCustom;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -14,9 +16,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
@@ -24,7 +28,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +44,9 @@ class DirectMessageServiceImplTest {
 
   @Mock
   private DirectMessageRepositoryCustom directMessageRepositoryCustom;
+
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks
   private DirectMessageServiceImpl directMessageService;
@@ -104,6 +113,12 @@ class DirectMessageServiceImplTest {
     // then
     assertEquals(expectedDto, actual);
     verify(directMessageRepository).save(any());
+
+    ArgumentCaptor<DirectMessageEvent> eventCaptor = ArgumentCaptor.forClass(DirectMessageEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+    DirectMessageEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.savedDirectMessage()).isEqualTo(savedMessage);
   }
 
   @Test
@@ -116,6 +131,7 @@ class DirectMessageServiceImplTest {
     assertThrows(RestException.class, () -> directMessageService.createDto(defaultRequest));
 
     verify(userRepository, never()).findById(receiverId);
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test
@@ -127,6 +143,7 @@ class DirectMessageServiceImplTest {
 
     // when & then
     assertThrows(RestException.class, () -> directMessageService.createDto(defaultRequest));
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test

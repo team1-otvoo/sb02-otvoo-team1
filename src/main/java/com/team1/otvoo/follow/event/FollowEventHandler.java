@@ -12,13 +12,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class FollowEventHandler {
 
-  private final SendNotificationService SendNotificationService;
+  private final SendNotificationService sendNotificationService;
 
   @Async
   @TransactionalEventListener
   public void handleEvent(FollowEvent event) {
     try {
-      SendNotificationService.sendFollowNotification(event.follower(), event.followee());
+      sendNotificationService.sendFollowNotification(event.follower(), event.followee());
     } catch (Exception e) {
       log.error("팔로우 알림 전송 실패: {}", e.getMessage(), e);
     }
