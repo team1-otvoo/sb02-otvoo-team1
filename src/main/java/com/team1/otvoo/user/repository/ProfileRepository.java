@@ -2,6 +2,7 @@ package com.team1.otvoo.user.repository;
 
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.projection.UserNameView;
+import com.team1.otvoo.weather.entity.WeatherLocation;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,4 +32,6 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
 
   @Query("SELECT DISTINCT p.location.id FROM Profile p WHERE p.location IS NOT NULL")
   List<UUID> findDistinctWeatherLocationIds();
+
+  List<Profile> findByLocation(WeatherLocation location);
 }

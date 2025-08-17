@@ -4,6 +4,8 @@ import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.entity.WeatherLocation;
 import com.team1.otvoo.weather.repository.custom.WeatherForecastRepositoryCustom;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -27,4 +29,14 @@ public interface WeatherForecastRepository extends JpaRepository<WeatherForecast
   @Query("DELETE FROM WeatherForecast wf WHERE wf.forecastedAt < :threshold")
   void deleteOlderThan(@Param("threshold") Instant threshold);
 
+
+  @Query("SELECT wf FROM WeatherForecast wf " +
+      "WHERE wf.location = :location " +
+      "AND wf.forecastedAt = :forecastedAt " +
+      "AND FUNCTION('DATE', wf.forecastAt) = :forecastDate")
+  List<WeatherForecast> findByLocationAndForecastedAtAndForecastDate(
+      @Param("location") WeatherLocation location,
+      @Param("forecastedAt") Instant forecastedAt,
+      @Param("forecastDate") LocalDate forecastDate
+  );
 }
