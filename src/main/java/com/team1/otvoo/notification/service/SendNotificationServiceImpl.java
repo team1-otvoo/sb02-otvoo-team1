@@ -169,6 +169,12 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     log.info("DM 수신 알림 전송: {} -> {}", sender.getId(), receiver.getId());
   }
 
+  @Override
+  public void sendWeatherForecastNotification(User receiver, String title, String content) {
+    createAndSendNotification(receiver, title, content);
+    log.info("날씨 알림 전송: {} -> {}", title, receiver.getId());
+  }
+
   /*****************************
    * helper method
    *****************************/

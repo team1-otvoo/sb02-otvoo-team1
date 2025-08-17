@@ -16,5 +16,5 @@ public interface SendNotificationService {
   void sendFeedNotification(Feed feed);
   void sendFollowNotification(User follower, User receiver);
   void sendDirectMessageNotification(DirectMessage directMessage);
-  //void sendWeatherForecastNotifiaction();
+  void sendWeatherForecastNotification(User receiver, String title, String content);
 }
