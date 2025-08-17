@@ -24,7 +24,7 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
         .selectFrom(notification)
         .join(notification.receiver).on().fetchJoin()
         .where(
-            notification.id.eq(receiverId),
+            notification.receiver.id.eq(receiverId),
             cursorCondition(notification, cursor, idAfter) // 커서 조건
         )
         .orderBy(notification.createdAt.desc(), notification.id.desc())

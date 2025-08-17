@@ -275,7 +275,7 @@ CREATE TABLE direct_messages (
 -- notifications 테이블
 CREATE TABLE notifications (
                                id UUID PRIMARY KEY,
-                               receiver_id UUID NOT NULL,
+                               receiver_id UUID,
                                title VARCHAR(255) NOT NULL,
                                content VARCHAR(255) NOT NULL,
                                level VARCHAR(20) NOT NULL,
