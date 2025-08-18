@@ -12,7 +12,7 @@ public interface ClothesService {
 
   ClothesDto create(ClothesCreateRequest request, MultipartFile imageFile);
 
-  ClothesDtoCursorResponse getClothes(ClothesSearchCondition condition);
+  ClothesDtoCursorResponse getClothesList(ClothesSearchCondition condition);
 
   ClothesDto update(UUID clothesId, ClothesUpdateRequest request, MultipartFile imageFile);
 

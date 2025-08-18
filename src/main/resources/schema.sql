@@ -155,7 +155,7 @@ CREATE TABLE clothes_selected_values (
 -- clothes_images 테이블
 CREATE TABLE clothes_images (
                                 id UUID PRIMARY KEY,
-                                image_url TEXT NOT NULL,
+                                image_key TEXT NOT NULL,
                                 file_name VARCHAR(255),
                                 content_type VARCHAR(100),
                                 size BIGINT,
@@ -163,7 +163,6 @@ CREATE TABLE clothes_images (
                                 height INT,
                                 upload_at TIMESTAMPTZ DEFAULT now(),
                                 clothes_id UUID NOT NULL UNIQUE,
-
                                 CONSTRAINT fk_clothes_images_clothes FOREIGN KEY (clothes_id)
                                     REFERENCES clothes(id) ON DELETE CASCADE
 );

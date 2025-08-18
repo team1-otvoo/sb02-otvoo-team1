@@ -24,8 +24,8 @@ public class ClothesImage {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
-  @Column(name = "image_url", nullable = false)
-  private String imageUrl;
+  @Column(name = "image_key", nullable = false)
+  private String imageKey;
 
   @Column(name = "file_name")
   private String fileName;
@@ -47,16 +47,27 @@ public class ClothesImage {
   @Column(name = "upload_at")
   private Instant uploadAt;
 
-  public ClothesImage(String imageUrl, String fileName, String contentType, Long size,
+  public ClothesImage(String imageKey, String fileName, String contentType, Long size,
       Integer width, Integer height,
       Clothes clothes) {
-    this.imageUrl = imageUrl;
+    this.imageKey = imageKey;
     this.fileName = fileName;
     this.contentType = contentType;
     this.size = size;
     this.width = width;
     this.height = height;
     this.clothes = clothes;
+    this.uploadAt = Instant.now();
+  }
+
+  public void replace(String newKey, String fileName, String contentType, Long size,
+      Integer width, Integer height) {
+    this.imageKey = newKey;
+    this.fileName = fileName;
+    this.contentType = contentType;
+    this.size = size;
+    this.width = width;
+    this.height = height;
     this.uploadAt = Instant.now();
   }
 }
