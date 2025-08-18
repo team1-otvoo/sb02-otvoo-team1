@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -35,6 +36,7 @@ public class ClothesAttributeDefController {
 
   private final ClothesAttributeDefService clothesAttributeDefService;
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping
   public ResponseEntity<ClothesAttributeDefDto> create(
       @RequestBody @Valid ClothesAttributeDefCreateRequest request) {
@@ -96,6 +98,7 @@ public class ClothesAttributeDefController {
         .body(result);
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @PatchMapping("/{definitionId}")
   public ResponseEntity<ClothesAttributeDefDto> update(
       @PathVariable UUID definitionId,
@@ -110,6 +113,7 @@ public class ClothesAttributeDefController {
         .body(result);
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{definitionId}")
   public ResponseEntity<Void> delete(@PathVariable UUID definitionId) {
     log.info("의상 속성 삭제 요청 - id: {}", definitionId);

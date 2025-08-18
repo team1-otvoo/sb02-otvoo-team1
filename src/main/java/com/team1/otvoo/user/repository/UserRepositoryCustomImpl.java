@@ -11,11 +11,11 @@ import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.dto.SortBy;
 import com.team1.otvoo.user.dto.SortDirection;
 import com.team1.otvoo.user.dto.UserDtoCursorRequest;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.QProfile;
 import com.team1.otvoo.user.entity.QProfileImage;
 import com.team1.otvoo.user.entity.QUser;
-import com.team1.otvoo.user.entity.User;
 import jakarta.persistence.EntityManager;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -56,33 +56,43 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
   }
 
   @Override
-  public UserSlice searchUsersWithCursor(UserDtoCursorRequest request) {
+  public UserSlice<UserRow> searchUserRowWithCursor(UserDtoCursorRequest request) {
     QUser user = QUser.user;
+    QProfile profile = QProfile.profile;
+    QProfileImage profileImage = QProfileImage.profileImage;
 
-    BooleanBuilder builder = buildConditions(user, request);
-    OrderSpecifier<?>[] orderSpecifiers = getOrderSpecifiers(user, request);
-
+    BooleanBuilder where = buildConditions(user, request);
+    OrderSpecifier<?>[] orders = getOrderSpecifiers(user, request);
     int limit = request.limit() > 0 ? request.limit() : 20;
 
-    long totalCount = queryFactory
-        .select(user.count())
+    // count
+    long total = queryFactory.select(user.count())
         .from(user)
-        .where(builder)
+        .where(where)
         .fetchOne();
 
-    List<User> result = queryFactory
-        .selectFrom(user)
-        .where(builder)
-        .orderBy(orderSpecifiers)
+    // rows (한 방 조회)
+    List<UserRow> rows = queryFactory
+        .select(Projections.constructor(UserRow.class,
+            user.id,
+            user.createdAt,
+            user.email,
+            profile.name,
+            user.role,
+            user.locked
+        ))
+        .from(user)
+        .leftJoin(profile).on(profile.user.eq(user))
+        .leftJoin(profileImage).on(profileImage.profile.eq(profile)) // 1:1이므로 row 폭발 없음
+        .where(where)
+        .orderBy(orders)
         .limit(limit + 1)
         .fetch();
 
-    boolean hasNext = result.size() > limit;
-    if (hasNext) {
-      result = result.subList(0, limit);
-    }
+    boolean hasNext = rows.size() > limit;
+    if (hasNext) rows = rows.subList(0, limit);
 
-    return new UserSlice(result, hasNext, totalCount);
+    return new UserSlice<>(rows, hasNext, total);
   }
 
 
@@ -92,26 +102,21 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
     if (request.emailLike() != null && !request.emailLike().isBlank()) {
       builder.and(user.email.containsIgnoreCase(request.emailLike()));
     }
-
     if (request.roleEqual() != null) {
       builder.and(user.role.eq(request.roleEqual()));
     }
-
     if (request.locked() != null) {
       builder.and(user.locked.eq(request.locked()));
     }
-    if ((request.cursor() != null && request.idAfter() == null)
-        || (request.cursor() == null && request.idAfter() != null)) {
 
-      log.warn("cursor 나 idAfter 둘 중 하나만 null 입니다.");
-
-      throw new RestException(ErrorCode.INVALID_INPUT_VALUE, Map.of("message", "cursor 나 idAfter 둘 중 하나만 null 입니다."));
+    // cursor 검증
+    if ((request.cursor() != null) ^ (request.idAfter() != null)) {
+      throw new RestException(ErrorCode.INVALID_INPUT_VALUE,
+          Map.of("message","cursor와 idAfter는 함께(null 아님) 또는 함께(null)여야 합니다."));
     }
-
-    if (request.cursor() != null && request.idAfter() != null) {
+    if (request.cursor() != null) {
       builder.and(buildCursorCondition(user, request));
     }
-
     return builder;
   }
 
@@ -124,31 +129,28 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
 
     switch (sortBy) {
       case EMAIL -> {
-        String cursorValue = request.cursor();
+        String cursor = request.cursor();
         if (direction == SortDirection.ASCENDING) {
-          condition.and(user.email.gt(cursorValue)
-              .or(user.email.eq(cursorValue).and(user.id.gt(idCursor))));
+          condition.and(user.email.gt(cursor)
+              .or(user.email.eq(cursor).and(user.id.gt(idCursor))));
         } else {
-          condition.and(user.email.lt(cursorValue)
-              .or(user.email.eq(cursorValue).and(user.id.lt(idCursor))));
+          condition.and(user.email.lt(cursor)
+              .or(user.email.eq(cursor).and(user.id.lt(idCursor))));
         }
       }
-
       case CREATED_AT -> {
-        Instant cursorTime = Instant.parse(request.cursor());
+        Instant cursor = Instant.parse(request.cursor());
         if (direction == SortDirection.ASCENDING) {
-          condition.and(user.createdAt.gt(cursorTime)
-              .or(user.createdAt.eq(cursorTime).and(user.id.gt(idCursor))));
+          condition.and(user.createdAt.gt(cursor)
+              .or(user.createdAt.eq(cursor).and(user.id.gt(idCursor))));
         } else {
-          condition.and(user.createdAt.lt(cursorTime)
-              .or(user.createdAt.eq(cursorTime).and(user.id.lt(idCursor))));
+          condition.and(user.createdAt.lt(cursor)
+              .or(user.createdAt.eq(cursor).and(user.id.lt(idCursor))));
         }
       }
     }
-
     return condition;
   }
-
 
   private OrderSpecifier<?>[] getOrderSpecifiers(QUser user, UserDtoCursorRequest request) {
     Order direction = request.sortDirection() == SortDirection.ASCENDING ? Order.ASC : Order.DESC;

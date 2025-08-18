@@ -3,6 +3,7 @@ package com.team1.otvoo.user.entity;
 import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.weather.entity.WeatherLocation;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
@@ -46,13 +48,17 @@ public class Profile{
   @JoinColumn(name = "user_id", unique = true)
   private User user;
 
-  @OneToOne
-  @JoinColumn(name = "weather_location_id", unique = true)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "weather_location_id")
   private WeatherLocation location;
 
   public Profile (String name, User user) {
     this.name = name;
     this.user = user;
+  }
+
+  public void setLocation(WeatherLocation location) {
+    this.location = location;
   }
 
   public Profile updateProfile(ProfileUpdateRequest request) {
@@ -66,20 +72,6 @@ public class Profile{
 
     if (request.birthDate() != null && !request.birthDate().equals(this.birth)) {
       this.birth = request.birthDate();
-    }
-
-    if (request.location() != null) {
-      Location requestLocation = request.location();
-
-      this.location.updateCoordinates(
-          requestLocation.latitude(),
-          requestLocation.longitude(),
-          requestLocation.x(),
-          requestLocation.y()
-      );
-
-      String result = String.join(", ", requestLocation.locationNames());
-      this.location.updateLocationNames(result);
     }
 
     if (request.temperatureSensitivity() != null && !request.temperatureSensitivity().equals(this.temperatureSensitivity)) {

@@ -4,6 +4,7 @@ import com.team1.otvoo.directmessage.dto.DirectMessageCreateRequest;
 import com.team1.otvoo.directmessage.dto.DirectMessageDto;
 import com.team1.otvoo.directmessage.dto.DirectMessageDtoCursorResponse;
 import com.team1.otvoo.directmessage.entity.DirectMessage;
+import com.team1.otvoo.directmessage.event.DirectMessageEvent;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepositoryCustom;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -12,6 +13,7 @@ import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
   private final UserRepository userRepository;
   private final DirectMessageRepository directMessageRepository;
   private final DirectMessageRepositoryCustom directMessageRepositoryCustom;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
@@ -55,22 +58,28 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         .createdAt(Instant.now())
         .build();
 
-    directMessageRepository.save(directMessage);
+    DirectMessage savedDirectMessage = directMessageRepository.save(directMessage);
 
     log.info("✅ DM 저장 완료: DM ID={}, senderId={}, receiverId={}",
         directMessage.getId(), sender.getId(), receiver.getId());
+
+    eventPublisher.publishEvent(new DirectMessageEvent(savedDirectMessage));
 
     return directMessageRepositoryCustom.findByIdWithUserSummaries(directMessage.getId());
   }
 
   @Override
   @Transactional(readOnly = true)
-  public DirectMessageDtoCursorResponse getDirectMessagesByUserId(UUID userId, String cursorStr, String idAfterStr, int limit) {
-    log.info("✅ DM 목록 조회 요청: userId={}, cursor={}, idAfter={}, limit={}", userId, cursorStr, idAfterStr, limit);
+  public DirectMessageDtoCursorResponse getDirectMessagesBetweenUsers(UUID userId1, UUID userId2, String cursorStr, String idAfterStr, int limit) {
+    log.info("✅ DM 목록 조회 요청: userId1={}, userId2={}, cursor={}, idAfter={}, limit={}",
+        userId1, userId2, cursorStr, idAfterStr, limit);
 
-    userRepository.findById(userId)
+    userRepository.findById(userId1)
         .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND,
-            Map.of("userId", userId, "message", "사용자를 찾을 수 없습니다")));
+            Map.of("userId", userId1, "message", "사용자를 찾을 수 없습니다")));
+    userRepository.findById(userId2)
+        .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND,
+            Map.of("userId", userId2, "message", "사용자를 찾을 수 없습니다")));
 
     Instant cursor = null;
     if (cursorStr != null && !cursorStr.isEmpty()) {
@@ -95,8 +104,9 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     }
 
     int pageSize = limit + 1;
-    List<DirectMessageDto> messages = directMessageRepositoryCustom.findDirectMessagesWithCursor(userId, cursor, idAfter, pageSize);
-    long totalCount = directMessageRepositoryCustom.countDirectMessagesByUserId(userId);
+    List<DirectMessageDto> messages = directMessageRepositoryCustom.findDirectMessagesBetweenUsersWithCursor(
+        userId1, userId2, cursor, idAfter, pageSize);
+    long totalCount = directMessageRepositoryCustom.countDirectMessagesBetweenUsers(userId1, userId2);
 
     boolean hasNext = messages.size() > limit;
     if (hasNext) {

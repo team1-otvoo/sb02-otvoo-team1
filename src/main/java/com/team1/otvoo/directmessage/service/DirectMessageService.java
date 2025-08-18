@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface DirectMessageService {
   DirectMessageDto createDto(DirectMessageCreateRequest request);
-  DirectMessageDtoCursorResponse getDirectMessagesByUserId(UUID userId, String cursorStr, String idAfterStr, int limit);
+  DirectMessageDtoCursorResponse getDirectMessagesBetweenUsers(UUID userId1, UUID userId2, String cursorStr, String idAfterStr, int limit);
 }

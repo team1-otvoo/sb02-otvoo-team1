@@ -5,20 +5,24 @@ CREATE TABLE weather_forecasts (
                                    forecast_at TIMESTAMP NOT NULL,
                                    sky_status VARCHAR(30) NOT NULL,
                                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                                   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                                   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                                   weather_location_id UUID NOT NULL, -- N:1 매핑을 위한 FK
+                                   CONSTRAINT fk_weather_forecasts_location FOREIGN KEY (weather_location_id)
+                                       REFERENCES weather_locations(id) ON DELETE CASCADE,
+
+                                    -- 중복 방지: 같은 지역 + 같은 예보시각 + 같은 발표시각 조합은 단 하나만 존재
+                                   CONSTRAINT uq_weather_forecasts_location_time
+                                       UNIQUE (weather_location_id, forecast_at, forecasted_at)
 );
 
 -- weather_locations 테이블
 CREATE TABLE weather_locations (
                                    id UUID PRIMARY KEY,
-                                   forecast_id UUID NOT NULL,
                                    latitude DOUBLE PRECISION NOT NULL,
                                    longitude DOUBLE PRECISION NOT NULL,
                                    x INT NOT NULL,
                                    y INT NOT NULL,
-                                   location_names TEXT,
-                                   CONSTRAINT fk_weather_locations_forecast FOREIGN KEY (forecast_id)
-                                       REFERENCES weather_forecasts(id) ON DELETE CASCADE
+                                   location_names TEXT
 );
 
 -- users 테이블
@@ -89,7 +93,7 @@ CREATE TABLE weather_temperatures (
                                       current DOUBLE PRECISION NOT NULL,
                                       min DOUBLE PRECISION,
                                       max DOUBLE PRECISION,
-                                      compared_to_day_before DOUBLE PRECISION NOT NULL,
+                                      compared_to_day_before DOUBLE PRECISION,
                                       CONSTRAINT fk_weather_temperatures_forecast FOREIGN KEY (forecast_id)
                                           REFERENCES weather_forecasts(id) ON DELETE CASCADE
 );
@@ -108,7 +112,7 @@ CREATE TABLE weather_precipitations (
 CREATE TABLE weather_humidities (
                                     forecast_id UUID PRIMARY KEY,
                                     current DOUBLE PRECISION NOT NULL,
-                                    compared_to_day_before DOUBLE PRECISION NOT NULL,
+                                    compared_to_day_before DOUBLE PRECISION,
                                     CONSTRAINT fk_weather_humidities_forecast FOREIGN KEY (forecast_id)
                                         REFERENCES weather_forecasts(id) ON DELETE CASCADE
 );
@@ -270,7 +274,7 @@ CREATE TABLE direct_messages (
 -- notifications 테이블
 CREATE TABLE notifications (
                                id UUID PRIMARY KEY,
-                               receiver_id UUID NOT NULL,
+                               receiver_id UUID,
                                title VARCHAR(255) NOT NULL,
                                content VARCHAR(255) NOT NULL,
                                level VARCHAR(20) NOT NULL,

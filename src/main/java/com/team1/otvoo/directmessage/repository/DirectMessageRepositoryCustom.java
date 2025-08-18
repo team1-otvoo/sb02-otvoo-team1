@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface DirectMessageRepositoryCustom {
-  List<DirectMessageDto> findDirectMessagesWithCursor(UUID userId, Instant cursor, UUID idAfter, int limit);
-  long countDirectMessagesByUserId(UUID userId);
   DirectMessageDto findByIdWithUserSummaries(UUID id);
+  List<DirectMessageDto> findDirectMessagesBetweenUsersWithCursor(UUID userId1, UUID userId2, Instant cursor, UUID idAfter, int limit);
+  long countDirectMessagesBetweenUsers(UUID userId1, UUID userId2);
 }

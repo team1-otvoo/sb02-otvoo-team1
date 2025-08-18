@@ -7,6 +7,7 @@ import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefSearch
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdateRequest;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
+import com.team1.otvoo.clothes.event.ClothesAttributeEvent;
 import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
@@ -20,6 +21,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
   private final ClothesAttributeDefRepository clothesAttributeDefRepository;
   private final ClothesAttributeDefMapper clothesAttributeDefMapper;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
@@ -57,6 +60,8 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
 
     log.info("의상 속성 등록 완료 - id: {}, name: {}, values: {}", saved.getId(), saved.getName(),
         saved.getValues());
+
+    eventPublisher.publishEvent(new ClothesAttributeEvent("CREATE", saved));
 
     return clothesAttributeDefMapper.toDto(saved);
   }
@@ -159,6 +164,8 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
         clothesAttributeDefinition);
     log.info("의상 속성 수정 완료 - id: {}, name: {}, values: {}", saved.getId(), saved.getName(),
         saved.getValues());
+
+    eventPublisher.publishEvent(new ClothesAttributeEvent("UPDATE", saved));
 
     return clothesAttributeDefMapper.toDto(saved);
   }

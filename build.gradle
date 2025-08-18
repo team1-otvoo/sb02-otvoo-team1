@@ -45,6 +45,7 @@ dependencies {
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310' // Java 8 날짜/시간 지원
 
     // Email
     implementation 'org.springframework.boot:spring-boot-starter-mail'
@@ -69,16 +70,20 @@ dependencies {
 
     // Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'
+    
+    // AWS S3
+    implementation 'software.amazon.awssdk:s3:2.31.7'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'com.h2database:h2'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
-
-    implementation 'software.amazon.awssdk:s3:2.31.7'
+    testImplementation 'org.springframework.batch:spring-batch-test'
 }
 
 tasks.named('test') {

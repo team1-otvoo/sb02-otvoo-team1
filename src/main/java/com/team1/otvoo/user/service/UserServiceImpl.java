@@ -15,23 +15,26 @@ import com.team1.otvoo.user.dto.UserDtoCursorRequest;
 import com.team1.otvoo.user.dto.UserDtoCursorResponse;
 import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.dto.UserRoleUpdateRequest;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
-import com.team1.otvoo.user.entity.ProfileImage;
+import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.event.UserRoleEvent;
 import com.team1.otvoo.user.mapper.ProfileMapper;
-import com.team1.otvoo.user.projection.UserNameView;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.user.mapper.UserMapper;
 import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
+import com.team1.otvoo.weather.entity.WeatherLocation;
+import com.team1.otvoo.weather.repository.WeatherLocationRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,35 +62,35 @@ public class UserServiceImpl implements UserService {
   private final RefreshTokenStore refreshTokenStore;
   private final AccessTokenStore accessTokenStore;
 
+
+  private final WeatherLocationRepository weatherLocationRepository;
+
+  private final ApplicationEventPublisher eventPublisher;
+
+
   @Transactional(readOnly = true)
   @Override
   public UserDtoCursorResponse getUsers(UserDtoCursorRequest request) {
+    UserSlice<UserRow> slice = userRepository.searchUserRowWithCursor(request);
+    List<UserRow> rows = slice.content();
 
-    UserSlice slice = userRepository.searchUsersWithCursor(request);
-    List<User> users = slice.content();
-
-
-    List<UUID> userIds = users.stream().map(User::getId).toList();
-    Map<UUID, String> nameMap = profileRepository.findUserNamesByUserIds(userIds).stream()
-        .collect(Collectors.toMap(UserNameView::getUserId, UserNameView::getName));
-
-
-    List<UserDto> dtos = users.stream()
-        .map(user -> {
-          String name = nameMap.get(user.getId());
-          return userMapper.toUserDto(user, name);
-        })
+    // Row → API DTO 매핑 (이 단계에서 플레이스홀더 처리 등 가능)
+    List<UserDto> dtos = rows.stream()
+        .map(userRow -> userMapper.toUserDtoFromUserRow(
+            userRow,
+            List.of()
+        ))
         .toList();
 
     String nextCursor = null;
     UUID nextIdAfter = null;
 
     if (slice.hasNext()) {
-      User last = users.get(users.size() - 1);
-      nextIdAfter = last.getId();
+      UserRow last = rows.get(rows.size() - 1);
+      nextIdAfter = last.id();
       nextCursor = switch (request.sortBy()) {
-        case EMAIL -> last.getEmail();
-        case CREATED_AT -> last.getCreatedAt().toString();
+        case EMAIL     -> last.email();
+        case CREATED_AT-> last.createdAt().toString();
       };
     }
 
@@ -136,19 +139,28 @@ public class UserServiceImpl implements UserService {
         }
     );
 
-    if (!profile.getUser().getRole().equals(request.role())) {
+    Role previousRole = profile.getUser().getRole();
+
+    if (!previousRole.equals(request.role())) {
       profile.getUser().updateRole(request.role());
 
       // 권한 변경시 로그아웃
       refreshTokenStore.remove(userId);
 
       String accessToken = accessTokenStore.get(userId);
-      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-      accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId);
+      if (accessToken != null && !accessToken.isBlank()) {
+        long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+
+        if (expiration > 0) {
+          accessTokenStore.blacklistAccessToken(accessToken, expiration);
+        }
+        accessTokenStore.remove(userId);
+      }
     }
 
     UserDto userDto = userMapper.toUserDto(profile.getUser(), profile.getName());
+
+    eventPublisher.publishEvent(new UserRoleEvent(previousRole, profile.getUser()));
 
     return userDto;
   }
@@ -184,21 +196,36 @@ public class UserServiceImpl implements UserService {
         }
     );
 
+    // 1. 프로필 기본 정보 업데이트 (location 제외)
     profile.updateProfile(profileUpdateRequest);
-    UUID profileId = profile.getId();
 
-    if (profileImageFile != null) {
-      profileImageRepository.findByProfileId(profileId)
-          .ifPresent(image -> {
-            profileImageService.deleteProfileImage(image);
-            profileImageRepository.delete(image);
-          });
+    // 2. WeatherLocation 중복 방지 로직 + 연결
+    if (profileUpdateRequest.location() != null) {
+      int x = profileUpdateRequest.location().x();
+      int y = profileUpdateRequest.location().y();
 
-      ProfileImage newProfileImage = profileImageService.createProfileImage(profileImageFile, profile);
-      profileImageRepository.save(newProfileImage);
+      // DB에서 동일한 x,y 좌표의 WeatherLocation row가 있는지 찾음
+      weatherLocationRepository.findByXAndY(x, y)
+          .ifPresentOrElse(
+              profile::setLocation,
+
+              // 동일좌표 없다면 -> 새로운 Location row 생성 후,
+              // 기존 profile 테이블의 location_id를 새로 생성된 row의 id로 교체
+              () -> profile.setLocation(
+                  new WeatherLocation(
+                      x,
+                      y,
+                      profileUpdateRequest.location().latitude(),
+                      profileUpdateRequest.location().longitude(),
+                      profileUpdateRequest.location().locationNames()
+                  )
+              )
+          );
     }
 
-    String profileImageUrl = profileImageUrlResolver.resolve(profileId);
+    // 3. 프로필 이미지 교체
+    String profileImageUrl = profileImageService.replaceProfileImageAndGetUrl(profile, profileImageFile);
+
     ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImageUrl);
 
     return dto;
@@ -236,9 +263,14 @@ public class UserServiceImpl implements UserService {
 
       // 특정 사용자의 access 토큰 redis에서 불러와서 블랙리스트에 추가
       String accessToken = accessTokenStore.get(userId);
-      long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
-      accessTokenStore.blacklistAccessToken(accessToken, expiration);
-      accessTokenStore.remove(userId);
+      if (accessToken != null && !accessToken.isBlank()) {
+        long expiration = jwtTokenProvider.getExpirationSecondsLeft(accessToken);
+
+        if (expiration > 0) {
+          accessTokenStore.blacklistAccessToken(accessToken, expiration);
+        }
+        accessTokenStore.remove(userId);
+      }
     }
 
     return userId;

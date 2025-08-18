@@ -13,10 +13,12 @@ import static org.mockito.Mockito.spy;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.follow.dto.FollowCreateRequest;
+import com.team1.otvoo.follow.dto.FollowCursorDto;
 import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.dto.FollowListResponse;
 import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.user.dto.UserSummary;
@@ -34,9 +36,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +57,9 @@ public class FollowServiceTest {
 
   @Mock
   private FollowMapper followMapper;
+
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   private UUID followeeId;
   private UUID followerId;
@@ -120,6 +127,13 @@ public class FollowServiceTest {
       then(userRepository).should().findById(followerId);
       then(followRepository).should().save(any(Follow.class));
       then(followMapper).should().toDto(follow);
+
+      ArgumentCaptor<FollowEvent> eventCaptor = ArgumentCaptor.forClass(FollowEvent.class);
+      then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+      FollowEvent publishedEvent = eventCaptor.getValue();
+      assertThat(publishedEvent.follower()).isEqualTo(follower);
+      assertThat(publishedEvent.followee()).isEqualTo(followee);
     }
 
     @Test
@@ -140,6 +154,8 @@ public class FollowServiceTest {
       then(followRepository).shouldHaveNoInteractions();
       then(userRepository).shouldHaveNoInteractions();
       then(followMapper).should(never()).toDto(follow);
+
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
     @Test
@@ -161,6 +177,8 @@ public class FollowServiceTest {
       then(followRepository).should().existsByFolloweeIdAndFollowerId(followeeId, followerId);
       then(userRepository).shouldHaveNoInteractions();
       then(followMapper).should(never()).toDto(follow);
+
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
     @Test
@@ -183,6 +201,8 @@ public class FollowServiceTest {
       then(userRepository).should(never()).findById(followerId);
       then(followRepository).should(never()).save(any(Follow.class));
       then(followMapper).should(never()).toDto(follow);
+
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
   }
@@ -321,13 +341,11 @@ public class FollowServiceTest {
       int limit = 20;
 
       // limit+1 만큼의 Mock 데이터 생성
-      List<Follow> mockFollows = createMockFollowList(limit + 1);
-      List<FollowDto> mockFollowDtos = mockFollows.stream().map(f -> followDto).collect(Collectors.toList());
+      List<FollowCursorDto> mockFollowCursorDtos = createMockFollowCursorDtoList(limit + 1);
 
       given(followRepository.findFollowingsWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
-          .willReturn(mockFollows);
+          .willReturn(mockFollowCursorDtos);
       given(followRepository.countByFollowerId(followerId)).willReturn(100L);
-      given(followMapper.toDtoList(mockFollows.subList(0, limit))).willReturn(mockFollowDtos.subList(0, limit));
 
       // when
       FollowListResponse response = followService.getFollowingList(followerId, null, null, limit, null);
@@ -338,13 +356,18 @@ public class FollowServiceTest {
       assertThat(response.totalCount()).isEqualTo(100L);
 
       // 마지막 데이터(limit-1 인덱스)로 nextCursor, nextIdAfter가 생성되었는지 확인
-      Follow lastFollowInPage = mockFollows.get(limit - 1);
-      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.getCreatedAt().toString());
-      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.getId());
+      FollowCursorDto lastFollowInPage = mockFollowCursorDtos.get(limit - 1);
+      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.createdAt().toString());
+      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.id());
+
+      FollowDto firstDto = response.data().get(0);
+      FollowCursorDto firstCursorDto = mockFollowCursorDtos.get(0);
+      assertThat(firstDto.id()).isEqualTo(firstCursorDto.id());
+      assertThat(firstDto.followee()).isEqualTo(firstCursorDto.followee());
+      assertThat(firstDto.follower()).isEqualTo(firstCursorDto.follower());
 
       then(followRepository).should().findFollowingsWithCursor(eq(followerId), isNull(), isNull(), eq(limit + 1), isNull());
       then(followRepository).should().countByFollowerId(eq(followerId));
-      then(followMapper).should().toDtoList(mockFollows.subList(0, limit));
     }
 
     @Test
@@ -355,13 +378,11 @@ public class FollowServiceTest {
       int resultSize = 19;
 
       // resultSize 만큼의 Mock 데이터 생성
-      List<Follow> mockFollows = createMockFollowList(resultSize);
-      List<FollowDto> mockFollowDtos = mockFollows.stream().map(f -> followDto).collect(Collectors.toList());
+      List<FollowCursorDto> mockFollowCursorDtos = createMockFollowCursorDtoList(resultSize);
 
       given(followRepository.findFollowingsWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
-          .willReturn(mockFollows);
+          .willReturn(mockFollowCursorDtos);
       given(followRepository.countByFollowerId(followerId)).willReturn((long) resultSize);
-      given(followMapper.toDtoList(mockFollows)).willReturn(mockFollowDtos);
 
       // when
       FollowListResponse response = followService.getFollowingList(followerId, null, null, limit, null);
@@ -372,13 +393,12 @@ public class FollowServiceTest {
       assertThat(response.totalCount()).isEqualTo(resultSize);
 
       // 마지막 데이터(limit-1 인덱스)로 nextCursor, nextIdAfter가 생성되었는지 확인
-      Follow lastFollowInPage = mockFollows.get(resultSize - 1);
-      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.getCreatedAt().toString());
-      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.getId());
+      FollowCursorDto lastFollowInPage = mockFollowCursorDtos.get(resultSize - 1);
+      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.createdAt().toString());
+      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.id());
 
       then(followRepository).should().findFollowingsWithCursor(eq(followerId), isNull(), isNull(), eq(limit + 1), isNull());
       then(followRepository).should().countByFollowerId(eq(followerId));
-      then(followMapper).should().toDtoList(mockFollows);
     }
 
     @Test
@@ -402,7 +422,6 @@ public class FollowServiceTest {
 
       then(followRepository).should().findFollowingsWithCursor(eq(followerId), isNull(), isNull(), eq(limit + 1), isNull());
       then(followRepository).should(never()).countByFollowerId(eq(followerId));
-      then(followMapper).shouldHaveNoInteractions();
     }
 
     @Test
@@ -435,13 +454,11 @@ public class FollowServiceTest {
       int limit = 20;
 
       // limit+1 만큼의 Mock 데이터 생성
-      List<Follow> mockFollows = createMockFollowList(limit + 1);
-      List<FollowDto> mockFollowDtos = mockFollows.stream().map(f -> followDto).collect(Collectors.toList());
+      List<FollowCursorDto> mockFollowCursorDtos = createMockFollowCursorDtoList(limit + 1);
 
       given(followRepository.findFollowersWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
-          .willReturn(mockFollows);
+          .willReturn(mockFollowCursorDtos);
       given(followRepository.countByFolloweeId(followeeId)).willReturn(100L);
-      given(followMapper.toDtoList(mockFollows.subList(0, limit))).willReturn(mockFollowDtos.subList(0, limit));
 
       // when
       FollowListResponse response = followService.getFollowerList(followeeId, null, null, limit, null);
@@ -452,13 +469,18 @@ public class FollowServiceTest {
       assertThat(response.totalCount()).isEqualTo(100L);
 
       // 마지막 데이터(limit-1 인덱스)로 nextCursor, nextIdAfter가 생성되었는지 확인
-      Follow lastFollowInPage = mockFollows.get(limit - 1);
-      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.getCreatedAt().toString());
-      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.getId());
+      FollowCursorDto lastFollowInPage = mockFollowCursorDtos.get(limit - 1);
+      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.createdAt().toString());
+      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.id());
+
+      FollowDto firstDto = response.data().get(0);
+      FollowCursorDto firstCursorDto = mockFollowCursorDtos.get(0);
+      assertThat(firstDto.id()).isEqualTo(firstCursorDto.id());
+      assertThat(firstDto.followee()).isEqualTo(firstCursorDto.followee());
+      assertThat(firstDto.follower()).isEqualTo(firstCursorDto.follower());
 
       then(followRepository).should().findFollowersWithCursor(eq(followeeId), isNull(), isNull(), eq(limit + 1), isNull());
       then(followRepository).should().countByFolloweeId(eq(followeeId));
-      then(followMapper).should().toDtoList(mockFollows.subList(0, limit));
     }
 
     @Test
@@ -469,13 +491,11 @@ public class FollowServiceTest {
       int resultSize = 19;
 
       // resultSize 만큼의 Mock 데이터 생성
-      List<Follow> mockFollows = createMockFollowList(resultSize);
-      List<FollowDto> mockFollowDtos = mockFollows.stream().map(f -> followDto).collect(Collectors.toList());
+      List<FollowCursorDto> mockFollowCursorDtos = createMockFollowCursorDtoList(resultSize);
 
       given(followRepository.findFollowersWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
-          .willReturn(mockFollows);
+          .willReturn(mockFollowCursorDtos);
       given(followRepository.countByFolloweeId(followeeId)).willReturn((long) resultSize);
-      given(followMapper.toDtoList(mockFollows)).willReturn(mockFollowDtos);
 
       // when
       FollowListResponse response = followService.getFollowerList(followeeId, null, null, limit, null);
@@ -486,13 +506,12 @@ public class FollowServiceTest {
       assertThat(response.totalCount()).isEqualTo(resultSize);
 
       // 마지막 데이터(limit-1 인덱스)로 nextCursor, nextIdAfter가 생성되었는지 확인
-      Follow lastFollowInPage = mockFollows.get(resultSize - 1);
-      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.getCreatedAt().toString());
-      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.getId());
+      FollowCursorDto lastFollowInPage = mockFollowCursorDtos.get(resultSize - 1);
+      assertThat(response.nextCursor()).isEqualTo(lastFollowInPage.createdAt().toString());
+      assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.id());
 
       then(followRepository).should().findFollowersWithCursor(eq(followeeId), isNull(), isNull(), eq(limit + 1), isNull());
       then(followRepository).should().countByFolloweeId(eq(followeeId));
-      then(followMapper).should().toDtoList(mockFollows);
     }
 
     @Test
@@ -516,7 +535,6 @@ public class FollowServiceTest {
 
       then(followRepository).should().findFollowersWithCursor(eq(followeeId), isNull(), isNull(), eq(limit + 1), isNull());
       then(followRepository).should(never()).countByFolloweeId(eq(followeeId));
-      then(followMapper).shouldHaveNoInteractions();
     }
 
     @Test
@@ -533,22 +551,21 @@ public class FollowServiceTest {
       assertThat(exception.getMessage()).contains("Invalid cursor format");
 
       then(followRepository).shouldHaveNoInteractions();
-      then(followMapper).shouldHaveNoInteractions();
     }
 
   }
 
   /**
-   * 테스트용 Follow 엔티티 리스트 생성
+   * 테스트용 FollowCursorDto 리스트 생성
    */
-  private List<Follow> createMockFollowList(int count) {
+  private List<FollowCursorDto> createMockFollowCursorDtoList(int count) {
     return IntStream.range(0, count)
-        .mapToObj(i -> {
-          Follow f = new Follow(followee, follower);
-          ReflectionTestUtils.setField(f, "id", UUID.randomUUID());
-          ReflectionTestUtils.setField(f, "createdAt", Instant.now().minusSeconds(i));
-          return f;
-        })
+        .mapToObj(i -> new FollowCursorDto(
+            UUID.randomUUID(),
+            Instant.now().minusSeconds(i),
+            followDto.followee(),
+            followDto.follower()
+        ))
         .collect(Collectors.toList());
   }
 }

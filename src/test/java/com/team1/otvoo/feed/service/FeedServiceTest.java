@@ -13,10 +13,12 @@ import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
+import com.team1.otvoo.feed.event.FeedEvent;
 import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
@@ -28,9 +30,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.security.core.Authentication;
@@ -61,6 +65,8 @@ public class FeedServiceTest {
   FeedLikeRepository feedLikeRepository;
   @Mock
   FeedMapper feedMapper;
+  @Mock
+  ApplicationEventPublisher eventPublisher;
   @InjectMocks
   FeedServiceImpl feedService;
 
@@ -91,6 +97,7 @@ public class FeedServiceTest {
           .content(feedArg.getContent())
           .build();
     });
+    given(feedRepository.save(any(Feed.class))).willAnswer(invocation -> invocation.getArgument(0));
 
     // when
     FeedDto createdFeed = feedService.create(request);
@@ -98,6 +105,12 @@ public class FeedServiceTest {
     // then
     assertThat(createdFeed.getContent()).isEqualTo("testContent");
     then(feedRepository).should(times(1)).save(any());
+
+    ArgumentCaptor<FeedEvent> eventCaptor = ArgumentCaptor.forClass(FeedEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+    FeedEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.savedFeed().getContent()).isEqualTo("testContent");
   }
 
   @Test
@@ -111,6 +124,8 @@ public class FeedServiceTest {
         .isInstanceOf(RestException.class)
         .hasMessageContaining("유저가 존재하지 않습니다.");
     then(feedRepository).should(never()).save(any());
+
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test
@@ -125,6 +140,8 @@ public class FeedServiceTest {
         .isInstanceOf(RestException.class)
         .hasMessageContaining("날씨 데이터가 존재하지 않습니다.");
     then(feedRepository).should(never()).save(any());
+
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test

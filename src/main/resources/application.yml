@@ -8,6 +8,11 @@ spring:
     password: otvoo_pass
     driver-class-name: org.postgresql.Driver
 
+  data:
+    redis:
+      port: 6379
+      host: localhost
+
   jpa:
     hibernate:
       ddl-auto: none
@@ -16,9 +21,15 @@ spring:
   profiles:
     active:
       - dev
+
   sql:
     init:
       mode: never
+
+  #임시
+  batch:
+    jdbc:
+      initialize-schema: always
 
   config:
     import: optional:file:.env[.properties]
@@ -34,11 +45,6 @@ spring:
           auth: true
           starttls:
             enable: true
-
-data:
-  redis:
-    port: 6379
-    host: localhost
 
 logging:
   level:
@@ -65,7 +71,7 @@ profile:
     height: 300
 
 admin:
-  name: abcde
+  name: 관리자
   email: abcde@email.com
   password: abcde123@
 
@@ -75,3 +81,7 @@ s3:
   access-key: ${AWS_ACCESS_KEY_ID}
   secret-key: ${AWS_SECRET_ACCESS_KEY}
   presigned-expiration-seconds: ${S3_PRESIGNED_TTL}
+
+sse:
+  timeout: 300_000
+  event-ttl-seconds: 300

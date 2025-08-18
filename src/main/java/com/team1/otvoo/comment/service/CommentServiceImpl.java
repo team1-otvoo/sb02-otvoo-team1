@@ -4,6 +4,7 @@ import com.team1.otvoo.comment.dto.CommentCreateRequest;
 import com.team1.otvoo.comment.dto.CommentCursor;
 import com.team1.otvoo.comment.dto.CommentDto;
 import com.team1.otvoo.comment.entity.FeedComment;
+import com.team1.otvoo.comment.event.CommentEvent;
 import com.team1.otvoo.comment.mapper.CommentMapper;
 import com.team1.otvoo.comment.repository.CommentRepository;
 import com.team1.otvoo.exception.ErrorCode;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class CommentServiceImpl implements CommentService{
   private final UserRepository userRepository;
   private final CommentRepository commentRepository;
   private final CommentMapper commentMapper;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Override
   @Transactional
@@ -44,8 +47,10 @@ public class CommentServiceImpl implements CommentService{
     AuthorDto authorDto = userRepository.projectionAuthorDtoById(user.getId());
 
     FeedComment comment = new FeedComment(user, feed, request.content());
-    commentRepository.save(comment);
+    FeedComment savedFeedComment = commentRepository.save(comment);
     feedRepository.incrementCommentCount(feed.getId());
+
+    eventPublisher.publishEvent(new CommentEvent(savedFeedComment));
 
     return commentMapper.toDto(comment, authorDto);
   }

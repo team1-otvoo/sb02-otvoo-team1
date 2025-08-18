@@ -2,8 +2,10 @@ package com.team1.otvoo.user.mapper;
 
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.dto.UserDto;
+import com.team1.otvoo.user.dto.UserRow;
 import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.*;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -82,5 +84,35 @@ class UserMapperTest {
     assertThat(dto.userId()).isEqualTo(user.getId());
     assertThat(dto.name()).isEqualTo("작성자");
     assertThat(dto.profileImageUrl()).isEqualTo("http://img/author.jpg");
+  }
+
+  @Test
+  void toUserDtoFromUserRow_shouldMapCorrectly() {
+    // given
+    UUID id = UUID.randomUUID();
+    Instant createdAt = Instant.parse("2024-12-31T23:59:59Z");
+    String email = "rowuser@example.com";
+    String name = "로우유저";
+    Role role = Role.USER;
+    boolean locked = true;
+
+    // ⚠️ 프로젝트의 UserRow 정의에 맞게 생성자를 확인하세요.
+    // 예: record UserRow(UUID id, Instant createdAt, String email, String name, Role role, boolean locked)
+    UserRow row = new UserRow(id, createdAt, email, name, role, locked);
+
+    // OAuth 제공자 목록(매핑에서 그대로 복사되어야 함)
+    List<String> providers = List.of("google", "github");
+
+    // when
+    UserDto dto = userMapper.toUserDtoFromUserRow(row, providers);
+
+    // then
+    assertThat(dto.id()).isEqualTo(id);
+    assertThat(dto.createdAt()).isEqualTo(createdAt);
+    assertThat(dto.email()).isEqualTo(email);
+    assertThat(dto.name()).isEqualTo(name);
+    assertThat(dto.role()).isEqualTo(role);
+    assertThat(dto.locked()).isEqualTo(locked);
+    assertThat(dto.linkedOAuthProviders()).containsExactlyElementsOf(providers);
   }
 }
