@@ -2,6 +2,12 @@ package com.team1.otvoo.clothes.controller;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -22,6 +28,9 @@ import com.team1.otvoo.clothes.entity.ClothesType;
 import com.team1.otvoo.clothes.service.ClothesService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.CustomUserDetailsService;
+import com.team1.otvoo.security.JwtAuthenticationFilter;
+import com.team1.otvoo.security.JwtTokenProvider;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +53,14 @@ class ClothesControllerTest {
   private MockMvc mockMvc;
   @Autowired
   private ObjectMapper objectMapper;
+
+  @MockitoBean
+  private JwtTokenProvider jwtTokenProvider;
+  @MockitoBean
+  private CustomUserDetailsService customUserDetailsService;
+  @MockitoBean
+  private JwtAuthenticationFilter jwtAuthenticationFilter;
+
 
   @MockitoBean
   private ClothesService clothesService;
@@ -81,7 +98,7 @@ class ClothesControllerTest {
         CREATED_AT
     );
 
-    Mockito.when(clothesService.create(any(), any())).thenReturn(responseDto);
+    when(clothesService.create(any(), any())).thenReturn(responseDto);
 
     // when & then
     mockMvc.perform(multipart("/api/clothes")
@@ -92,6 +109,48 @@ class ClothesControllerTest {
         .andExpect(jsonPath("$.ownerId").value(ownerId.toString()))
         .andExpect(jsonPath("$.type").value(ClothesType.TOP.name()))
         .andExpect(jsonPath("$.attributes[0].definitionName").value("색상"));
+
+    verify(clothesService).create(eq(request), isNull());
+  }
+
+  @Test
+  @DisplayName("의상 등록 성공_이미지 포함")
+  void createClothes_WithImage_Success() throws Exception {
+    UUID ownerId = UUID.randomUUID();
+    ClothesCreateRequest request = new ClothesCreateRequest(
+        ownerId, "기본 티셔츠", ClothesType.TOP,
+        List.of(new ClothesAttributeDto(UUID.randomUUID(), "블랙"))
+    );
+
+    MockMultipartFile reqPart = new MockMultipartFile(
+        "request", "", MediaType.APPLICATION_JSON_VALUE,
+        objectMapper.writeValueAsBytes(request)
+    );
+    MockMultipartFile imgPart = new MockMultipartFile(
+        "image", "x.jpg", "image/jpeg", "dummy".getBytes()
+    );
+
+    ClothesDto responseDto = new ClothesDto(
+        UUID.randomUUID(), ownerId, "기본 티셔츠", "https://example.com",
+        ClothesType.TOP,
+        List.of(new ClothesAttributeWithDefDto(UUID.randomUUID(), "색상", List.of("레드", "블랙"), "블랙")),
+        CREATED_AT
+    );
+    when(clothesService.create(any(), any())).thenReturn(responseDto);
+
+    mockMvc.perform(multipart("/api/clothes")
+            .file(reqPart)
+            .file(imgPart)
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.imageUrl").value("https://example.com"));
+
+    verify(clothesService).create(
+        eq(request),
+        argThat(mf -> mf != null && !mf.isEmpty()
+            && "x.jpg".equals(mf.getOriginalFilename())
+            && "image/jpeg".equals(mf.getContentType()))
+    );
   }
 
   @Test
@@ -107,14 +166,18 @@ class ClothesControllerTest {
     Instant t2 = Instant.parse("2025-01-02T00:00:00Z");
 
     ClothesDto dto1 = new ClothesDto(
-        id1, ownerId, "티셔츠1", null, ClothesType.TOP,
+        id1, ownerId, "티셔츠1",
+        "https://example.com/1.jpg",
+        ClothesType.TOP,
         List.of(
             new ClothesAttributeWithDefDto(UUID.randomUUID(), "색상", List.of("빨강", "파랑", "초록"), "파랑")
         ),
         t1
     );
     ClothesDto dto2 = new ClothesDto(
-        id2, ownerId, "티셔츠2", null, ClothesType.TOP,
+        id2, ownerId, "티셔츠2",
+        "https://example.com/2.jpg",
+        ClothesType.TOP,
         List.of(
             new ClothesAttributeWithDefDto(UUID.randomUUID(), "두께감", List.of("얇음", "보통", "두꺼움"),
                 "얇음")
@@ -132,7 +195,7 @@ class ClothesControllerTest {
         SortDirection.DESCENDING
     );
 
-    Mockito.when(clothesService.getClothes(Mockito.any(ClothesSearchCondition.class)))
+    when(clothesService.getClothesList(Mockito.any(ClothesSearchCondition.class)))
         .thenReturn(responseDto);
 
     // when & then
@@ -147,6 +210,8 @@ class ClothesControllerTest {
         .andExpect(jsonPath("$.data", hasSize(2)))
         .andExpect(jsonPath("$.data[0].name").value("티셔츠1"))
         .andExpect(jsonPath("$.data[1].name").value("티셔츠2"))
+        .andExpect(jsonPath("$.data[0].imageUrl").value("https://example.com/1.jpg"))
+        .andExpect(jsonPath("$.data[1].imageUrl").value("https://example.com/2.jpg"))
         .andExpect(jsonPath("$.nextCursor").value(t2.toString()))
         .andExpect(jsonPath("$.nextIdAfter").value(id2.toString()))
         .andExpect(jsonPath("$.sortBy").value("createdAt"))
@@ -178,7 +243,7 @@ class ClothesControllerTest {
         List.of(),
         CREATED_AT
     );
-    Mockito.when(clothesService.update(Mockito.eq(clothesId), any(), any()))
+    when(clothesService.update(eq(clothesId), any(), any()))
         .thenReturn(responseDto);
 
     // when & then
@@ -196,6 +261,50 @@ class ClothesControllerTest {
         .andExpect(jsonPath("$.type").value(ClothesType.OUTER.name()))
         .andExpect(jsonPath("$.attributes", hasSize(0))
         );
+    verify(clothesService).update(eq(clothesId), eq(request), isNull());
+  }
+
+  @Test
+  @DisplayName("의상 수정 성공_이미지 포함")
+  void updateClothes_WithImage_Success() throws Exception {
+    UUID clothesId = UUID.randomUUID();
+    UUID ownerId = UUID.randomUUID();
+
+    ClothesUpdateRequest request = new ClothesUpdateRequest(
+        "업데이트 티셔츠", ClothesType.OUTER,
+        List.of(new ClothesAttributeDto(UUID.randomUUID(), "여름"))
+    );
+
+    MockMultipartFile reqPart = new MockMultipartFile(
+        "request", "", MediaType.APPLICATION_JSON_VALUE, objectMapper.writeValueAsBytes(request));
+    MockMultipartFile imgPart = new MockMultipartFile(
+        "image", "new.jpg", "image/jpeg", "dummy".getBytes());
+
+    ClothesDto responseDto = new ClothesDto(
+        clothesId, ownerId, "업데이트 티셔츠", "https://img/new",
+        ClothesType.OUTER, List.of(), CREATED_AT
+    );
+    when(clothesService.update(eq(clothesId), Mockito.any(), Mockito.any()))
+        .thenReturn(responseDto);
+
+    mockMvc.perform(multipart("/api/clothes/{clothesId}", clothesId)
+            .file(reqPart)
+            .file(imgPart)
+            .with(r -> {
+              r.setMethod("PATCH");
+              return r;
+            })
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.imageUrl").value("https://img/new"));
+
+    verify(clothesService).update(
+        eq(clothesId),
+        any(ClothesUpdateRequest.class),
+        argThat(
+            mf -> mf != null && !mf.isEmpty() && "new.jpg".equals(mf.getOriginalFilename())
+                && "image/jpeg".equals(mf.getContentType()))
+    );
   }
 
   @Test
@@ -218,7 +327,7 @@ class ClothesControllerTest {
         objectMapper.writeValueAsBytes(request)
     );
 
-    Mockito.when(clothesService.update(Mockito.eq(clothesId), any(), any()))
+    when(clothesService.update(eq(clothesId), any(), any()))
         .thenThrow(new RestException(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE));
 
     // when & then
@@ -242,7 +351,7 @@ class ClothesControllerTest {
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
 
-    Mockito.verify(clothesService).delete(clothesId);
+    verify(clothesService).delete(clothesId);
   }
 
   @Test
@@ -250,7 +359,7 @@ class ClothesControllerTest {
   void deleteClothes_Fail_NotFound() throws Exception {
     // given
     UUID clothesId = UUID.randomUUID();
-    Mockito.doThrow(new RestException(ErrorCode.CLOTHES_NOT_FOUND))
+    doThrow(new RestException(ErrorCode.CLOTHES_NOT_FOUND))
         .when(clothesService).delete(clothesId);
 
     // when & then
