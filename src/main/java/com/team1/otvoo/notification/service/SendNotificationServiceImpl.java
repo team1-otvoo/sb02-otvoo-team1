@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -116,34 +115,30 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     String content = NotificationType.FOLLOWEE_ADD_FEED.formatContent(feed.getContent());
     NotificationLevel level = NotificationLevel.INFO;
 
-    // 2. 각 팔로워에 대한 알림 엔티티 리스트 생성 (메모리에서)
+    // 2. 각 팔로워에 대한 알림 엔티티 리스트 생성
     List<Notification> notifications = followers.stream()
         .map(follower -> new Notification(follower, title, content, level))
         .toList();
 
     // 3. Bulk Insert를 통해 한 번의 쿼리로 모든 알림 저장 (N+1 해결)
-    notificationRepository.saveAll(notifications);
+    List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
 
-    // 4. SSE 메시지는 한 번만 전송
-    // eventData에는 개인화된 정보가 아닌, 공통 정보를 담는 것이 좋음
-    Map<String, String> eventPayload = Map.of(
-        "title", title,
-        "content", content,
-        "level", level.name()
-    );
+    // 4. SSE 메시지 전송
+    // * 메시지 큐 or 배치 처리 도입 고려
+    savedNotifications.forEach(notification -> {
+      NotificationDto notificationDto = notificationMapper.toDto(notification);
 
-    Set<UUID> receiverIds = followers.stream().map(User::getId).collect(Collectors.toSet());
+      SseMessage message = SseMessage.builder()
+          .eventId(UUID.randomUUID())
+          .receiverIds(Set.of(notification.getReceiver().getId()))
+          .broadcast(false)
+          .eventName("notifications")
+          .eventData(notificationDto)
+          .build();
 
-    SseMessage message = SseMessage.builder()
-        .eventId(UUID.randomUUID())
-        .receiverIds(receiverIds)
-        .broadcast(false)
-        .eventName("notifications")
-        .eventData(eventPayload)
-        .build();
-
-    redisPublisher.publish(message);
-    log.info("피드 등록 알림 전송: {} -> {}명의 팔로워", followee.getId(), receiverIds.size());
+      redisPublisher.publish(message);
+    });
+    log.info("피드 등록 알림 전송: {} -> {}명의 팔로워", followee.getId(), followers.size());
   }
 
   @Override
@@ -179,12 +174,10 @@ public class SendNotificationServiceImpl implements SendNotificationService {
    * helper method
    *****************************/
   private void createAndSendNotification(User receiver, String title, String content) {
-    // 1. DB에 저장할 Notification 엔티티 생성
     Notification notification = new Notification(receiver, title, content, NotificationLevel.INFO);
-    notificationRepository.save(notification);
+    Notification saved = notificationRepository.save(notification);
+    NotificationDto notificationDto = notificationMapper.toDto(saved);
 
-    // 2. SSE로 전송할 메시지 생성
-    NotificationDto notificationDto = notificationMapper.toDto(notification);
     log.info("SseMessage로 변환 전 notificationDto {}", notificationDto);
     SseMessage message = SseMessage.builder()
         .eventId(UUID.randomUUID())
@@ -197,19 +190,16 @@ public class SendNotificationServiceImpl implements SendNotificationService {
   }
 
   private void createAndSendBroadcastNotification(String title, String content) {
-    // 브로드캐스트 알림은 DB에 저장하지 않는 것이 일반적
+    Notification notification = new Notification(null, title, content, NotificationLevel.INFO);
+    Notification saved = notificationRepository.save(notification);
+    NotificationDto notificationDto = notificationMapper.toDto(saved);
 
-    Map<String, String> eventPayload = Map.of(
-        "title", title,
-        "content", content,
-        "level", NotificationLevel.INFO.name()
-    );
-
+    log.info("SseMessage로 변환 전 notificationDto {}", notificationDto);
     SseMessage message = SseMessage.builder()
         .eventId(UUID.randomUUID())
         .broadcast(true)
         .eventName("notifications")
-        .eventData(eventPayload)
+        .eventData(notificationDto)
         .build();
 
     redisPublisher.publish(message);

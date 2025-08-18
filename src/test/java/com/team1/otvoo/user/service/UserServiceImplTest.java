@@ -17,6 +17,7 @@ import com.team1.otvoo.auth.token.RefreshTokenStore;
 import com.team1.otvoo.auth.token.TemporaryPasswordStore;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.security.JwtTokenProvider;
 import com.team1.otvoo.user.dto.ChangePasswordRequest;
 import com.team1.otvoo.user.dto.Location;
@@ -37,6 +38,7 @@ import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.event.UserRoleEvent;
 import com.team1.otvoo.user.mapper.ProfileMapper;
 import com.team1.otvoo.user.mapper.TestUtils;
 import com.team1.otvoo.user.mapper.UserMapper;
@@ -55,9 +57,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -102,6 +106,9 @@ class UserServiceImplTest {
 
   @Mock
   private JwtTokenProvider jwtTokenProvider;
+
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   private UserCreateRequest request;
 
@@ -280,6 +287,13 @@ class UserServiceImplTest {
     verify(jwtTokenProvider).getExpirationSecondsLeft(accessToken);
     verify(accessTokenStore).blacklistAccessToken(accessToken, expiresIn);
     verify(accessTokenStore).remove(userId);
+
+    ArgumentCaptor<UserRoleEvent> eventCaptor = ArgumentCaptor.forClass(UserRoleEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+    UserRoleEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.user()).isEqualTo(user);
+
   }
 
   @Test

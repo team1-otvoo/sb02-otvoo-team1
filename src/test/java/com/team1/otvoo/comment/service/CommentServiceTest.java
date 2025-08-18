@@ -4,11 +4,13 @@ import com.team1.otvoo.comment.dto.CommentCreateRequest;
 import com.team1.otvoo.comment.dto.CommentCursor;
 import com.team1.otvoo.comment.dto.CommentDto;
 import com.team1.otvoo.comment.entity.FeedComment;
+import com.team1.otvoo.comment.event.CommentEvent;
 import com.team1.otvoo.comment.mapper.CommentMapper;
 import com.team1.otvoo.comment.repository.CommentRepository;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -19,9 +21,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -41,6 +45,8 @@ public class CommentServiceTest {
   CommentRepository commentRepository;
   @Mock
   CommentMapper commentMapper;
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
   @InjectMocks
   CommentServiceImpl commentService;
 
@@ -70,6 +76,7 @@ public class CommentServiceTest {
       return new CommentDto(commentArg.getId(), commentArg.getCreatedAt(),
           commentArg.getFeed().getId(), authorDto, commentArg.getContent());
     });
+    given(commentRepository.save(any(FeedComment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
     // when
     CommentDto result =  commentService.create(request);
@@ -77,6 +84,12 @@ public class CommentServiceTest {
     // then
     assertThat(result.content()).isEqualTo("commentTest");
     then(commentRepository).should(times(1)).save(any());
+
+    ArgumentCaptor<CommentEvent> eventCaptor = ArgumentCaptor.forClass(CommentEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+    CommentEvent publishedEvent = eventCaptor.getValue();
+    assertThat(publishedEvent.savedComment().getContent()).isEqualTo("commentTest");
   }
 
   @Test
@@ -95,6 +108,7 @@ public class CommentServiceTest {
     assertThatThrownBy(() -> commentService.create(request))
         .isInstanceOf(RestException.class)
         .hasMessageContaining("유저가 존재하지 않습니다.");
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test
@@ -111,6 +125,7 @@ public class CommentServiceTest {
     assertThatThrownBy(() -> commentService.create(request))
         .isInstanceOf(RestException.class)
         .hasMessageContaining("피드가 존재하지 않습니다.");
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test

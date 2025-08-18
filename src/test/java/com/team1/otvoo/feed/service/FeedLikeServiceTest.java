@@ -1,5 +1,6 @@
 package com.team1.otvoo.feed.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
@@ -8,8 +9,10 @@ import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedLike;
+import com.team1.otvoo.feed.event.FeedLikeEvent;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
+import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.user.entity.User;
 import java.util.Optional;
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,6 +44,8 @@ public class FeedLikeServiceTest {
   private Authentication authentication;
   @Mock
   private CustomUserDetails customUserDetails;
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   private User user;
   private Feed feed;
@@ -71,6 +77,7 @@ public class FeedLikeServiceTest {
     given(securityContext.getAuthentication()).willReturn(authentication);
     given(authentication.getPrincipal()).willReturn(customUserDetails);
     given(customUserDetails.getUser()).willReturn(user);
+    given(feedLikeRepository.save(any(FeedLike.class))).willAnswer(invocation -> invocation.getArgument(0));
 
     // when
     feedLikeService.create(feedId);
@@ -79,6 +86,9 @@ public class FeedLikeServiceTest {
     then(feedRepository).should(times(1)).findById(feedId);
     then(feedLikeRepository).should(times(1)).save(any(FeedLike.class));
     then(feedRepository).should(times(1)).incrementLikeCount(feedId);
+
+    ArgumentCaptor<FeedLikeEvent> eventCaptor = ArgumentCaptor.forClass(FeedLikeEvent.class);
+    then(eventPublisher).should().publishEvent(eventCaptor.capture());
   }
 
   @Test
@@ -94,6 +104,7 @@ public class FeedLikeServiceTest {
 
     then(feedLikeRepository).should(never()).save(any());
     then(feedRepository).should(never()).incrementLikeCount(any());
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @Test
