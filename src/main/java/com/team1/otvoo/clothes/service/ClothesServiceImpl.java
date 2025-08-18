@@ -11,13 +11,16 @@ import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDto;
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
+import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.clothes.repository.ClothesAttributeValueRepository;
+import com.team1.otvoo.clothes.repository.ClothesImageRepository;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.util.ArrayList;
@@ -45,6 +48,10 @@ public class ClothesServiceImpl implements ClothesService {
   private final ClothesAttributeValueRepository clothesAttributeValueRepository;
   private final UserRepository userRepository;
   private final ClothesMapper clothesMapper;
+  private final ClothesImageService clothesImageService;
+  private final ClothesImageRepository clothesImageRepository;
+  private final S3ImageStorage s3ImageStorage;
+
 
   @Override
   @Transactional
@@ -73,15 +80,15 @@ public class ClothesServiceImpl implements ClothesService {
     // 이미지 처리
     String imageUrl = null;
     if (imageFile != null && !imageFile.isEmpty()) {
-      // TODO
+      ClothesImage image = clothesImageService.create(saved, imageFile);
+      imageUrl = getPresignedUrl(image);
     }
-
     return clothesMapper.toDto(saved, imageUrl);
   }
 
   @Override
   @Transactional(readOnly = true)
-  public ClothesDtoCursorResponse getClothes(ClothesSearchCondition condition) {
+  public ClothesDtoCursorResponse getClothesList(ClothesSearchCondition condition) {
     List<Clothes> clothesList = clothesRepository.searchWithCursor(condition);
 
     boolean hasNext = clothesList.size() > condition.limit();
@@ -98,8 +105,17 @@ public class ClothesServiceImpl implements ClothesService {
 
     long totalCount = clothesRepository.countWithCondition(condition);
 
+    List<UUID> clothesIds = page.stream().map(Clothes::getId).toList();
+
+    Map<UUID, ClothesImage> imageMap = clothesImageRepository.findAllByClothes_IdIn(clothesIds)
+        .stream().collect(Collectors.toMap(ci -> ci.getClothes().getId(), ci -> ci));
+
     List<ClothesDto> data = page.stream()
-        .map(clothes -> clothesMapper.toDto(clothes, null))
+        .map(clothes -> {
+          ClothesImage image = imageMap.get(clothes.getId());
+          String imageUrl = getPresignedUrl(image);
+          return clothesMapper.toDto(clothes, imageUrl);
+        })
         .toList();
 
     return new ClothesDtoCursorResponse(
@@ -141,12 +157,17 @@ public class ClothesServiceImpl implements ClothesService {
         clothes.replaceSelectedValues(newSelectedValues);
       }
     }
-
+    Clothes saved = clothesRepository.save(clothes);
     // 이미지 처리
     String imageUrl = null;
-    // TODO
-
-    Clothes saved = clothesRepository.save(clothes);
+    if (imageFile != null && !imageFile.isEmpty()) {
+      ClothesImage image = clothesImageService.create(saved, imageFile);
+      imageUrl = getPresignedUrl(image);
+    } else {
+      imageUrl = clothesImageRepository.findByClothes_Id(clothes.getId())
+          .map(this::getPresignedUrl)
+          .orElse(null);
+    }
     return clothesMapper.toDto(saved, imageUrl);
   }
 
@@ -154,8 +175,8 @@ public class ClothesServiceImpl implements ClothesService {
   @Transactional
   public void delete(UUID clothesId) {
     Clothes clothes = getClothes(clothesId);
-    // 이미지도 같이 삭제
-    //TODO
+    Optional<ClothesImage> image = clothesImageRepository.findByClothes_Id(clothes.getId());
+    image.ifPresent(clothesImageService::delete);
     clothesRepository.delete(clothes);
   }
 
@@ -194,6 +215,19 @@ public class ClothesServiceImpl implements ClothesService {
             ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE,
             Map.of("definitionId", attr.definitionId()));
       }
+    }
+  }
+
+  private String getPresignedUrl(ClothesImage image) {
+    if (image == null || image.getImageKey() == null) {
+      return null;
+    }
+    try {
+      return s3ImageStorage.getPresignedUrl(image.getImageKey(), image.getContentType());
+    } catch (Exception e) {
+      log.warn("presigned URL 생성 실패: key={}, msg={}",
+          image.getImageKey(), e.getMessage(), e);
+      return null;
     }
   }
 }

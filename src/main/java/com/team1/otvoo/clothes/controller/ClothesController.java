@@ -80,7 +80,7 @@ public class ClothesController {
         type,
         ownerId
     );
-    ClothesDtoCursorResponse result = clothesService.getClothes(condition);
+    ClothesDtoCursorResponse result = clothesService.getClothesList(condition);
 
     return ResponseEntity
         .status(HttpStatus.OK)
