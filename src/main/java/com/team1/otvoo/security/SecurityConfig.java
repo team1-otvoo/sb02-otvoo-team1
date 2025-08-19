@@ -32,6 +32,8 @@ public class SecurityConfig {
   private final CustomLoginFailureHandler loginFailureHandler;
   private final CustomUserDetailsService customUserDetailsService;
   private final ObjectMapper objectMapper;
+  private final OAuth2JwtLoginSuccessHandler oAuth2JwtLoginSuccessHandler;
+  private final CustomOAuth2UserService customOAuth2UserService;
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
@@ -58,7 +60,11 @@ public class SecurityConfig {
         .logout(logout -> logout
             .logoutUrl("/api/auth/sign-out")
             .addLogoutHandler(jwtLogoutHandler)
-            .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK)));
+            .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK)))
+        .oauth2Login(oauth2 -> oauth2
+            .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+            .successHandler(oAuth2JwtLoginSuccessHandler)
+            .failureHandler(loginFailureHandler));
 
     return http.build();
   }
