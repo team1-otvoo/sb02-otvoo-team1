@@ -167,7 +167,7 @@ public class AuthServiceImpl implements AuthService {
 
     TemporaryPassword temporaryPassword = new TemporaryPassword(tempPassword, System.currentTimeMillis() + Duration.ofMinutes(3).toMillis());
 
-    temporaryPasswordStore.save(user.getId(), temporaryPassword, Duration.ofMinutes(30));
+    temporaryPasswordStore.save(user.getId(), temporaryPassword, Duration.ofMinutes(3));
 
     emailService.sendTemporaryPassword(user.getEmail(), tempPassword);
   }
