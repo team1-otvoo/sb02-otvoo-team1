@@ -13,6 +13,7 @@ import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;
+import com.team1.otvoo.clothes.event.ClothesCreatedEvent;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.clothes.repository.ClothesAttributeValueRepository;
@@ -34,6 +35,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,7 +52,7 @@ public class ClothesServiceImpl implements ClothesService {
   private final ClothesMapper clothesMapper;
   private final ClothesImageService clothesImageService;
   private final ClothesImageRepository clothesImageRepository;
-  private final S3ImageStorage s3ImageStorage;
+  private final ApplicationEventPublisher eventPublisher;
 
 
   @Override
@@ -83,6 +85,9 @@ public class ClothesServiceImpl implements ClothesService {
       ClothesImage image = clothesImageService.create(saved, imageFile);
       imageUrl = getPresignedUrl(image);
     }
+
+    eventPublisher.publishEvent(new ClothesCreatedEvent(saved, imageUrl));
+
     return clothesMapper.toDto(saved, imageUrl);
   }
 

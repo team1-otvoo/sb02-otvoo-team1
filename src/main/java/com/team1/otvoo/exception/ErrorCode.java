@@ -21,6 +21,7 @@ public enum ErrorCode implements Code {
   INVALID_SORT_BY_FIELD(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 필드입니다."),
   INVALID_SORT_DIRECTION(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 방향입니다."),
   UNSUPPORTED_IMAGE_FORMAT(HttpStatus.BAD_REQUEST,"지원하지 않는 이미지 포맷입니다."),
+  MALFORMED_URL(HttpStatus.BAD_REQUEST, "올바르지 않은 Url 형식 입니다."),
 
 
   // --- 401 Unauthorized ---
