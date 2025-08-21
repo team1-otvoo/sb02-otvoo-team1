@@ -131,6 +131,7 @@ public class ClothesAiRecommendService {
 
     // 3-2. 기존 저장된 추천 정보 삭제
     recommendationRepository.deleteAllByWeather_Id(weatherId);
+    recommendationRepository.flush();
 
     // 4. 추천 결과 DB에 저장
     Recommendation savedRecommendation = saveRecommendation(user, weatherForecast, responseDto);

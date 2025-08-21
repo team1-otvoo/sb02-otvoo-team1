@@ -19,6 +19,7 @@ import com.team1.otvoo.weather.util.WeatherTimeCalculator;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
