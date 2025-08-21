@@ -53,6 +53,7 @@ public class ClothesServiceImpl implements ClothesService {
   private final ClothesImageService clothesImageService;
   private final ClothesImageRepository clothesImageRepository;
   private final ApplicationEventPublisher eventPublisher;
+  private final S3ImageStorage s3ImageStorage;
 
 
   @Override
