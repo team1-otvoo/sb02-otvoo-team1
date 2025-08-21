@@ -24,7 +24,6 @@ public class ClothesAiAttributeService {
   @Transactional
   public ClothesAiAttributes extractAndSaveAttributes(Clothes clothes, String imageUrl) {
     // 1. LLM Vision API 호출
-    imageUrl += "?w=100";
     VisionAttributeResponseDto response = openAiClient.analyzeImage(imageUrl);
 
     log.info("Vision API 추출 결과: {}", response.attributes());

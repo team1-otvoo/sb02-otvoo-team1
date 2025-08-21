@@ -12,7 +12,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class ClothesEventHandler {
 
-  private ClothesAiAttributeService clothesAiAttributeService;
+  private final ClothesAiAttributeService clothesAiAttributeService;
 
   @TransactionalEventListener
   @Async

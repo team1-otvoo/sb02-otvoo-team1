@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,7 +26,22 @@ public class RecommendationController {
 
     log.info("의상 추천 요청: weatherId={}", weatherId);
 
-    RecommendationDto dto = recommendationService.get(weatherId);
-    return ResponseEntity.ok(dto);
+    RecommendationDto recommendationDto = recommendationService.get(weatherId);
+
+    log.info("의상 추천 완료: weatherId={}", weatherId);
+
+    return ResponseEntity
+        .ok(recommendationDto);
+  }
+
+  @PostMapping("/refresh")
+  public ResponseEntity<RecommendationDto> refreshRecommendation(@RequestParam("weatherId") UUID weatherId) {
+    log.info("의상 재추천 요청: weatherId={}", weatherId);
+
+    RecommendationDto recommendationDto = recommendationService.refresh(weatherId);
+
+    log.info("의상 재추천 완료: weatherId={}", weatherId);
+    return ResponseEntity
+        .ok(recommendationDto);
   }
 }

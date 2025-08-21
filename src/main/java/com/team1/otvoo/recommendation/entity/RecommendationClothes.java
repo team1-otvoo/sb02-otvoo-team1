@@ -12,12 +12,16 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "recommendation_clothes")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RecommendationClothes {
 
@@ -33,12 +37,8 @@ public class RecommendationClothes {
   @JoinColumn(name = "clothes_id", nullable = false)
   private Clothes clothes;
 
-  @Column(name = "clothes_order", nullable = false)
-  private int clothesOrder;
-
-  public RecommendationClothes(Clothes clothes, int clothesOrder) {
+  public RecommendationClothes(Clothes clothes) {
     this.clothes = clothes;
-    this.clothesOrder = clothesOrder;
   }
 
   public void setRecommendation(Recommendation recommendation) {

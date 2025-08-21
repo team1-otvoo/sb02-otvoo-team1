@@ -196,7 +196,6 @@ CREATE TABLE recommendation_clothes (
                                         id                UUID PRIMARY KEY,
                                         recommendation_id UUID NOT NULL,
                                         clothes_id        UUID NOT NULL,
-                                        clothes_order     INT  NOT NULL,
 
                                         CONSTRAINT fk_recommendation FOREIGN KEY (recommendation_id)
                                             REFERENCES recommendations(id) ON DELETE CASCADE,
