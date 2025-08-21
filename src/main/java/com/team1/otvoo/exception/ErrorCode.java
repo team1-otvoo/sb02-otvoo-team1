@@ -21,6 +21,7 @@ public enum ErrorCode implements Code {
   INVALID_SORT_BY_FIELD(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 필드입니다."),
   INVALID_SORT_DIRECTION(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 방향입니다."),
   UNSUPPORTED_IMAGE_FORMAT(HttpStatus.BAD_REQUEST,"지원하지 않는 이미지 포맷입니다."),
+  MALFORMED_URL(HttpStatus.BAD_REQUEST, "올바르지 않은 Url 형식 입니다."),
 
 
   // --- 401 Unauthorized ---
@@ -56,6 +57,7 @@ public enum ErrorCode implements Code {
   DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "데이터베이스 처리 중 오류가 발생했습니다."),
   EXTERNAL_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API 호출 중 오류가 발생했습니다."),
   EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "외부 API가 빈 응답을 반환했습니다."),
+  LLM_PROCESSING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "LLM 처리 중 오류가 발생했습니다"),
 
   // --- Clothes 관련 ErrorCode ---
   CLOTHES_NOT_FOUND(HttpStatus.NOT_FOUND, "의상이 존재하지 않습니다."),
@@ -73,7 +75,11 @@ public enum ErrorCode implements Code {
   PROFILE_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "유저의 프로필 이미지가 존재하지 않습니다."),
 
   // --- Weather 관련 ErrorCode ---
-  WEATHER_FORECAST_NOT_FOUND(HttpStatus.NOT_FOUND, "날씨 데이터가 존재하지 않습니다.");
+  WEATHER_FORECAST_NOT_FOUND(HttpStatus.NOT_FOUND, "날씨 데이터가 존재하지 않습니다."),
+
+  // --- Recommendation 관련 ErrorCode ---
+  RECOMMENDATION_NOT_FOUND(HttpStatus.NOT_FOUND, "추천 데이터가 존재하지 않습니다.");
+
 
 
   private final HttpStatus status;

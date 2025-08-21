@@ -4,6 +4,10 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+ext {
+    set('springAiVersion', "1.0.0-M2")
+}
+
 group = 'com.team1.otvoo'
 version = '0.0.1-SNAPSHOT'
 
@@ -21,6 +25,7 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
@@ -39,6 +44,9 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
     implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // ai
+    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
 
     // Database
     runtimeOnly 'org.postgresql:postgresql'
@@ -104,4 +112,10 @@ sourceSets {
 // gradle clean 시 QClass 디렉토리 삭제
 clean {
     delete file(generatedDir)
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
 }

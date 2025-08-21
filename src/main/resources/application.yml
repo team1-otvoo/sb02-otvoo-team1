@@ -22,17 +22,26 @@ spring:
     active:
       - dev
 
+  config:
+    import: optional:file:.env[.properties]
+
   sql:
     init:
       mode: never
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          maxCompletionTokens: 1000
 
   #임시
   batch:
     jdbc:
       initialize-schema: always
-
-  config:
-    import: optional:file:.env[.properties]
 
   mail:
     host: smtp.gmail.com
@@ -54,6 +63,8 @@ weather:
   api:
     base-url: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst
     service-key: ${WEATHER_API_KEY}
+  batch:
+    base-time: "2300"
 
 kakao:
   local:

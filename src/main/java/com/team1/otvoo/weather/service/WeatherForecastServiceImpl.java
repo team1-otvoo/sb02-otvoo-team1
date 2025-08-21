@@ -121,23 +121,23 @@ public class WeatherForecastServiceImpl implements WeatherForecastService {
         tmnMap
     );
 
-    // 8-1. 중복 필터링 추가
-    List<WeatherForecast> newForecasts = forecasts.stream()
-        .filter(f ->
-            !weatherForecastRepository.existsByLocationAndForecastAtAndForecastedAt(
-                f.getLocation(), f.getForecastAt(), f.getForecastedAt())
-        )
-        .toList();
+    // 8. 중복 방지 + DB 엔티티 병합
+    List<WeatherForecast> merged = new ArrayList<>();
 
-    log.info("온디맨드 예보 변환 수: {}, 중복 제거 후 저장 대상: {}",
-        forecasts.size(), newForecasts.size());
+    for (WeatherForecast f : forecasts) {
+      weatherForecastRepository.findByLocationAndForecastAtAndForecastedAt(
+          f.getLocation(), f.getForecastAt(), f.getForecastedAt()
+      ).ifPresentOrElse(
+          existing -> merged.add(existing), // 이미 DB에 있으면 기존 엔티티 사용
+          () -> merged.add(weatherForecastRepository.save(f)) // 없으면 저장 후 추가
+      );
+    }
 
-    // 8-2. DB 저장 (중복 된거 제외한 것만)
-    weatherForecastRepository.saveAll(newForecasts);
+    // 9. 오늘 이후 데이터만 필터링
+    String today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-    // 9. UI 에 표시할 날짜 필터링 (오늘 이전 데이터 제외)
-    String today = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-    List<WeatherForecast> filtered = forecasts.stream()
+    List<WeatherForecast> filtered = merged.stream()
         .filter(f -> {
           String fcstDate = f.getForecastAt()
               .atZone(ZoneId.of("Asia/Seoul"))

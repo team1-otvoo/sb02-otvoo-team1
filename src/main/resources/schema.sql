@@ -152,6 +152,18 @@ CREATE TABLE clothes_selected_values (
                                              REFERENCES clothes_attribute_values(id) ON DELETE CASCADE
 );
 
+-- clothes_ai_attributes 테이블
+CREATE TABLE clothes_ai_attributes (
+                                       id UUID PRIMARY KEY,
+                                       clothes_id UUID NOT NULL,
+                                       attributes JSONB NOT NULL, -- (key-value JSON)
+
+                                       CONSTRAINT fk_clothes_ai_attributes_clothes
+                                           FOREIGN KEY (clothes_id)
+                                               REFERENCES clothes(id)
+                                               ON DELETE CASCADE
+);
+
 -- clothes_images 테이블
 CREATE TABLE clothes_images (
                                 id UUID PRIMARY KEY,
@@ -184,7 +196,6 @@ CREATE TABLE recommendation_clothes (
                                         id                UUID PRIMARY KEY,
                                         recommendation_id UUID NOT NULL,
                                         clothes_id        UUID NOT NULL,
-                                        clothes_order     INT  NOT NULL,
 
                                         CONSTRAINT fk_recommendation FOREIGN KEY (recommendation_id)
                                             REFERENCES recommendations(id) ON DELETE CASCADE,
