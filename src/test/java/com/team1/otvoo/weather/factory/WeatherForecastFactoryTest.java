@@ -1,17 +1,16 @@
 package com.team1.otvoo.weather.factory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import com.team1.otvoo.weather.dto.VilageFcstResponse.FcstItem;
-import com.team1.otvoo.weather.entity.PrecipitationType;
-import com.team1.otvoo.weather.entity.SkyStatus;
-import com.team1.otvoo.weather.entity.WeatherForecast;
-import com.team1.otvoo.weather.entity.WindStrength;
+import com.team1.otvoo.weather.entity.*;
 import com.team1.otvoo.weather.util.ForecastParsingUtils;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
 import org.junit.jupiter.api.Test;
 
 class WeatherForecastFactoryTest {
@@ -24,6 +23,8 @@ class WeatherForecastFactoryTest {
     // given
     int nx = 60, ny = 127;
     double lat = 37.5665, lon = 126.9780;
+    List<String> names = List.of("서울특별시","중구","명동");
+    WeatherLocation location = new WeatherLocation(nx, ny, lat, lon, names);
 
     List<FcstItem> items = new ArrayList<>();
 
@@ -49,8 +50,12 @@ class WeatherForecastFactoryTest {
     items.add(new FcstItem("20250811","1100","20250811","1300","PCP","강수없음",nx,ny));
     items.add(new FcstItem("20250811","1100","20250811","1300","SKY","1",nx,ny));      // CLEAR
 
+    // TMX/TMN Map (필요 없을 때는 빈 Map)
+    Map<String, Double> tmxMap = new HashMap<>();
+    Map<String, Double> tmnMap = new HashMap<>();
+
     // when
-    List<WeatherForecast> results = factory.createForecasts(items, lat, lon, nx, ny, "서울특별시,중구,명동");
+    List<WeatherForecast> results = factory.createForecasts(items, location, tmxMap, tmnMap);
 
     // then
     assertThat(results).hasSize(2);
@@ -65,7 +70,7 @@ class WeatherForecastFactoryTest {
     // 기본 필드
     assertThat(card.getSkyStatus()).isEqualTo(SkyStatus.CLEAR);
     assertThat(card.getPrecipitation().getType()).isEqualTo(PrecipitationType.NONE);
-    assertThat(card.getPrecipitation().getProbability()).isEqualTo(10.0);
+    assertThat(card.getPrecipitation().getProbability()).isEqualTo(0.10); // 10% → 0.10
     assertThat(card.getPrecipitation().getAmount()).isEqualTo(0.0);
 
     // 온도
