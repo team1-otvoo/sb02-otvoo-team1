@@ -10,8 +10,10 @@ import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.weather.entity.PrecipitationType;
 import com.team1.otvoo.weather.entity.SkyStatus;
 import com.team1.otvoo.weather.entity.WeatherForecast;
+import com.team1.otvoo.weather.entity.WeatherLocation;
 import com.team1.otvoo.weather.entity.WeatherPrecipitation;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
+import com.team1.otvoo.weather.repository.WeatherLocationRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
@@ -41,6 +43,9 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
   private WeatherForecastRepository weatherForecastRepository;
 
   @Autowired
+  private WeatherLocationRepository weatherLocationRepository;
+
+  @Autowired
   private EntityManager entityManager;
 
   UUID userId = UUID.randomUUID();
@@ -55,11 +60,17 @@ public class FeedRepositoryCustomImplTest extends AbstractPostgresTest {
 
     WeatherForecast weatherForecast1 = new WeatherForecast(Instant.now(), Instant.now(), SkyStatus.CLEAR);
     WeatherPrecipitation weatherPrecipitation1 = new WeatherPrecipitation(weatherForecast1, PrecipitationType.NONE, 3.0, 3.0);
+    WeatherLocation weatherLocation1 = new WeatherLocation(5, 5, 5, 5, List.of("장기동"));
     weatherForecast1.setPrecipitation(weatherPrecipitation1);
+    weatherForecast1.setLocation(weatherLocation1);
 
     WeatherForecast weatherForecast2 = new WeatherForecast(Instant.now(), Instant.now(), SkyStatus.CLOUDY);
     WeatherPrecipitation weatherPrecipitation2 = new WeatherPrecipitation(weatherForecast2, PrecipitationType.RAIN, 3.0, 3.0);
+    WeatherLocation weatherLocation2 = new WeatherLocation(5, 5, 5, 5, List.of("장기동"));
+    weatherForecast2.setLocation(weatherLocation2);
     weatherForecast2.setPrecipitation(weatherPrecipitation2);
+
+    weatherLocationRepository.saveAll(List.of(weatherLocation1, weatherLocation2));
 
     weatherForecastRepository.saveAll(List.of(weatherForecast1, weatherForecast2));
 

@@ -20,6 +20,7 @@ import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
 import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.security.CustomUserDetails;
+import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -67,6 +68,8 @@ public class FeedServiceTest {
   FeedMapper feedMapper;
   @Mock
   ApplicationEventPublisher eventPublisher;
+  @Mock
+  S3ImageStorage s3ImageStorage;
   @InjectMocks
   FeedServiceImpl feedService;
 
@@ -280,12 +283,13 @@ public class FeedServiceTest {
 
     ClothesImage image = mock(ClothesImage.class);
     given(image.getClothes()).willReturn(clothes);
-    given(image.getImageUrl()).willReturn("http://img");
+    given(image.getImageKey()).willReturn("http://img");
+    given(s3ImageStorage.getPresignedUrl("http://img", null)).willReturn("presigned.url");
     given(clothesImageRepository.findAllByClothes_IdIn(List.of(clothesId)))
         .willReturn(List.of(image));
 
     OotdDto ootdDto = mock(OotdDto.class);
-    given(clothesMapper.toOotdDto(clothes, "http://img")).willReturn(ootdDto);
+    given(clothesMapper.toOotdDto(clothes, "presigned.url")).willReturn(ootdDto);
 
     // when
     Slice<FeedDto> result = feedService.getFeedsWithCursor(mock(FeedSearchCondition.class));

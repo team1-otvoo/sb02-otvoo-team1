@@ -20,6 +20,7 @@ import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
 import com.team1.otvoo.security.CustomUserDetails;
+import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -53,6 +54,7 @@ public class FeedServiceImpl implements FeedService {
   private final FeedMapper feedMapper;
   private final ClothesMapper clothesMapper;
   private final ApplicationEventPublisher eventPublisher;
+  private final S3ImageStorage s3ImageStorage;
 
   @Transactional
   @Override
@@ -116,7 +118,9 @@ public class FeedServiceImpl implements FeedService {
 
     List<ClothesImage> images = clothesImageRepository.findAllByClothes_IdIn(clothesIds);
     Map<UUID, String> imageMap = images.stream()
-        .collect(Collectors.toMap(img -> img.getClothes().getId(), ClothesImage::getImageUrl, (a, b) -> a));
+        .collect(Collectors.toMap(img -> img.getClothes().getId(),
+            clothesImage -> s3ImageStorage.getPresignedUrl(clothesImage.getImageKey(),
+                clothesImage.getContentType()), (a, b) -> a));
 
     // feedId로 그룹핑 후, 연관된 Clothes들을 ootdDto List로 변환
     // Collectors.mapping은 groupingBy로 묶인 각 그룹 내부 요소에만 작동
