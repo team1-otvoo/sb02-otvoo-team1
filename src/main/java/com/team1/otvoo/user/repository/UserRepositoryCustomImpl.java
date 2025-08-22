@@ -46,7 +46,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             AuthorDto.class,
             user.id,
             profile.name,
-            profileImage.imageUrl
+            profileImage.objectKey
         ))
         .from(user)
         .leftJoin(profile).on(profile.user.eq(user))

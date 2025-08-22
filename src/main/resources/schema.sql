@@ -62,7 +62,7 @@ CREATE TABLE profiles
 CREATE TABLE profile_images
 (
     id                UUID PRIMARY KEY,
-    image_url         TEXT,
+    object_key        VARCHAR(255),
     original_filename VARCHAR(255),
     content_type      VARCHAR(50),
     size              BIGINT,

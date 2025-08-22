@@ -63,7 +63,7 @@ public class CommentRepositoryCustomImpl implements CommentRepositoryCustom{
                 AuthorDto.class,
                 user.id,
                 profile.name,
-                profileImage.imageUrl),
+                profileImage.objectKey),
             comment.content))
         .from(comment)
         .join(comment.user, user)

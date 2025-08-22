@@ -1,5 +1,6 @@
 package com.team1.otvoo.user.entity;
 
+import com.team1.otvoo.user.dto.ProfileImageMetaData;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -24,8 +25,8 @@ public class ProfileImage{
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
-  @Column(name = "image_url")
-  private String imageUrl;
+  @Column(name = "object_key", length = 255)
+  private String objectKey;
 
   @Column(name = "original_filename", length = 255)
   private String originalFilename;
@@ -50,7 +51,7 @@ public class ProfileImage{
   private Profile profile;
 
   public ProfileImage(
-      String imageUrl,
+      String objectKey,
       String originalFilename,
       String contentType,
       Long size,
@@ -58,7 +59,7 @@ public class ProfileImage{
       Integer height,
       Profile profile
   ) {
-    this.imageUrl = imageUrl;
+    this.objectKey = objectKey;
     this.originalFilename = originalFilename;
     this.contentType = contentType;
     this.size = size;
@@ -69,26 +70,15 @@ public class ProfileImage{
   }
 
   // ProfileImage 엔티티 내부
-  public void updateFrom(ProfileImage src) {
-    if (src == null) {
-      return;
-    }
-    // 동일 프로필에 대한 교체만 허용 (안전장치)
-    if (this.getProfile() == null || src.getProfile() == null
-        || !this.getProfile().getId().equals(src.getProfile().getId())) {
-      return;
-    }
+  public void updateMetaData(ProfileImageMetaData metaData) {
 
     // 식별자(id)와 연관(profile)은 유지하고, 메타데이터만 교체
-    this.imageUrl = src.getImageUrl();
-    this.originalFilename = src.getOriginalFilename();
-    this.contentType = src.getContentType();
-    this.size = src.getSize();
-    this.width = src.getWidth();
-    this.height = src.getHeight();
+    this.objectKey = metaData.objectKey();
+    this.originalFilename = metaData.originalFilename();
+    this.contentType = metaData.contentType();
+    this.size = metaData.size();
+    this.width = metaData.width();
+    this.height = metaData.height();
     this.uploadedAt = Instant.now();
-
-    // JPA Auditing을 쓰신다면 @LastModifiedDate 로 갱신되므로 별도 처리 불필요
-    // (직접 관리한다면 여기서 updatedAt = Instant.now();)
   }
 }

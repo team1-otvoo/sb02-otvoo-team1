@@ -68,12 +68,12 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
             Projections.constructor(UserSummary.class,
                 userFollowee.id,
                 profileFollowee.name,
-                imageFollowee.imageUrl
+                imageFollowee.objectKey
             ),
             Projections.constructor(UserSummary.class,
                 userFollower.id,
                 profileFollower.name,
-                imageFollower.imageUrl
+                imageFollower.objectKey
             )
         ))
         .from(follow)
