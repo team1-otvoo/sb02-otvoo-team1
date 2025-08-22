@@ -40,9 +40,13 @@ public class NotificationController {
   }
 
   @DeleteMapping("/{notificationId}")
-  public ResponseEntity<Void> read(@PathVariable UUID notificationId) {
-    log.info("알림 읽음 처리 요청: id={}", notificationId);
-    notificationService.delete(notificationId);
+  public ResponseEntity<Void> read(
+      @PathVariable UUID notificationId,
+      @AuthenticationPrincipal CustomUserDetails userDetails
+  ) {
+    UUID userId = userDetails.getUser().getId();
+    log.info("알림 읽음 처리 요청: id={}, userId={}", notificationId, userId);
+    notificationService.readNotification(notificationId, userId);
     log.debug("알림 읽음 처리 완료");
     return ResponseEntity.noContent().build();
   }
