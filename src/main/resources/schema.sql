@@ -1,4 +1,4 @@
--- weather_forecasts 테이블
+-- weather_locations 테이블
 CREATE TABLE weather_locations
 (
     id             UUID PRIMARY KEY,
@@ -9,7 +9,8 @@ CREATE TABLE weather_locations
     location_names TEXT
 );
 
--- weather_locations 테이블
+
+-- weather_forecasts 테이블
 CREATE TABLE weather_forecasts
 (
     id                  UUID PRIMARY KEY,
