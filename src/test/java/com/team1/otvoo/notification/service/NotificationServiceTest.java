@@ -3,10 +3,12 @@ package com.team1.otvoo.notification.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 
@@ -16,10 +18,14 @@ import com.team1.otvoo.notification.dto.NotificationDto;
 import com.team1.otvoo.notification.dto.NotificationDtoCursorResponse;
 import com.team1.otvoo.notification.entity.Notification;
 import com.team1.otvoo.notification.entity.NotificationLevel;
+import com.team1.otvoo.notification.entity.NotificationReadStatus;
 import com.team1.otvoo.notification.mapper.NotificationMapper;
+import com.team1.otvoo.notification.repository.NotificationReadStatusRepository;
 import com.team1.otvoo.notification.repository.NotificationRepository;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.repository.UserRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +50,12 @@ public class NotificationServiceTest {
 
   @Mock
   private NotificationRepository notificationRepository;
+
+  @Mock
+  private NotificationReadStatusRepository readStatusRepository;
+
+  @Mock
+  private UserRepository userRepository;
 
   @Mock
   private NotificationMapper notificationMapper;
@@ -99,9 +111,9 @@ public class NotificationServiceTest {
       List<Notification> mockNotifications = createMockNotificationList(limit + 1);
       List<NotificationDto> mockNotificationDtos = mockNotifications.stream().map(n -> notificationDto).collect(Collectors.toList());
 
-      given(notificationRepository.findNotificationsWithCursor(any(UUID.class), any(), any(), eq(limit + 1)))
+      given(notificationRepository.findUnreadNotificationsWithCursor(any(UUID.class), any(), any(), eq(limit + 1)))
           .willReturn(mockNotifications);
-      given(notificationRepository.countByReceiverId(receiverId)).willReturn(100L);
+      given(notificationRepository.countUnreadNotifications(receiverId)).willReturn(100L);
       given(notificationMapper.toDtoList(mockNotifications.subList(0, limit))).willReturn(mockNotificationDtos.subList(0, limit));
 
       // when
@@ -117,8 +129,8 @@ public class NotificationServiceTest {
       assertThat(response.nextCursor()).isEqualTo(lastNotificationInPage.getCreatedAt().toString());
       assertThat(response.nextIdAfter()).isEqualTo(lastNotificationInPage.getId());
 
-      then(notificationRepository).should().findNotificationsWithCursor(eq(receiverId), isNull(), isNull(), eq(limit + 1));
-      then(notificationRepository).should().countByReceiverId(eq(receiverId));
+      then(notificationRepository).should().findUnreadNotificationsWithCursor(eq(receiverId), isNull(), isNull(), eq(limit + 1));
+      then(notificationRepository).should().countUnreadNotifications(eq(receiverId));
       then(notificationMapper).should().toDtoList(mockNotifications.subList(0, limit));
     }
 
@@ -133,9 +145,9 @@ public class NotificationServiceTest {
       List<Notification> mockNotifications = createMockNotificationList(resultSize);
       List<NotificationDto> mockNotificationDtos = mockNotifications.stream().map(n -> notificationDto).collect(Collectors.toList());
 
-      given(notificationRepository.findNotificationsWithCursor(any(UUID.class), any(), any(), eq(limit + 1)))
+      given(notificationRepository.findUnreadNotificationsWithCursor(any(UUID.class), any(), any(), eq(limit + 1)))
           .willReturn(mockNotifications);
-      given(notificationRepository.countByReceiverId(receiverId)).willReturn((long) resultSize);
+      given(notificationRepository.countUnreadNotifications(receiverId)).willReturn((long) resultSize);
       given(notificationMapper.toDtoList(mockNotifications)).willReturn(mockNotificationDtos);
 
       // when
@@ -151,8 +163,8 @@ public class NotificationServiceTest {
       assertThat(response.nextCursor()).isEqualTo(lastNotificationInPage.getCreatedAt().toString());
       assertThat(response.nextIdAfter()).isEqualTo(lastNotificationInPage.getId());
 
-      then(notificationRepository).should().findNotificationsWithCursor(eq(receiverId), isNull(), isNull(), eq(limit + 1));
-      then(notificationRepository).should().countByReceiverId(eq(receiverId));
+      then(notificationRepository).should().findUnreadNotificationsWithCursor(eq(receiverId), isNull(), isNull(), eq(limit + 1));
+      then(notificationRepository).should().countUnreadNotifications(eq(receiverId));
       then(notificationMapper).should().toDtoList(mockNotifications);
     }
 
@@ -162,7 +174,7 @@ public class NotificationServiceTest {
       // given
       int limit = 20;
 
-      given(notificationRepository.findNotificationsWithCursor(any(UUID.class), any(), any(), eq(limit + 1)))
+      given(notificationRepository.findUnreadNotificationsWithCursor(any(UUID.class), any(), any(), eq(limit + 1)))
           .willReturn(Collections.emptyList());
 
       // when
@@ -175,8 +187,8 @@ public class NotificationServiceTest {
       assertThat(response.nextCursor()).isNull();
       assertThat(response.nextIdAfter()).isNull();
 
-      then(notificationRepository).should().findNotificationsWithCursor(eq(receiverId), isNull(), isNull(), eq(limit + 1));
-      then(notificationRepository).should(never()).countByReceiverId(eq(receiverId));
+      then(notificationRepository).should().findUnreadNotificationsWithCursor(eq(receiverId), isNull(), isNull(), eq(limit + 1));
+      then(notificationRepository).should(never()).countUnreadNotifications(eq(receiverId));
       then(notificationMapper).shouldHaveNoInteractions();
     }
 
@@ -201,40 +213,179 @@ public class NotificationServiceTest {
 
   @Nested
   @DisplayName("알림 읽음 처리 테스트")
-  class DeleteNotificationTests {
+  class ReadNotificationTests {
 
     @Test
-    @DisplayName("성공")
-    void deleteNotification_Success() {
+    @DisplayName("성공_개인 알림")
+    void readNotification_Success_PersonalNotification() {
       // given
       given(notificationRepository.findById(notificationId)).willReturn(Optional.of(notification));
 
       // when
-      notificationService.delete(notificationId);
+      notificationService.readNotification(notificationId, receiverId);
 
       // then
       then(notificationRepository).should().findById(notificationId);
       then(notificationRepository).should().delete(notification);
+      then(readStatusRepository).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("성공_브로드캐스트 알림_처음 읽을 때")
+    void readNotification_Success_BroadcastNotification_FirstRead() {
+      // given
+      UUID userId = UUID.randomUUID();
+      UUID notificationId = UUID.randomUUID();
+      Notification notification = mock(Notification.class);
+      given(notification.getReceiver()).willReturn(null);
+      given(notificationRepository.findById(notificationId)).willReturn(Optional.of(notification));
+
+      given(readStatusRepository.existsByUserIdAndNotificationId(userId, notificationId))
+          .willReturn(false);
+
+      User user = mock(User.class);
+      given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+      // when
+      notificationService.readNotification(notificationId, userId);
+
+      // then
+      then(readStatusRepository).should().existsByUserIdAndNotificationId(userId, notificationId);
+      then(userRepository).should().findById(userId);
+      then(readStatusRepository).should().save(any(NotificationReadStatus.class));
+      then(notificationRepository).should(never()).delete(notification);
+    }
+
+    @Test
+    @DisplayName("성공_브로드캐스트 알림_이미 읽은 경우")
+    void readNotification_Success_BroadcastNotification_AlreadyRead() {
+      // given
+      UUID userId = UUID.randomUUID();
+      UUID notificationId = UUID.randomUUID();
+      Notification notification = mock(Notification.class);
+      given(notification.getReceiver()).willReturn(null);
+      given(notificationRepository.findById(notificationId)).willReturn(Optional.of(notification));
+
+      given(readStatusRepository.existsByUserIdAndNotificationId(userId, notificationId))
+          .willReturn(true);
+
+      // when
+      notificationService.readNotification(notificationId, userId);
+
+      // then
+      then(readStatusRepository).should().existsByUserIdAndNotificationId(userId, notificationId);
+      then(userRepository).shouldHaveNoInteractions();
+      then(readStatusRepository).should(never()).save(any());
     }
 
     @Test
     @DisplayName("실패_존재하지 않는 알림 내역")
-    void deleteNotification_Failure_ShouldThrowException_WhenNotificationNotFound() {
+    void readNotification_Failure_ShouldThrowException_WhenNotificationNotFound() {
       // given
+      UUID userId = UUID.randomUUID();
       given(notificationRepository.findById(notificationId)).willReturn(Optional.empty());
 
       // when & then
       RestException exception = assertThrows(RestException.class,
-          () -> notificationService.delete(notificationId));
+          () -> notificationService.readNotification(notificationId, userId));
 
       assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
       assertThat(exception.getDetails().get("id")).isEqualTo(notificationId);
 
       // then
       then(notificationRepository).should().findById(notificationId);
+      then(notificationRepository).should(never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("실패_개인 알림이지만 본인 소유가 아님")
+    void readNotification_Failure_ShouldThrowException_WhenNotOwner() {
+      // given
+      UUID userId = UUID.randomUUID();
+      given(notificationRepository.findById(notificationId)).willReturn(Optional.of(notification));
+
+      // when & then
+      RestException exception = assertThrows(RestException.class,
+          () -> notificationService.readNotification(notificationId, userId));
+
+      assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACCESS_DENIED);
+      assertThat(exception.getDetails().get("id")).isEqualTo(receiverId);
+
+      // then
+      then(notificationRepository).should().findById(notificationId);
       then(notificationRepository).should(never()).delete(notification);
     }
 
+  }
+
+  @Nested
+  @DisplayName("오래된 브로드캐스트 알림 정리 스케줄러 테스트")
+  class CleanupOldNotificationsTests {
+
+    @Test
+    @DisplayName("성공")
+    void cleanupOldNotifications_Success() {
+      // given
+      Instant before = Instant.now();
+      given(readStatusRepository.deleteByCreatedAtBefore(any(Instant.class)))
+          .willReturn(5L); // 5개 삭제됨
+      given(notificationRepository.deleteByReceiverIsNullAndCreatedAtBefore(any(Instant.class)))
+          .willReturn(2L); // 2개 삭제됨
+
+      // when
+      notificationService.cleanupOldNotifications();
+
+      // then
+      Instant expectedCutoff = Instant.now().minus(7, ChronoUnit.DAYS);
+
+      then(readStatusRepository).should()
+          .deleteByCreatedAtBefore(argThat(cutoff ->
+              cutoff.isBefore(before.minus(7, ChronoUnit.DAYS).plusSeconds(1)) &&
+                  cutoff.isAfter(expectedCutoff.minusSeconds(1))
+          ));
+
+      then(notificationRepository).should()
+          .deleteByReceiverIsNullAndCreatedAtBefore(argThat(cutoff ->
+              cutoff.isBefore(before.minus(7, ChronoUnit.DAYS).plusSeconds(1)) &&
+                  cutoff.isAfter(expectedCutoff.minusSeconds(1))
+          ));
+    }
+
+    @Test
+    @DisplayName("실패_readStatusRepository 삭제 중 예외 발생")
+    void cleanupOldNotifications_Failure_ReadStatusRepository() {
+      // given
+      RuntimeException expectedException = new RuntimeException("ReadStatus DB error");
+      given(readStatusRepository.deleteByCreatedAtBefore(any(Instant.class)))
+          .willThrow(expectedException);
+
+      // when
+      notificationService.cleanupOldNotifications();
+
+      // then
+      then(readStatusRepository).should().deleteByCreatedAtBefore(any(Instant.class));
+      then(notificationRepository).should(never())
+          .deleteByReceiverIsNullAndCreatedAtBefore(any(Instant.class));
+    }
+
+    @Test
+    @DisplayName("실패_notificationRepository 삭제 중 예외 발생")
+    void cleanupOldNotifications_Failure_NotificationRepository() {
+      // given
+      given(readStatusRepository.deleteByCreatedAtBefore(any(Instant.class)))
+          .willReturn(5L);
+      RuntimeException expectedException = new RuntimeException("Notification DB error");
+      given(notificationRepository.deleteByReceiverIsNullAndCreatedAtBefore(any(Instant.class)))
+          .willThrow(expectedException);
+
+      // when
+      notificationService.cleanupOldNotifications();
+
+      // then
+      then(readStatusRepository).should().deleteByCreatedAtBefore(any(Instant.class));
+      then(notificationRepository).should()
+          .deleteByReceiverIsNullAndCreatedAtBefore(any(Instant.class));
+    }
   }
 
   /**
