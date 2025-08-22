@@ -318,3 +318,16 @@ CREATE TABLE notifications
     CONSTRAINT fk_receiver FOREIGN KEY (receiver_id)
         REFERENCES users (id) ON DELETE CASCADE
 );
+
+-- notification_read_status 테이블
+CREATE TABLE notification_read_status (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    notification_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_notification UNIQUE (user_id, notification_id),
+    CONSTRAINT fk_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_notification FOREIGN KEY (notification_id)
+        REFERENCES notifications(id) ON DELETE CASCADE
+);
