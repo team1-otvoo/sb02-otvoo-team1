@@ -7,7 +7,6 @@ import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedLike;
-import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.notification.dto.NotificationDto;
 import com.team1.otvoo.notification.entity.Notification;
@@ -15,18 +14,22 @@ import com.team1.otvoo.notification.entity.NotificationLevel;
 import com.team1.otvoo.notification.entity.NotificationType;
 import com.team1.otvoo.notification.mapper.NotificationMapper;
 import com.team1.otvoo.notification.repository.NotificationRepository;
-import com.team1.otvoo.sse.event.RedisPublisher;
+import com.team1.otvoo.sse.event.RedisStreamService;
 import com.team1.otvoo.sse.model.SseMessage;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.ProfileRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +42,7 @@ public class SendNotificationServiceImpl implements SendNotificationService {
   private final NotificationRepository notificationRepository;
   private final ProfileRepository profileRepository;
   private final FollowRepository followRepository;
-  private final RedisPublisher redisPublisher;
+  private final RedisStreamService redisStreamService;
   private final NotificationMapper notificationMapper;
 
   @Override
@@ -101,43 +104,52 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     User followee = feed.getUser();
     Profile followeeProfile = findProfileByUserId(followee.getId());
 
-    // 1. 나를 팔로우하는 모든 유저 ID 조회
-    List<User> followers = followRepository.findByFolloweeId(followee.getId())
-        .stream()
-        .map(Follow::getFollower)
-        .toList();
-
-    if (followers.isEmpty()) {
-      return;
-    }
-
     String title = NotificationType.FOLLOWEE_ADD_FEED.formatTitle(followeeProfile.getName());
     String content = NotificationType.FOLLOWEE_ADD_FEED.formatContent(feed.getContent());
     NotificationLevel level = NotificationLevel.INFO;
 
-    // 2. 각 팔로워에 대한 알림 엔티티 리스트 생성
-    List<Notification> notifications = followers.stream()
-        .map(follower -> new Notification(follower, title, content, level))
-        .toList();
+    Pageable pageable = PageRequest.of(0, 1000); // 1000명 단위로 처리
+    Page<User> followerPage;
+    List<User> followers;
 
-    // 3. Bulk Insert를 통해 한 번의 쿼리로 모든 알림 저장 (N+1 해결)
-    List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
+    do {
+      // 1. 팔로워를 배치 단위로 조회
+      followerPage = followRepository.findFollowersByFolloweeId(feed.getUser().getId(), pageable);
+      followers = followerPage.getContent();
 
-    // 4. SSE 메시지 전송
-    // * 메시지 큐 or 배치 처리 도입 고려
-    savedNotifications.forEach(notification -> {
-      NotificationDto notificationDto = notificationMapper.toDto(notification);
+      if (followers.isEmpty()) {
+        return;
+      }
 
-      SseMessage message = SseMessage.builder()
-          .eventId(UUID.randomUUID())
-          .receiverIds(Set.of(notification.getReceiver().getId()))
-          .broadcast(false)
-          .eventName("notifications")
-          .eventData(notificationDto)
-          .build();
+      // 2. 각 팔로워에 대한 알림 엔티티 리스트 생성
+      List<Notification> notifications = followers.stream()
+          .map(follower -> new Notification(follower, title, content, level))
+          .toList();
+      log.info("배치 생성된 알림 수: {}", notifications.size());
 
-      redisPublisher.publish(message);
-    });
+      // 3. Bulk Insert를 통해 한 번의 쿼리로 모든 알림 저장 (N+1 해결)
+      List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
+      log.info("배치 DB 저장 완료: {}개 저장", savedNotifications.size());
+
+      // 4. SSE 메시지 전송
+      // * 메시지 큐 or 배치 처리 도입 고려
+      savedNotifications.forEach(notification -> {
+        NotificationDto notificationDto = notificationMapper.toDto(notification);
+
+        SseMessage message = SseMessage.builder()
+            .eventId(UUID.randomUUID())
+            .receiverIds(Set.of(notification.getReceiver().getId()))
+            .broadcast(false)
+            .eventName("notifications")
+            .eventData(notificationDto)
+            .createdAt(Instant.now())
+            .build();
+
+        redisStreamService.publish(message);
+      });
+
+      pageable = followerPage.nextPageable();
+    } while(followerPage.hasNext());
     log.info("피드 등록 알림 전송: {} -> {}명의 팔로워", followee.getId(), followers.size());
   }
 
@@ -156,8 +168,8 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     User sender = directMessage.getSender();
     User receiver = directMessage.getReceiver();
 
-    Profile receiverProfile = findProfileByUserId(receiver.getId());
-    String title = NotificationType.RECEIVE_DM.formatTitle(receiverProfile.getName());
+    Profile senderProfile = findProfileByUserId(sender.getId());
+    String title = NotificationType.RECEIVE_DM.formatTitle(senderProfile.getName());
     String content = NotificationType.RECEIVE_DM.formatContent(directMessage.getContent());
     createAndSendNotification(receiver, title, content);
 
@@ -167,6 +179,7 @@ public class SendNotificationServiceImpl implements SendNotificationService {
   @Override
   public void sendWeatherForecastNotification(User receiver, String title, String content) {
     createAndSendNotification(receiver, title, content);
+
     log.info("날씨 알림 전송: {} -> {}", title, receiver.getId());
   }
 
@@ -184,9 +197,10 @@ public class SendNotificationServiceImpl implements SendNotificationService {
         .receiverIds(Set.of(receiver.getId()))
         .eventName("notifications")
         .eventData(notificationDto)
+        .createdAt(Instant.now())
         .build();
 
-    redisPublisher.publish(message);
+    redisStreamService.publish(message);
   }
 
   private void createAndSendBroadcastNotification(String title, String content) {
@@ -200,9 +214,10 @@ public class SendNotificationServiceImpl implements SendNotificationService {
         .broadcast(true)
         .eventName("notifications")
         .eventData(notificationDto)
+        .createdAt(Instant.now())
         .build();
 
-    redisPublisher.publish(message);
+    redisStreamService.publish(message);
   }
 
   private Profile findProfileByUserId(UUID userId) {
