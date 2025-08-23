@@ -9,10 +9,10 @@ import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import com.team1.otvoo.sse.event.RedisStreamService;
 import com.team1.otvoo.sse.model.SseEmitterWrapper;
 import com.team1.otvoo.sse.model.SseMessage;
 import com.team1.otvoo.sse.repository.SseEmitterRepository;
-import com.team1.otvoo.sse.repository.SseEventRepository;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -35,13 +35,13 @@ class SseServiceTest {
   private SseEmitterRepository emitterRepository;
 
   @Mock
-  private SseEventRepository eventRepository;
+  private RedisStreamService redisStreamService;
 
   private SseServiceImpl sseService;
 
   @BeforeEach
   void setUp() {
-    sseService = new SseServiceImpl(emitterRepository, eventRepository);
+    sseService = new SseServiceImpl(emitterRepository, redisStreamService);
     ReflectionTestUtils.setField(sseService, "timeout", 300_000L);
   }
 
@@ -62,7 +62,7 @@ class SseServiceTest {
 
     // then
     then(emitterRepository).should().save(eq(userId), any(SseEmitterWrapper.class));
-    then(eventRepository).shouldHaveNoMoreInteractions();
+    then(redisStreamService).shouldHaveNoMoreInteractions();
 
     SseEmitterWrapper savedWrapper = captor.getValue();
     assertThat(savedWrapper).isNotNull();
@@ -85,7 +85,7 @@ class SseServiceTest {
         .eventData("lostNotificationInfo")
         .build();
 
-    given(eventRepository.findAllByEventIdAfterAndReceiverId(lastEventId, userId))
+    given(redisStreamService.findAllByEventIdAfterAndReceiverId(lastEventId, userId))
         .willReturn(List.of(lostMessage));
 
     SseEmitter spyEmitter = spy(new SseEmitter());
@@ -100,7 +100,7 @@ class SseServiceTest {
 
     // then
     then(emitterRepository).should().save(eq(userId), any(SseEmitterWrapper.class));
-    then(eventRepository).should().findAllByEventIdAfterAndReceiverId(lastEventId, userId);
+    then(redisStreamService).should().findAllByEventIdAfterAndReceiverId(lastEventId, userId);
 
     SseEmitterWrapper savedWrapper = captor.getValue();
     assertThat(savedWrapper).isNotNull();

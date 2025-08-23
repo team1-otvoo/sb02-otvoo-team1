@@ -1,9 +1,9 @@
 package com.team1.otvoo.sse.service;
 
+import com.team1.otvoo.sse.event.RedisStreamService;
 import com.team1.otvoo.sse.model.SseEmitterWrapper;
 import com.team1.otvoo.sse.model.SseMessage;
 import com.team1.otvoo.sse.repository.SseEmitterRepository;
-import com.team1.otvoo.sse.repository.SseEventRepository;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -21,27 +21,27 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseServiceImpl implements SseService {
 
   @Value("${sse.timeout}")
-  private long timeout;
+  private long TIME_OUT;
 
   private final SseEmitterRepository sseEmitterRepository;
-  private final SseEventRepository sseEventRepository;
+  private final RedisStreamService redisStreamService;
 
   @Override
   public SseEmitter connect(UUID userId, UUID lastEventId) {
-    SseEmitter sseEmitter = new SseEmitter(timeout);
+    SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
     SseEmitterWrapper wrapper = SseEmitterWrapper.wrap(sseEmitter);
 
     // 콜백 등록(완료, 타임아웃, 에러 발생 시): 해당 Emitter 삭제
     sseEmitter.onCompletion(() -> {
-      log.debug("sse on onCompletion");
+      log.debug("SSE 연결 완료: userId={}, emitterId={}", userId, wrapper.getEmitterId());
       sseEmitterRepository.delete(userId, wrapper);
     });
     sseEmitter.onTimeout(() -> {
-      log.debug("sse on onTimeout");
+      log.debug("SSE 타임아웃: userId={}, emitterId={}", userId, wrapper.getEmitterId());
       sseEmitterRepository.delete(userId, wrapper);
     });
     sseEmitter.onError((ex) -> {
-      log.debug("sse on onError");
+      log.error("SSE 에러: userId={}, emitterId={}", userId, wrapper.getEmitterId(), ex);
       sseEmitterRepository.delete(userId, wrapper);
     });
 
@@ -63,7 +63,7 @@ public class SseServiceImpl implements SseService {
     // 유실된 이벤트 재전송
     Optional.ofNullable(lastEventId)
         .ifPresent(id -> {
-          sseEventRepository.findAllByEventIdAfterAndReceiverId(id, userId)
+          redisStreamService.findAllByEventIdAfterAndReceiverId(id, userId)
               .forEach(message -> sendToEmitter(userId, wrapper, message));
         });
 
@@ -103,7 +103,7 @@ public class SseServiceImpl implements SseService {
     }
   }
 
-  @Scheduled(fixedDelay = 300000)
+  @Scheduled(fixedDelay = 600000)
   public void cleanupInactiveConnections() {
     log.debug("비활성 SSE 연결 정리 작업 시작");
     SseEmitter.SseEventBuilder ping = SseEmitter.event()

@@ -98,5 +98,11 @@ aws:
     queue-name: otvoo_sqs_queue   # 실제 sqs queue 이름
 
 sse:
-  timeout: 300_000
-  event-ttl-seconds: 300
+  timeout: 1800000
+  event-ttl-days: 7
+  max-connections: 10000
+
+stream:
+  index-ttl-days: 7
+  max-stream-length: 100000
+  retention-days: 7

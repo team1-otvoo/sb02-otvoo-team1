@@ -1,5 +1,8 @@
 package com.team1.otvoo.notification.repository;
 
+import static com.team1.otvoo.notification.entity.QNotification.notification;
+import static com.team1.otvoo.notification.entity.QNotificationReadStatus.notificationReadStatus;
+
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team1.otvoo.notification.entity.Notification;
@@ -17,19 +20,48 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
   private final JPAQueryFactory queryFactory;
 
   @Override
-  public List<Notification> findNotificationsWithCursor(UUID receiverId, Instant cursor, UUID idAfter, int limit) {
-    QNotification notification = QNotification.notification;
-
+  public List<Notification> findUnreadNotificationsWithCursor(UUID receiverId, Instant cursor, UUID idAfter, int limit) {
     return queryFactory
         .selectFrom(notification)
-        .join(notification.receiver).on().fetchJoin()
+        .leftJoin(notification.receiver).fetchJoin()
+        .leftJoin(notificationReadStatus)
+        .on(
+            notificationReadStatus.notification.id.eq(notification.id),
+            notificationReadStatus.user.id.eq(receiverId)
+        )
         .where(
-            notification.receiver.id.eq(receiverId),
+            notification.receiver.id.eq(receiverId)
+                .or(
+                    notification.receiver.id.isNull()
+                        .and(notificationReadStatus.id.isNull())
+                ),
             cursorCondition(notification, cursor, idAfter) // 커서 조건
         )
         .orderBy(notification.createdAt.desc(), notification.id.desc())
         .limit(limit)
         .fetch();
+  }
+
+  @Override
+  public long countUnreadNotifications(UUID receiverId) {
+    Long count = queryFactory
+        .select(notification.count())
+        .from(notification)
+        .leftJoin(notificationReadStatus)
+        .on(
+            notificationReadStatus.notification.id.eq(notification.id),
+            notificationReadStatus.user.id.eq(receiverId)
+        )
+        .where(
+            notification.receiver.id.eq(receiverId)
+                .or(
+                    notification.receiver.id.isNull()
+                        .and(notificationReadStatus.id.isNull())
+                )
+        )
+        .fetchOne();
+
+    return count != null ? count : 0L;
   }
 
   // 커서 조건
