@@ -60,13 +60,13 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
                 UserSummary.class,
                 sender.id,
                 senderProfile.name,
-                senderProfileImage.imageUrl
+                senderProfileImage.objectKey
             ),
             Projections.constructor(
                 UserSummary.class,
                 receiver.id,
                 receiverProfile.name,
-                receiverProfileImage.imageUrl
+                receiverProfileImage.objectKey
             ),
             dm.content
         ))
@@ -118,13 +118,13 @@ public class DirectMessageRepositoryCustomImpl implements DirectMessageRepositor
                 UserSummary.class,
                 sender.id,
                 senderProfile.name,
-                senderProfileImage.imageUrl
+                senderProfileImage.objectKey
             ),
             Projections.constructor(
                 UserSummary.class,
                 receiver.id,
                 receiverProfile.name,
-                receiverProfileImage.imageUrl
+                receiverProfileImage.objectKey
             ),
             dm.content
         ))

@@ -86,12 +86,16 @@ admin:
   email: abcde@email.com
   password: abcde123@
 
-s3:
-  bucket: ${S3_BUCKET}
-  region: ${S3_REGION}
-  access-key: ${AWS_ACCESS_KEY_ID}
-  secret-key: ${AWS_SECRET_ACCESS_KEY}
-  presigned-expiration-seconds: ${S3_PRESIGNED_TTL}
+aws:
+  s3:
+    bucket: ${S3_BUCKET}
+    region: ${S3_REGION}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    presigned-expiration-seconds: ${S3_PRESIGNED_TTL}
+
+  sqs:
+    queue-name: otvoo_sqs_queue   # 실제 sqs queue 이름
 
 sse:
   timeout: 300_000

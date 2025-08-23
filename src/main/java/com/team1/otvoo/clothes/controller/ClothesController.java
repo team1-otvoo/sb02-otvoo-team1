@@ -9,6 +9,7 @@ import com.team1.otvoo.clothes.entity.ClothesType;
 import com.team1.otvoo.clothes.service.ClothesService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,6 +39,7 @@ public class ClothesController {
 
   private final ClothesService clothesService;
 
+  @PreAuthorize("#request.ownerId() == principal.user.id")
   @PostMapping(
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
@@ -53,6 +57,7 @@ public class ClothesController {
         .body(result);
   }
 
+  @PreAuthorize("#ownerId == principal.user.id")
   @GetMapping
   public ResponseEntity<ClothesDtoCursorResponse> getClothes(
       @RequestParam(required = false) String cursor,
@@ -92,12 +97,13 @@ public class ClothesController {
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ClothesDto> update(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
       @PathVariable UUID clothesId,
       @RequestPart("request") ClothesUpdateRequest request,
       @RequestPart(value = "image", required = false) MultipartFile image) {
     log.info("의상 수정 요청 - clothesId:{}", clothesId);
 
-    ClothesDto result = clothesService.update(clothesId, request, image);
+    ClothesDto result = clothesService.update(userDetails, clothesId, request, image);
 
     return ResponseEntity
         .status(HttpStatus.OK)
@@ -105,10 +111,12 @@ public class ClothesController {
   }
 
   @DeleteMapping("/{clothesId}")
-  public ResponseEntity<Void> delete(@PathVariable UUID clothesId) {
+  public ResponseEntity<Void> delete(
+      @AuthenticationPrincipal CustomUserDetails userDetails,
+      @PathVariable UUID clothesId) {
     log.info("의상 삭제 요청 - clothesId:{}", clothesId);
 
-    clothesService.delete(clothesId);
+    clothesService.delete(userDetails, clothesId);
 
     return ResponseEntity.noContent().build();
   }

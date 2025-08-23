@@ -61,6 +61,7 @@ public enum ErrorCode implements Code {
 
   // --- Clothes 관련 ErrorCode ---
   CLOTHES_NOT_FOUND(HttpStatus.NOT_FOUND, "의상이 존재하지 않습니다."),
+  CLOTHES_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "사용자의 id와 옷 소유자의 id가 일치하지 않습니다"),
   ATTRIBUTE_DEFINITION_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성 정의가 존재하지 않습니다."),
   ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),
   ATTRIBUTE_VALUE_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성값이 존재하지 않습니다."),
@@ -73,6 +74,11 @@ public enum ErrorCode implements Code {
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저가 존재하지 않습니다."),
   PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "유저의 프로필이 존재하지 않습니다."),
   PROFILE_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "유저의 프로필 이미지가 존재하지 않습니다."),
+
+  // --- Profile 관련 ErrorCode ---
+  INVALID_PROFILE_IMAGE_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 이미지 타입입니다."),
+  TOO_BIG_PROFILE_IMAGE(HttpStatus.BAD_REQUEST, "이미지의 크기가 너무 큽니다"),
+  PROFILE_IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "프로필 이미지 업로드를 실패했습니다."),
 
   // --- Weather 관련 ErrorCode ---
   WEATHER_FORECAST_NOT_FOUND(HttpStatus.NOT_FOUND, "날씨 데이터가 존재하지 않습니다."),
