@@ -48,7 +48,7 @@ public class Profile{
   @JoinColumn(name = "user_id", unique = true)
   private User user;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
   @JoinColumn(name = "weather_location_id")
   private WeatherLocation location;
 
