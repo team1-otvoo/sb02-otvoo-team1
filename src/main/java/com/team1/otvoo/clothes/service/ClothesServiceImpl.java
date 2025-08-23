@@ -22,6 +22,7 @@ import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.storage.S3ImageStorage;
+import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.util.ArrayList;
@@ -137,8 +138,12 @@ public class ClothesServiceImpl implements ClothesService {
 
   @Override
   @Transactional
-  public ClothesDto update(UUID clothesId, ClothesUpdateRequest request, MultipartFile imageFile) {
+  public ClothesDto update(CustomUserDetails userDetails, UUID clothesId, ClothesUpdateRequest request, MultipartFile imageFile) {
     Clothes clothes = getClothes(clothesId);
+
+    if (userDetails.getUser().getId() != clothes.getOwner().getId()) {
+      throw new RestException(ErrorCode.CLOTHES_UNAUTHORIZED, Map.of("ownerId", clothes.getOwner().getId(), "userId", userDetails.getUser().getId()));
+    }
 
     clothes.updateName(request.name());
     clothes.updateType(request.type());
@@ -179,8 +184,13 @@ public class ClothesServiceImpl implements ClothesService {
 
   @Override
   @Transactional
-  public void delete(UUID clothesId) {
+  public void delete(CustomUserDetails userDetails, UUID clothesId) {
     Clothes clothes = getClothes(clothesId);
+
+    if (userDetails.getUser().getId() != clothes.getOwner().getId()) {
+      throw new RestException(ErrorCode.CLOTHES_UNAUTHORIZED, Map.of("ownerId", clothes.getOwner().getId(), "userId", userDetails.getUser().getId()));
+    }
+
     Optional<ClothesImage> image = clothesImageRepository.findByClothes_Id(clothes.getId());
     image.ifPresent(clothesImageService::delete);
     clothesRepository.delete(clothes);
