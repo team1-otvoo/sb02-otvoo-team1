@@ -28,6 +28,18 @@ repositories {
     maven { url 'https://repo.spring.io/milestone' }
 }
 
+// 사용할 Spring Cloud AWS 버전을 최상단에 변수로 선언
+ext {
+    springCloudAwsVersion = '3.1.1'
+}
+
+dependencyManagement {
+    imports {
+        // Spring Cloud AWS BOM 추가
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}"
+    }
+}
+
 dependencies {
     // Spring Boot Core
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -78,9 +90,19 @@ dependencies {
 
     // Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'
-    
+
     // AWS S3
-    implementation 'software.amazon.awssdk:s3:2.31.7'
+    // implementation 'software.amazon.awssdk:s3:2.31.7'
+
+    // Image 처리
+    implementation 'net.coobird:thumbnailator:0.4.17'
+    implementation 'org.apache.tika:tika-core:3.2.2'
+
+    // Spring Cloud AWS SQS 스타터 추가
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+
+    // S3를 계속 사용하려면 S3 스타터도 추가합니다.
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
