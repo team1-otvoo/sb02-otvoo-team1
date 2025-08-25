@@ -165,7 +165,9 @@ public class ClothesServiceImpl implements ClothesService {
       }
 
       if (!currentMap.equals(requestMap)) {
-        clothes.replaceSelectedValues(newSelectedValues);
+        clothes.clearSelectedValues();
+        clothesRepository.flush();
+        clothes.addSelectedValues(newSelectedValues);
       }
     }
     Clothes saved = clothesRepository.save(clothes);
