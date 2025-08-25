@@ -6,11 +6,13 @@ import com.team1.otvoo.clothes.dto.ClothesDtoCursorResponse;
 import com.team1.otvoo.clothes.dto.ClothesSearchCondition;
 import com.team1.otvoo.clothes.dto.ClothesUpdateRequest;
 import com.team1.otvoo.clothes.entity.ClothesType;
+import com.team1.otvoo.clothes.extraction.service.ClothesExtractService;
 import com.team1.otvoo.clothes.service.ClothesService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.security.CustomUserDetails;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,12 +35,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
+@Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/clothes")
 public class ClothesController {
 
   private final ClothesService clothesService;
+  private final ClothesExtractService clothesExtractService;
 
   @PreAuthorize("#request.ownerId() == principal.user.id")
   @PostMapping(
@@ -119,5 +124,16 @@ public class ClothesController {
     clothesService.delete(userDetails, clothesId);
 
     return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/extractions")
+  public ResponseEntity<ClothesDto> extract(
+      @RequestParam @NotBlank(message = "url은 비어있을 수 없습니다.") String url) {
+    log.info("의상 정보 추출 요청 - url:{}", url);
+    ClothesDto result = clothesExtractService.extract(url);
+
+    return ResponseEntity
+        .status(HttpStatus.OK)
+        .body(result);
   }
 }

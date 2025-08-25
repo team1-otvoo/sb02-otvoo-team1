@@ -21,6 +21,7 @@ public enum ErrorCode implements Code {
   INVALID_SORT_BY_FIELD(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 필드입니다."),
   INVALID_SORT_DIRECTION(HttpStatus.BAD_REQUEST, "지원하지 않는 정렬 방향입니다."),
   UNSUPPORTED_IMAGE_FORMAT(HttpStatus.BAD_REQUEST,"지원하지 않는 이미지 포맷입니다."),
+  FETCH_OR_PARSE_FAILED(HttpStatus.BAD_REQUEST, "외부 페이지를 가져오거나 파싱하는 데 실패했습니다."),
   MALFORMED_URL(HttpStatus.BAD_REQUEST, "올바르지 않은 Url 형식 입니다."),
 
 
@@ -66,6 +67,7 @@ public enum ErrorCode implements Code {
   ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),
   ATTRIBUTE_VALUE_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성값이 존재하지 않습니다."),
   ATTRIBUTE_VALUE_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성값입니다."),
+  IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "의상 이미지 업로드를 실패했습니다."),
 
   // --- Feed 관련 ErrorCode ---
   FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),
