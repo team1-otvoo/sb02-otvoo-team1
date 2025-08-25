@@ -1,5 +1,7 @@
 package com.team1.otvoo.feed.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.team1.otvoo.common.AbstractPostgresTest;
 import com.team1.otvoo.config.QueryDslConfig;
 import com.team1.otvoo.feed.dto.FeedDto;
@@ -26,9 +28,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Slice;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
 
 @DataJpaTest
 @Import(QueryDslConfig.class)

@@ -1,5 +1,7 @@
 package com.team1.otvoo.feed.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
@@ -22,9 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
 
 @DataJpaTest
 @Import(QueryDslConfig.class)

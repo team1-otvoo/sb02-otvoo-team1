@@ -23,7 +23,9 @@ import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
+import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.Collections;
@@ -51,10 +53,12 @@ public class FeedServiceImpl implements FeedService {
   private final FeedRepository feedRepository;
   private final FeedLikeRepository feedLikeRepository;
   private final FeedClothesRepository feedClothesRepository;
+  private final ProfileRepository profileRepository;
   private final FeedMapper feedMapper;
   private final ClothesMapper clothesMapper;
   private final ApplicationEventPublisher eventPublisher;
   private final S3ImageStorage s3ImageStorage;
+  private final ProfileImageUrlResolver profileImageUrlResolver;
 
   @Transactional
   @Override
@@ -139,6 +143,10 @@ public class FeedServiceImpl implements FeedService {
 
     // FeedDto에 OotdDto 리스트 세팅
     for (FeedDto feedDto : feeds) {
+      UUID profileId = profileRepository.findByUserId(feedDto.getAuthor().getUserId()).orElseThrow(
+          () -> new RestException(ErrorCode.PROFILE_NOT_FOUND,
+              Map.of("userId", feedDto.getAuthor().getUserId()))).getId();
+      feedDto.getAuthor().setProfileImageUrl(profileImageUrlResolver.resolve(profileId));
       feedDto.setOotds(ootdMap.getOrDefault(feedDto.getId(), Collections.emptyList()));
     }
 

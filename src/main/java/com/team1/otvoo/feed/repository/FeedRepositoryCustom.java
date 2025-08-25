@@ -7,5 +7,4 @@ import org.springframework.data.domain.Slice;
 
 public interface FeedRepositoryCustom {
   Slice<FeedDto> searchByCondition(FeedSearchCondition condition, UUID currentUserId);
-
 }

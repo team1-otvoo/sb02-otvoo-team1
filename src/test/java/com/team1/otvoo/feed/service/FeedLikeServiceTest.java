@@ -1,9 +1,11 @@
 package com.team1.otvoo.feed.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.never;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.times;
 
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -12,7 +14,6 @@ import com.team1.otvoo.feed.entity.FeedLike;
 import com.team1.otvoo.feed.event.FeedLikeEvent;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
-import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.user.entity.User;
 import java.util.Optional;
@@ -21,7 +22,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;

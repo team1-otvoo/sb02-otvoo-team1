@@ -83,7 +83,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
                 AuthorDto.class,
                 user.id,
                 profile.name,
-                profileImage.objectKey
+                Expressions.nullExpression(String.class)
             ),
             Projections.constructor(
                 WeatherSummaryDto.class,

@@ -1,4 +1,4 @@
-package com.team1.otvoo.clothes.dto;
+package com.team1.otvoo.recommendation.dto;
 
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.ClothesType;
@@ -9,14 +9,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-@AllArgsConstructor
-@Getter
 @Setter
+@Getter
+@AllArgsConstructor
 @Builder
-public class OotdDto{
+public class ElasticOotdDto {
   UUID clothesId;
   String name;
-  String imageUrl;
+  String imageKey;
+  String contentType;
   ClothesType type;
   List<ClothesAttributeWithDefDto> attributes;
 }

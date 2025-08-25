@@ -1,5 +1,15 @@
 package com.team1.otvoo.feed.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.any;
+import static org.mockito.BDDMockito.anyBoolean;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.mock;
+import static org.mockito.BDDMockito.never;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.times;
+
 import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.Clothes;
 import com.team1.otvoo.clothes.entity.ClothesImage;
@@ -18,12 +28,14 @@ import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
-import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.dto.AuthorDto;
+import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
+import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.List;
 import java.util.Optional;
@@ -43,9 +55,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
-
 @ExtendWith(MockitoExtension.class)
 public class FeedServiceTest {
   @Mock
@@ -59,11 +68,15 @@ public class FeedServiceTest {
   @Mock
   FeedClothesRepository feedClothesRepository;
   @Mock
+  ProfileRepository profileRepository;
+  @Mock
   FeedRepository feedRepository;
   @Mock
   ClothesMapper clothesMapper;
   @Mock
   FeedLikeRepository feedLikeRepository;
+  @Mock
+  ProfileImageUrlResolver profileImageUrlResolver;
   @Mock
   FeedMapper feedMapper;
   @Mock
@@ -246,10 +259,12 @@ public class FeedServiceTest {
   void get_feeds_success() {
     // given
     UUID feedId = UUID.randomUUID();
+    AuthorDto authorDto = new AuthorDto(UUID.randomUUID(), "testUser", "imageUrl");
 
     FeedDto feedDto = FeedDto.builder()
         .id(feedId)
         .content("test")
+        .author(authorDto)
         .build();
 
     User user = User.builder()
@@ -260,6 +275,9 @@ public class FeedServiceTest {
 
     Slice<FeedDto> feedSlice = new SliceImpl<>(List.of(feedDto));
     given(feedRepository.searchByCondition(any(),any())).willReturn(feedSlice);
+    given(profileRepository.findByUserId(any())).willReturn(
+        Optional.ofNullable(mock(Profile.class)));
+    given(profileImageUrlResolver.resolve(any())).willReturn("presigned.url");
 
     Authentication authentication = mock(Authentication.class);
     CustomUserDetails customUserDetails = mock(CustomUserDetails.class);
