@@ -1,4 +1,17 @@
+server:
+  tomcat:
+    # 이 값을 -1로 설정하면 크기 제한 없이 모두 처리 후 응답을 보냅니다.
+    # spring.servlet.multipart.max-request-size 와 동일한 값으로 설정해도 좋습니다.
+    max-swallow-size: 10MB
+
 spring:
+  servlet:
+    multipart:
+      # 파일 하나당 최대 크기를 10MB로 변경
+      max-file-size: 10MB
+      # 전체 요청의 최대 크기를 50MB로 변경 (여러 파일 업로드 고려)
+      max-request-size: 50MB
+
   application:
     name: otvoo
 
