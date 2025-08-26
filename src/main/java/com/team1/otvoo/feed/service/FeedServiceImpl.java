@@ -14,7 +14,10 @@ import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
+import com.team1.otvoo.feed.event.FeedCreatedEvent;
+import com.team1.otvoo.feed.event.FeedDeletedEvent;
 import com.team1.otvoo.feed.event.FeedEvent;
+import com.team1.otvoo.feed.event.FeedUpdatedEvent;
 import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
@@ -82,9 +85,11 @@ public class FeedServiceImpl implements FeedService {
     createdFeed.updateFeedClothes(feedClothesList);
     Feed savedFeed = feedRepository.save(createdFeed);
 
-    eventPublisher.publishEvent(new FeedEvent(savedFeed));
 
-    return feedMapper.toDto(createdFeed, authorDto,false);
+    FeedDto feedDto =  feedMapper.toDto(createdFeed, authorDto,false);
+    eventPublisher.publishEvent(new FeedEvent(savedFeed));
+    eventPublisher.publishEvent(new FeedCreatedEvent(feedDto));
+    return feedDto;
   }
 
   @Transactional
@@ -95,11 +100,14 @@ public class FeedServiceImpl implements FeedService {
     AuthorDto authorDto = userRepository.projectionAuthorDtoById(user.getId());
 
     feed.updateFeed(request.content());
-
     feedRepository.save(feed);
 
-    return feedMapper.toDto(feed, authorDto,
+    FeedDto feedDto = feedMapper.toDto(feed, authorDto,
         feedLikeRepository.existsFeedLikeByFeed_IdAndLikedBy_Id(id, user.getId()));
+
+    eventPublisher.publishEvent(new FeedUpdatedEvent(feedDto));
+
+    return feedDto;
   }
 
   @Transactional(readOnly = true)
@@ -159,6 +167,7 @@ public class FeedServiceImpl implements FeedService {
     Feed feed = findFeed(id);
 
     feedRepository.delete(feed);
+    eventPublisher.publishEvent(new FeedDeletedEvent(id));
   }
 
   private Feed findFeed(UUID id) {

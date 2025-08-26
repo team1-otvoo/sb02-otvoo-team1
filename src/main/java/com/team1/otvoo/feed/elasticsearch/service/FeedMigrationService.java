@@ -114,7 +114,7 @@ public class FeedMigrationService {
                 feed.getWeather().getPrecipitation().getProbability()),
             new TemperatureDto(
                 feed.getWeather().getTemperature().getCurrent(),
-                feed.getWeather().getTemperature().getComparedToDayBefore(),
+                feed.getWeather().getTemperature().getComparedToDayBefore() == null ? null : feed.getWeather().getTemperature().getComparedToDayBefore(),
                 feed.getWeather().getTemperature().getMin(),
                 feed.getWeather().getTemperature().getMax()
             )))

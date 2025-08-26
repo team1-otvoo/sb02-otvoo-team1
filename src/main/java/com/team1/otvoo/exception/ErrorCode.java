@@ -62,6 +62,7 @@ public enum ErrorCode implements Code {
   // --- Clothes 관련 ErrorCode ---
   CLOTHES_NOT_FOUND(HttpStatus.NOT_FOUND, "의상이 존재하지 않습니다."),
   CLOTHES_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "사용자의 id와 옷 소유자의 id가 일치하지 않습니다"),
+  CLOTHES_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 이미지가 존재하지 않습니다."),
   ATTRIBUTE_DEFINITION_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성 정의가 존재하지 않습니다."),
   ATTRIBUTE_DEFINITION_DUPLICATE(HttpStatus.CONFLICT, "이미 존재하는 의상 속성 정의입니다."),
   ATTRIBUTE_VALUE_NOT_FOUND(HttpStatus.NOT_FOUND, "의상 속성값이 존재하지 않습니다."),

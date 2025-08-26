@@ -14,6 +14,8 @@ import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;
 import com.team1.otvoo.clothes.event.ClothesCreatedEvent;
+import com.team1.otvoo.clothes.event.ClothesDeletedEvent;
+import com.team1.otvoo.clothes.event.ClothesUpdatedEvent;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.clothes.repository.ClothesAttributeValueRepository;
@@ -141,7 +143,7 @@ public class ClothesServiceImpl implements ClothesService {
   public ClothesDto update(CustomUserDetails userDetails, UUID clothesId, ClothesUpdateRequest request, MultipartFile imageFile) {
     Clothes clothes = getClothes(clothesId);
 
-    if (userDetails.getUser().getId() != clothes.getOwner().getId()) {
+    if (!clothes.getOwner().getId().equals(userDetails.getUser().getId())) {
       throw new RestException(ErrorCode.CLOTHES_UNAUTHORIZED, Map.of("ownerId", clothes.getOwner().getId(), "userId", userDetails.getUser().getId()));
     }
 
@@ -165,7 +167,9 @@ public class ClothesServiceImpl implements ClothesService {
       }
 
       if (!currentMap.equals(requestMap)) {
-        clothes.replaceSelectedValues(newSelectedValues);
+        clothes.clearSelectedValues();
+        clothesRepository.flush();
+        clothes.addSelectedValues(newSelectedValues);
       }
     }
     Clothes saved = clothesRepository.save(clothes);
@@ -179,6 +183,9 @@ public class ClothesServiceImpl implements ClothesService {
           .map(this::getPresignedUrl)
           .orElse(null);
     }
+
+    eventPublisher.publishEvent(new ClothesUpdatedEvent(clothesId));
+
     return clothesMapper.toDto(saved, imageUrl);
   }
 
@@ -187,13 +194,16 @@ public class ClothesServiceImpl implements ClothesService {
   public void delete(CustomUserDetails userDetails, UUID clothesId) {
     Clothes clothes = getClothes(clothesId);
 
-    if (userDetails.getUser().getId() != clothes.getOwner().getId()) {
+    if (!userDetails.getUser().getId().equals(clothes.getOwner().getId())) {
       throw new RestException(ErrorCode.CLOTHES_UNAUTHORIZED, Map.of("ownerId", clothes.getOwner().getId(), "userId", userDetails.getUser().getId()));
     }
 
     Optional<ClothesImage> image = clothesImageRepository.findByClothes_Id(clothes.getId());
     image.ifPresent(clothesImageService::delete);
     clothesRepository.delete(clothes);
+
+    // 삭제 이벤트 발행
+    eventPublisher.publishEvent(new ClothesDeletedEvent(clothesId));
   }
 
   private Clothes getClothes(UUID clothesId) {

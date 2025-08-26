@@ -69,15 +69,27 @@ public class Clothes {
       this.name = newName;
     }
   }
+
   public void updateType(ClothesType newType) {
     if (newType != null) {
       this.type = newType;
     }
   }
-  public void replaceSelectedValues(List<ClothesSelectedValue> newSelectedValues) {
-    this.selectedValues.clear();
-    for(ClothesSelectedValue value : newSelectedValues) {
+
+  public void addSelectedValues(List<ClothesSelectedValue> selectedValues) {
+    for (ClothesSelectedValue value : selectedValues) {
       addSelectedValue(value);
+    }
+  }
+
+  public void removeSelectedValue(ClothesSelectedValue value) {
+    this.selectedValues.remove(value);
+    value.setClothes(null);
+  }
+
+  public void clearSelectedValues() {
+    for (ClothesSelectedValue sv : new ArrayList<>(selectedValues)) {
+      removeSelectedValue(sv);
     }
   }
 }

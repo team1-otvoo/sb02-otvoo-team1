@@ -8,6 +8,7 @@ import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdate
 import com.team1.otvoo.clothes.entity.ClothesAttributeDefinition;
 import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.event.ClothesAttributeEvent;
+import com.team1.otvoo.clothes.event.ClothesAttributeUpdatedEvent;
 import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
@@ -165,7 +166,11 @@ public class ClothesAttributeDefServiceImpl implements ClothesAttributeDefServic
     log.info("의상 속성 수정 완료 - id: {}, name: {}, values: {}", saved.getId(), saved.getName(),
         saved.getValues());
 
+    // 알림 이벤트 발행
     eventPublisher.publishEvent(new ClothesAttributeEvent("UPDATE", saved));
+
+    // ES 동기화 이벤트 발행
+    eventPublisher.publishEvent(new ClothesAttributeUpdatedEvent(saved.getId()));
 
     return clothesAttributeDefMapper.toDto(saved);
   }
