@@ -24,13 +24,16 @@ public class ClothesAiAttributeService {
   @Transactional
   public ClothesAiAttributes extractAndSaveAttributes(Clothes clothes, String imageUrl) {
     // 1. LLM Vision API 호출
-    VisionAttributeResponseDto response = openAiClient.analyzeImage(imageUrl);
+    if(imageUrl != null) {
+      VisionAttributeResponseDto response = openAiClient.analyzeImage(imageUrl);
 
-    log.info("Vision API 추출 결과: {}", response.attributes());
+      log.info("Vision API 추출 결과: {}", response.attributes());
 
-    // 2. 새 엔티티 생성 후 저장
-    ClothesAiAttributes entity = new ClothesAiAttributes(clothes, response.attributes());
-    return clothesAiAttributesRepository.save(entity);
+      // 2. 새 엔티티 생성 후 저장
+      ClothesAiAttributes entity = new ClothesAiAttributes(clothes, response.attributes());
+      return clothesAiAttributesRepository.save(entity);
+    }
+    return null;
   }
 
   // 속성 조회 -> 추천 로직 등에서 사용

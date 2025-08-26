@@ -3,12 +3,9 @@ package com.team1.otvoo.feed.mapper;
 import com.team1.otvoo.clothes.dto.OotdDto;
 import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.repository.ClothesImageRepository;
-import com.team1.otvoo.exception.ErrorCode;
-import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.elasticsearch.document.FeedDocument;
 import com.team1.otvoo.recommendation.dto.ElasticOotdDto;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -31,14 +28,12 @@ public class FeedDocumentMapper {
   }
 
   private ElasticOotdDto toElasticOotdDto(OotdDto ootdDto) {
-    ClothesImage clothesImage = clothesImageRepository.findByClothes_Id(ootdDto.getClothesId()).orElseThrow(
-        () -> new RestException(ErrorCode.CLOTHES_IMAGE_NOT_FOUND, Map.of("clothesId", ootdDto.getClothesId()))
-    );
+    ClothesImage clothesImage = clothesImageRepository.findByClothes_Id(ootdDto.getClothesId()).orElse(null);
     return ElasticOotdDto.builder()
         .clothesId(ootdDto.getClothesId())
         .name(ootdDto.getName())
-        .imageKey(clothesImage.getImageKey())
-        .contentType(clothesImage.getContentType())
+        .imageKey(clothesImage != null ? clothesImage.getImageKey() : null)
+        .contentType(clothesImage != null ? clothesImage.getContentType() : null)
         .type(ootdDto.getType())
         .attributes(ootdDto.getAttributes())
         .build();
