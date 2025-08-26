@@ -36,7 +36,6 @@ class ProfileMapperTest {
     List<String> locationNames = List.of("서울특별시", "중구", "소공동");
 
     WeatherLocation location = new WeatherLocation(
-        forecast,
         x,
         y,
         latitude,
@@ -67,7 +66,7 @@ class ProfileMapperTest {
     );
 
     // when
-    ProfileDto dto = profileMapper.toProfileDto(user.getId(), profile, profileImage.getImageUrl());
+    ProfileDto dto = profileMapper.toProfileDto(user.getId(), profile, profileImage.getObjectKey());
 
     // then
     assertThat(dto).isNotNull();

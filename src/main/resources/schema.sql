@@ -95,6 +95,15 @@ CREATE TABLE clothes_attribute_values
     CONSTRAINT uq_definition_value UNIQUE (definition_id, value)
 );
 
+-- attribute_candidates 테이블
+CREATE TABLE attribute_candidates (
+                                          id UUID PRIMARY KEY,
+                                          definition VARCHAR(255) NOT NULL,
+                                          value VARCHAR(255) NOT NULL,
+                                          count INT NOT NULL DEFAULT 1,
+                                          CONSTRAINT uq_attribute_candidate UNIQUE (definition,value)
+);
+
 -- weather_temperatures 테이블
 CREATE TABLE weather_temperatures
 (

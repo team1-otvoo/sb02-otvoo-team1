@@ -29,7 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ClothesImageServiceImpl implements ClothesImageService {
 
   private static final Set<String> ALLOWED =
-      Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
+      Set.of("image/jpg", "image/jpeg", "image/png", "image/webp", "image/gif");
   private final ClothesImageRepository clothesImageRepository;
   private final S3ImageStorage s3ImageStorage;
 
@@ -42,12 +42,13 @@ public class ClothesImageServiceImpl implements ClothesImageService {
     if (file == null || file.isEmpty()) {
       throw new RestException(ErrorCode.INVALID_INPUT_VALUE, Map.of("file", "empty"));
     }
-    String inputContentType = file.getContentType();
-    String contentType = inputContentType == null ? null : inputContentType.toLowerCase();
+    String contentType = normalizeContentType(file.getContentType(),
+        file.getOriginalFilename());
     if (contentType == null || !ALLOWED.contains(contentType)) {
       throw new RestException(ErrorCode.UNSUPPORTED_IMAGE_FORMAT,
-          Map.of("contentType", String.valueOf(inputContentType)));
+          Map.of("contentType", String.valueOf(contentType)));
     }
+
     String extension = resolveExt(file.getOriginalFilename(), contentType);
     String key = "images/clothes/" + clothes.getId() + "/" + UUID.randomUUID() + "." + extension;
 
@@ -71,8 +72,8 @@ public class ClothesImageServiceImpl implements ClothesImageService {
 
     try (InputStream in = new ByteArrayInputStream(bytes)) {
       s3ImageStorage.upload(key, in, bytes.length, contentType);
-    } catch (IOException e) {
-      log.warn("업로드 스트림 종료 실패");
+    } catch (Exception e) {
+      throw new RestException(ErrorCode.IMAGE_UPLOAD_FAILED, Map.of("s3", "upload failed"));
     }
 
     Optional<ClothesImage> existingOpt = clothesImageRepository.findByClothes_Id(clothes.getId());
@@ -146,7 +147,52 @@ public class ClothesImageServiceImpl implements ClothesImageService {
     clothesImageRepository.delete(clothesImage);
   }
 
+  private String trimQuery(String name) {
+    if (name == null) {
+      return null;
+    }
+    int q = name.indexOf('?');
+    if (q >= 0) {
+      name = name.substring(0, q);
+    }
+    int h = name.indexOf('#');
+    if (h >= 0) {
+      name = name.substring(0, h);
+    }
+    return name;
+  }
+
+  private String normalizeContentType(String raw, String fileName) {
+    String contentType = raw == null ? null : raw.toLowerCase();
+    if (contentType == null || contentType.isBlank() || contentType.equals(
+        "application/octet-stream")) {
+      contentType = guessFromFileName(fileName);
+
+    }
+    return contentType;
+  }
+
+  private String guessFromFileName(String fileName) {
+    fileName = trimQuery(fileName);
+    if (fileName == null) {
+      return null;
+    }
+    int dot = fileName.lastIndexOf('.');
+    if (dot < 0 || dot == fileName.length() - 1) {
+      return null;
+    }
+    String ext = fileName.substring(dot + 1).toLowerCase();
+    return switch (ext) {
+      case "jpg", "jpeg" -> "image/jpeg";
+      case "png" -> "image/png";
+      case "gif" -> "image/gif";
+      case "webp" -> "image/webp";
+      default -> null;
+    };
+  }
+
   private String resolveExt(String fileName, String contentType) {
+    fileName = trimQuery(fileName);
     String ext = null;
     if (fileName != null) {
       int dot = fileName.lastIndexOf('.');
@@ -157,6 +203,7 @@ public class ClothesImageServiceImpl implements ClothesImageService {
     if (ext == null) {
       switch (contentType) {
         case "image/jpeg":
+        case "image/jpg":
           ext = "jpg";
           break;
         case "image/png":

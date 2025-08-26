@@ -63,6 +63,9 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
     implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
+    // Jsoup
+    implementation 'org.jsoup:jsoup:1.17.2'
+
     // ai
     implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
 
@@ -103,6 +106,9 @@ dependencies {
     // Image 처리
     implementation 'net.coobird:thumbnailator:0.4.17'
     implementation 'org.apache.tika:tika-core:3.2.2'
+
+    //
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
     // Spring Cloud AWS SQS 스타터 추가
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
