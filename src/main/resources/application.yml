@@ -40,7 +40,6 @@ spring:
           temperature: 0.7
           maxCompletionTokens: 1000
 
-  #임시
   batch:
     jdbc:
       initialize-schema: always
@@ -109,4 +108,4 @@ sse:
 stream:
   index-ttl-days: 7
   max-stream-length: 100000
-  retention-days: 7
+  retention-days: 8
