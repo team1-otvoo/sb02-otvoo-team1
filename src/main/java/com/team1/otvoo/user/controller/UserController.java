@@ -104,8 +104,6 @@ public class UserController {
         .body(userDto);
   }
 
-  // 경로에 포함된 userId 와 principal.id 가 같은 지 확인 필요
-  @PreAuthorize("#userId == principal.user.id")
   @GetMapping("/{userId}/profiles")
   ResponseEntity<ProfileDto> getUserProfile(@PathVariable UUID userId) {
     log.info("GET /api/users/{userId}/profiles - 프로필 조회 요청: userId={}", userId);
