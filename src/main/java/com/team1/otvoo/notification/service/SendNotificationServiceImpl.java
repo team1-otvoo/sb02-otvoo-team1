@@ -12,21 +12,20 @@ import com.team1.otvoo.notification.dto.NotificationDto;
 import com.team1.otvoo.notification.entity.Notification;
 import com.team1.otvoo.notification.entity.NotificationLevel;
 import com.team1.otvoo.notification.entity.NotificationType;
+import com.team1.otvoo.notification.event.NotificationEvent;
 import com.team1.otvoo.notification.mapper.NotificationMapper;
 import com.team1.otvoo.notification.repository.NotificationRepository;
-import com.team1.otvoo.sse.event.RedisStreamService;
-import com.team1.otvoo.sse.model.SseMessage;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.ProfileRepository;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,8 +41,10 @@ public class SendNotificationServiceImpl implements SendNotificationService {
   private final NotificationRepository notificationRepository;
   private final ProfileRepository profileRepository;
   private final FollowRepository followRepository;
-  private final RedisStreamService redisStreamService;
+  private final ApplicationEventPublisher eventPublisher;
   private final NotificationMapper notificationMapper;
+
+  private static final int PAGE_SIZE = 1000;
 
   @Override
   public void sendUserRoleNotification(Role previousUserRole, User user) {
@@ -108,7 +109,7 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     String content = NotificationType.FOLLOWEE_ADD_FEED.formatContent(feed.getContent());
     NotificationLevel level = NotificationLevel.INFO;
 
-    Pageable pageable = PageRequest.of(0, 1000); // 1000명 단위로 처리
+    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
     Page<User> followerPage;
     List<User> followers;
 
@@ -131,22 +132,13 @@ public class SendNotificationServiceImpl implements SendNotificationService {
       List<Notification> savedNotifications = notificationRepository.saveAll(notifications);
       log.info("배치 DB 저장 완료: {}개 저장", savedNotifications.size());
 
-      // 4. SSE 메시지 전송
-      // * 메시지 큐 or 배치 처리 도입 고려
-      savedNotifications.forEach(notification -> {
-        NotificationDto notificationDto = notificationMapper.toDto(notification);
-
-        SseMessage message = SseMessage.builder()
-            .eventId(UUID.randomUUID())
-            .receiverIds(Set.of(notification.getReceiver().getId()))
-            .broadcast(false)
-            .eventName("notifications")
-            .eventData(notificationDto)
-            .createdAt(Instant.now())
-            .build();
-
-        redisStreamService.publish(message);
-      });
+      // 4. 배치 이벤트 발행
+      List<NotificationDto> notificationDtoList = savedNotifications.stream()
+          .map(notificationMapper::toDto)
+          .collect(Collectors.toList());
+      boolean broadcast = false;
+      
+      eventPublisher.publishEvent(new NotificationEvent(notificationDtoList, broadcast));
 
       pageable = followerPage.nextPageable();
     } while(followerPage.hasNext());
@@ -191,16 +183,9 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     Notification saved = notificationRepository.save(notification);
     NotificationDto notificationDto = notificationMapper.toDto(saved);
 
-    log.info("SseMessage로 변환 전 notificationDto {}", notificationDto);
-    SseMessage message = SseMessage.builder()
-        .eventId(UUID.randomUUID())
-        .receiverIds(Set.of(receiver.getId()))
-        .eventName("notifications")
-        .eventData(notificationDto)
-        .createdAt(Instant.now())
-        .build();
+    boolean broadcast = false;
 
-    redisStreamService.publish(message);
+    eventPublisher.publishEvent(new NotificationEvent(notificationDto, broadcast));
   }
 
   private void createAndSendBroadcastNotification(String title, String content) {
@@ -208,16 +193,9 @@ public class SendNotificationServiceImpl implements SendNotificationService {
     Notification saved = notificationRepository.save(notification);
     NotificationDto notificationDto = notificationMapper.toDto(saved);
 
-    log.info("SseMessage로 변환 전 notificationDto {}", notificationDto);
-    SseMessage message = SseMessage.builder()
-        .eventId(UUID.randomUUID())
-        .broadcast(true)
-        .eventName("notifications")
-        .eventData(notificationDto)
-        .createdAt(Instant.now())
-        .build();
+    boolean broadcast = true;
 
-    redisStreamService.publish(message);
+    eventPublisher.publishEvent(new NotificationEvent(notificationDto, broadcast));
   }
 
   private Profile findProfileByUserId(UUID userId) {
