@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 @RestControllerAdvice
 @Slf4j
@@ -50,6 +52,32 @@ public class GlobalExceptionHandler {
     );
     return ResponseEntity.badRequest().body(errorResponse);
   }
+
+  // tomcat , DispatcherServlet 에서 잡는 예외
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException e) {
+    log.warn("파일 업로드 용량 초과: {}", e.getMessage());
+    ErrorResponse body = new ErrorResponse(
+        ErrorCode.TOO_BIG_IMAGE.toString(),
+        ErrorCode.TOO_BIG_IMAGE.getMessage(),
+        Map.of()
+    );
+    return ResponseEntity.status(ErrorCode.TOO_BIG_IMAGE.getStatus()).body(body); // 413
+  }
+
+  @ExceptionHandler(MultipartException.class)
+  public ResponseEntity<ErrorResponse> handleMultipart(MultipartException e) {
+    log.warn("Multipart 예외: {}", e.getMessage(), e);
+
+    if (e.getCause() instanceof MaxUploadSizeExceededException cause) {
+      return handleMaxUpload(cause);
+    }
+
+    ErrorResponse body = new ErrorResponse(
+        ErrorCode.INVALID_MULTIPART_REQUEST.toString(),
+        ErrorCode.INVALID_MULTIPART_REQUEST.getMessage(),
+        Map.of("reason", e.getClass().getSimpleName())
+    );
+    return ResponseEntity.status(ErrorCode.INVALID_MULTIPART_REQUEST.getStatus()).body(body);
+  }
 }
-
-

@@ -87,9 +87,13 @@ public enum ErrorCode implements Code {
   WEATHER_FORECAST_NOT_FOUND(HttpStatus.NOT_FOUND, "날씨 데이터가 존재하지 않습니다."),
 
   // --- Recommendation 관련 ErrorCode ---
-  RECOMMENDATION_NOT_FOUND(HttpStatus.NOT_FOUND, "추천 데이터가 존재하지 않습니다.");
+  RECOMMENDATION_NOT_FOUND(HttpStatus.NOT_FOUND, "추천 데이터가 존재하지 않습니다."),
 
+  // --- image 관련 ErrorCode ---
+  TOO_BIG_IMAGE(HttpStatus.PAYLOAD_TOO_LARGE, "업로드 가능한 파일 크기를 초과했습니다."),
 
+  // --- multipart 관련 ErrorCode ---
+  INVALID_MULTIPART_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 멀티파트 요청입니다.");
 
   private final HttpStatus status;
   private final String message;
