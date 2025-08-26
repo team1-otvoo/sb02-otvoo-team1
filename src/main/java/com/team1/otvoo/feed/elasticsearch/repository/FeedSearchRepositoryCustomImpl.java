@@ -51,7 +51,8 @@ public class FeedSearchRepositoryCustomImpl implements FeedSearchRepositoryCusto
     // SkyStatus 필터
     if (searchCondition.skyStatusEqual() != null) {
       boolQuery.filter(
-          f -> f.term(t -> t.field("weather.skyStatus").value(searchCondition.skyStatusEqual().name())));
+          f -> f.term(
+              t -> t.field("weather.skyStatus").value(searchCondition.skyStatusEqual().name())));
     }
 
     // PrecipitationType 필터
@@ -71,12 +72,15 @@ public class FeedSearchRepositoryCustomImpl implements FeedSearchRepositoryCusto
     if ("likeCount".equalsIgnoreCase(sortBy)) {
       // likeCount 정렬 → tie-breaker: created_at, feed_id
       sorts.add(SortOptions.of(s -> s.field(f -> f.field("likeCount").order(order))));
-      sorts.add(SortOptions.of(s -> s.field(f -> f.field("createdAt").order(SortOrder.Desc)))); // tie-breaker 1
-      sorts.add(SortOptions.of(s -> s.field(f -> f.field("feedId").order(SortOrder.Asc)))); //  tie-breaker 2
+      sorts.add(SortOptions.of(
+          s -> s.field(f -> f.field("createdAt").order(SortOrder.Desc)))); // tie-breaker 1
+      sorts.add(SortOptions.of(
+          s -> s.field(f -> f.field("feedId").order(SortOrder.Asc)))); //  tie-breaker 2
     } else {
       // createdAt 정렬 → tie-breaker: feed_id
       sorts.add(SortOptions.of(s -> s.field(f -> f.field("createdAt").order(order))));
-      sorts.add(SortOptions.of(s -> s.field(f -> f.field("feedId").order(SortOrder.Asc)))); // tie-breaker 1
+      sorts.add(SortOptions.of(
+          s -> s.field(f -> f.field("feedId").order(SortOrder.Asc)))); // tie-breaker 1
     }
 
     // search_after (커서)
@@ -133,7 +137,8 @@ public class FeedSearchRepositoryCustomImpl implements FeedSearchRepositoryCusto
         doc.getOotds().stream().map(
             eo -> OotdDto.builder()
                 .type(eo.getType())
-                .imageUrl(s3ImageStorage.getPresignedUrl(eo.getImageKey(), eo.getContentType()))
+                .imageUrl(eo.getImageKey() == null || eo.getClothesId() == null ? null
+                    : s3ImageStorage.getPresignedUrl(eo.getImageKey(), eo.getContentType()))
                 .clothesId(eo.getClothesId())
                 .attributes(eo.getAttributes())
                 .name(eo.getName())
@@ -145,7 +150,8 @@ public class FeedSearchRepositoryCustomImpl implements FeedSearchRepositoryCusto
         false
     );
     UUID profileId = profileRepository.findByUserId(feedDto.getAuthor().getUserId()).orElseThrow(
-        () -> new RestException(ErrorCode.PROFILE_NOT_FOUND, Map.of("userId", feedDto.getAuthor().getUserId()))
+        () -> new RestException(ErrorCode.PROFILE_NOT_FOUND,
+            Map.of("userId", feedDto.getAuthor().getUserId()))
     ).getId();
     feedDto.getAuthor().setProfileImageUrl(profileImageUrlResolver.resolve(profileId));
 

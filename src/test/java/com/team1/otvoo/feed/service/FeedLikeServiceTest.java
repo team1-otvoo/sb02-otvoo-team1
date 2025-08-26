@@ -69,6 +69,7 @@ public class FeedLikeServiceTest {
         .user(user)
         .build();
     ReflectionTestUtils.setField(feed, "id", feedId);
+    ReflectionTestUtils.setField(feed, "likeCount", 1);
   }
 
   @Test
