@@ -5,6 +5,7 @@ import com.team1.otvoo.sse.model.SseMessage;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -13,13 +14,11 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.stream.ObjectRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.connection.stream.StreamReadOptions;
-import org.springframework.data.redis.connection.stream.StreamRecords;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -95,25 +94,46 @@ public class RedisStreamService {
       return Collections.emptyList();
     }
 
-    try {
-      List<ObjectRecord<String, String>> records = stringRedisTemplate.opsForStream().read(
-          String.class,
-          StreamReadOptions.empty().count(1000),
-          StreamOffset.create(STREAM_KEY, ReadOffset.from(RecordId.of(lastRecordId)))
-      );
+    List<SseMessage> missedMessages = new ArrayList<>();
+    // lastRecordId로 시작
+    ReadOffset readOffset = ReadOffset.from(RecordId.of(lastRecordId));
 
-      return records.stream()
-          .map(r -> {
-            try {
-              return objectMapper.readValue(r.getValue(), SseMessage.class);
-            } catch (Exception ex) {
-              log.error("SseMessage 역직렬화 실패 기록: recordId={}, value={}", r.getId().getValue(), r.getValue(), ex);
-              return null;
-            }
-          })
-          .filter(Objects::nonNull)
+    try {
+      while (true) {
+        // 한번에 200개씩 끊어서 읽어옴
+        List<ObjectRecord<String, String>> records = stringRedisTemplate.opsForStream().read(
+            String.class,
+            StreamReadOptions.empty().count(200),
+            StreamOffset.create(STREAM_KEY, readOffset)
+        );
+
+        // 더 이상 읽을 데이터가 없으면 루프 종료
+        if (records == null || records.isEmpty()) {
+          break;
+        }
+
+        List<SseMessage> messagesInBatch = records.stream()
+            .map(r -> {
+              try {
+                return objectMapper.readValue(r.getValue(), SseMessage.class);
+              } catch (Exception ex) {
+                log.error("SseMessage 역직렬화 실패: recordId={}, value={}", r.getId().getValue(), r.getValue(), ex);
+                return null;
+              }
+            })
+            .filter(Objects::nonNull)
+            .filter(msg -> msg.isReceivable(receiverId)) // 해당 사용자가 받을 수 있는 메시지만 필터링
+            .toList();
+
+        missedMessages.addAll(messagesInBatch);
+
+        // 다음 조회 시작점을 마지막으로 읽은 레코드 ID로 갱신
+        readOffset = ReadOffset.from(records.get(records.size() - 1).getId());
+      }
+
+      // lastEventId 자체는 제외하고 반환 (XREAD는 exclusive하게 동작하지만 안전장치로 추가)
+      return missedMessages.stream()
           .filter(msg -> !msg.getEventId().equals(lastEventId))
-          .filter(msg -> msg.isReceivable(receiverId))
           .toList();
 
     } catch (Exception e) {
