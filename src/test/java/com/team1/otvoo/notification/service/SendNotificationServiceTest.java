@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -22,10 +23,9 @@ import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.notification.dto.NotificationDto;
 import com.team1.otvoo.notification.entity.Notification;
 import com.team1.otvoo.notification.entity.NotificationLevel;
+import com.team1.otvoo.notification.event.NotificationEvent;
 import com.team1.otvoo.notification.mapper.NotificationMapper;
 import com.team1.otvoo.notification.repository.NotificationRepository;
-import com.team1.otvoo.sse.event.RedisPublisher;
-import com.team1.otvoo.sse.model.SseMessage;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
@@ -33,7 +33,6 @@ import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.weather.entity.WeatherForecast;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +44,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,7 +66,7 @@ public class SendNotificationServiceTest {
   private FollowRepository followRepository;
 
   @Mock
-  private RedisPublisher redisPublisher;
+  private ApplicationEventPublisher eventPublisher;
 
   @Mock
   private NotificationMapper notificationMapper;
@@ -170,7 +173,7 @@ public class SendNotificationServiceTest {
 
       // then
       then(notificationRepository).should().save(any(Notification.class));
-      then(redisPublisher).should().publish(any(SseMessage.class));
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
 
       ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
       then(notificationRepository).should().save(notificationCaptor.capture());
@@ -192,24 +195,14 @@ public class SendNotificationServiceTest {
     void sendClothesAttributeNotification_Success_ShouldSendBroadcastWhenCreated() {
       // given
       String methodType = "CREATE";
+      given(notificationRepository.save(any(Notification.class))).willReturn(notification);
+      given(notificationMapper.toDto(any(Notification.class))).willReturn(notificationDto);
 
       // when
       sendNotificationService.sendClothesAttributeNotification(methodType, clothesAttributeDefinition);
 
       // then
-      then(redisPublisher).should().publish(any(SseMessage.class));
-
-      ArgumentCaptor<SseMessage> messageCaptor = ArgumentCaptor.forClass(SseMessage.class);
-      then(redisPublisher).should().publish(messageCaptor.capture());
-
-      SseMessage sentMessage = messageCaptor.getValue();
-      assertThat(sentMessage.isBroadcast()).isTrue();
-      assertThat(sentMessage.getEventName()).isEqualTo("notifications");
-
-      @SuppressWarnings("unchecked")
-      Map<String, String> eventData = (Map<String, String>) sentMessage.getEventData();
-      assertThat(eventData.get("title")).contains("속성이 추가");
-      assertThat(eventData.get("content")).contains(clothesAttributeDefinition.getName());
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
     }
 
     @Test
@@ -217,24 +210,14 @@ public class SendNotificationServiceTest {
     void sendClothesAttributeNotification_Success_ShouldSendBroadcastWhenUpdated() {
       // given
       String methodType = "UPDATE";
+      given(notificationRepository.save(any(Notification.class))).willReturn(notification);
+      given(notificationMapper.toDto(any(Notification.class))).willReturn(notificationDto);
 
       // when
       sendNotificationService.sendClothesAttributeNotification(methodType, clothesAttributeDefinition);
 
       // then
-      then(redisPublisher).should().publish(any(SseMessage.class));
-
-      ArgumentCaptor<SseMessage> messageCaptor = ArgumentCaptor.forClass(SseMessage.class);
-      then(redisPublisher).should().publish(messageCaptor.capture());
-
-      SseMessage sentMessage = messageCaptor.getValue();
-      assertThat(sentMessage.isBroadcast()).isTrue();
-      assertThat(sentMessage.getEventName()).isEqualTo("notifications");
-
-      @SuppressWarnings("unchecked")
-      Map<String, String> eventData = (Map<String, String>) sentMessage.getEventData();
-      assertThat(eventData.get("title")).contains("의상 속성이 변경되었어요.");
-      assertThat(eventData.get("content")).contains(clothesAttributeDefinition.getName());
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
     }
   }
 
@@ -256,7 +239,7 @@ public class SendNotificationServiceTest {
       // then
       then(profileRepository).should().findByUserId(followerId);
       then(notificationRepository).should().save(any(Notification.class));
-      then(redisPublisher).should().publish(any(SseMessage.class));
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
 
       ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
       then(notificationRepository).should().save(notificationCaptor.capture());
@@ -282,7 +265,7 @@ public class SendNotificationServiceTest {
 
       then(profileRepository).should().findByUserId(followerId);
       then(notificationRepository).shouldHaveNoInteractions();
-      then(redisPublisher).shouldHaveNoInteractions();
+      then(eventPublisher).shouldHaveNoInteractions();
     }
   }
 
@@ -304,7 +287,7 @@ public class SendNotificationServiceTest {
       // then
       then(profileRepository).should().findByUserId(followerId);
       then(notificationRepository).should().save(any(Notification.class));
-      then(redisPublisher).should().publish(any(SseMessage.class));
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
 
       ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
       then(notificationRepository).should().save(notificationCaptor.capture());
@@ -331,7 +314,7 @@ public class SendNotificationServiceTest {
 
       then(profileRepository).should().findByUserId(followerId);
       then(notificationRepository).shouldHaveNoInteractions();
-      then(redisPublisher).shouldHaveNoInteractions();
+      then(eventPublisher).shouldHaveNoInteractions();
     }
   }
 
@@ -342,44 +325,26 @@ public class SendNotificationServiceTest {
     @Test
     @DisplayName("성공 - 팔로워들에게 피드 등록 알림을 전송한다")
     void sendFeedNotification_Success_ShouldSendNotificationToAllFollowers() {
-      // given
-      User follower1 = spy(new User("follower1@test.com", "password"));
+      User follower1 = spy(new User("f1@test.com", "pw"));
       ReflectionTestUtils.setField(follower1, "id", UUID.randomUUID());
-
-      User follower2 = spy(new User("follower2@test.com", "password"));
+      User follower2 = spy(new User("f2@test.com", "pw"));
       ReflectionTestUtils.setField(follower2, "id", UUID.randomUUID());
 
-      Follow follow1 = new Follow(user, follower1);
-      Follow follow2 = new Follow(user, follower2);
-      List<Follow> follows = List.of(follow1, follow2);
+      List<User> followers = List.of(follower1, follower2);
+      Page<User> followerPage = new PageImpl<>(followers);
 
       given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
-      given(followRepository.findByFolloweeId(userId)).willReturn(follows);
-      given(notificationRepository.saveAll(anyList())).willReturn(List.of());
+      given(followRepository.findFollowersByFolloweeId(eq(userId), any(Pageable.class)))
+          .willReturn(followerPage);
+      given(notificationRepository.saveAll(anyList())).willReturn(List.of(notification));
+      given(notificationMapper.toDto(any(Notification.class))).willReturn(notificationDto);
 
       // when
       sendNotificationService.sendFeedNotification(feed);
 
       // then
-      then(profileRepository).should().findByUserId(userId);
-      then(followRepository).should().findByFolloweeId(userId);
       then(notificationRepository).should().saveAll(anyList());
-      then(redisPublisher).should().publish(any(SseMessage.class));
-
-      ArgumentCaptor<List<Notification>> notificationsCaptor = ArgumentCaptor.forClass(List.class);
-      then(notificationRepository).should().saveAll(notificationsCaptor.capture());
-
-      List<Notification> savedNotifications = notificationsCaptor.getValue();
-      assertThat(savedNotifications).hasSize(2);
-      assertThat(savedNotifications.get(0).getReceiver()).isEqualTo(follower1);
-      assertThat(savedNotifications.get(1).getReceiver()).isEqualTo(follower2);
-
-      ArgumentCaptor<SseMessage> messageCaptor = ArgumentCaptor.forClass(SseMessage.class);
-      then(redisPublisher).should().publish(messageCaptor.capture());
-
-      SseMessage sentMessage = messageCaptor.getValue();
-      assertThat(sentMessage.isBroadcast()).isFalse();
-      assertThat(sentMessage.getReceiverIds()).hasSize(2);
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
     }
 
     @Test
@@ -387,16 +352,17 @@ public class SendNotificationServiceTest {
     void sendFeedNotification_Success_ShouldNotSendWhenNoFollowers() {
       // given
       given(profileRepository.findByUserId(userId)).willReturn(Optional.of(profile));
-      given(followRepository.findByFolloweeId(userId)).willReturn(List.of());
+      given(followRepository.findFollowersByFolloweeId(eq(userId), any(Pageable.class)))
+          .willReturn(Page.empty());
 
       // when
       sendNotificationService.sendFeedNotification(feed);
 
       // then
       then(profileRepository).should().findByUserId(userId);
-      then(followRepository).should().findByFolloweeId(userId);
+      then(followRepository).should().findFollowersByFolloweeId(eq(userId), any(Pageable.class));
       then(notificationRepository).shouldHaveNoInteractions();
-      then(redisPublisher).shouldHaveNoInteractions();
+      then(eventPublisher).shouldHaveNoInteractions();
     }
 
     @Test
@@ -415,7 +381,7 @@ public class SendNotificationServiceTest {
       then(profileRepository).should().findByUserId(userId);
       then(followRepository).shouldHaveNoInteractions();
       then(notificationRepository).shouldHaveNoInteractions();
-      then(redisPublisher).shouldHaveNoInteractions();
+      then(eventPublisher).shouldHaveNoInteractions();
     }
   }
 
@@ -437,7 +403,7 @@ public class SendNotificationServiceTest {
       // then
       then(profileRepository).should().findByUserId(followerId);
       then(notificationRepository).should().save(any(Notification.class));
-      then(redisPublisher).should().publish(any(SseMessage.class));
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
 
       ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
       then(notificationRepository).should().save(notificationCaptor.capture());
@@ -463,7 +429,7 @@ public class SendNotificationServiceTest {
 
       then(profileRepository).should().findByUserId(followerId);
       then(notificationRepository).shouldHaveNoInteractions();
-      then(redisPublisher).shouldHaveNoInteractions();
+      then(eventPublisher).shouldHaveNoInteractions();
     }
   }
 
@@ -475,8 +441,9 @@ public class SendNotificationServiceTest {
     @DisplayName("성공 - DM 알림을 정상적으로 전송한다")
     void sendDirectMessageNotification_Success_ShouldSendNotificationWhenDirectMessageSent() {
       // given
-      Profile receiverProfile = new Profile("ReceiverUser", receiver);
-      given(profileRepository.findByUserId(receiverId)).willReturn(Optional.of(receiverProfile));
+      UUID senderId = directMessage.getSender().getId();
+      Profile senderProfile = new Profile("SenderUser", directMessage.getSender());
+      given(profileRepository.findByUserId(senderId)).willReturn(Optional.of(senderProfile));
       given(notificationRepository.save(any(Notification.class))).willReturn(notification);
       given(notificationMapper.toDto(any(Notification.class))).willReturn(notificationDto);
 
@@ -484,16 +451,16 @@ public class SendNotificationServiceTest {
       sendNotificationService.sendDirectMessageNotification(directMessage);
 
       // then
-      then(profileRepository).should().findByUserId(receiverId);
+      then(profileRepository).should().findByUserId(senderId);
       then(notificationRepository).should().save(any(Notification.class));
-      then(redisPublisher).should().publish(any(SseMessage.class));
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
 
       ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
       then(notificationRepository).should().save(notificationCaptor.capture());
 
       Notification savedNotification = notificationCaptor.getValue();
       assertThat(savedNotification.getReceiver()).isEqualTo(receiver);
-      assertThat(savedNotification.getTitle()).contains(receiverProfile.getName());
+      assertThat(savedNotification.getTitle()).contains(senderProfile.getName());
       assertThat(savedNotification.getContent()).contains(directMessage.getContent());
     }
 
@@ -501,18 +468,41 @@ public class SendNotificationServiceTest {
     @DisplayName("실패 - 프로필을 찾을 수 없으면 예외를 발생시킨다")
     void sendDirectMessageNotification_Failure_ShouldThrowExceptionWhenProfileNotFound() {
       // given
-      given(profileRepository.findByUserId(receiverId)).willReturn(Optional.empty());
+      UUID senderId = directMessage.getSender().getId();
+      given(profileRepository.findByUserId(senderId)).willReturn(Optional.empty());
 
       // when & then
       RestException exception = assertThrows(RestException.class,
           () -> sendNotificationService.sendDirectMessageNotification(directMessage));
 
       assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOT_FOUND);
-      assertThat(exception.getDetails()).containsEntry("id", receiverId);
+      assertThat(exception.getDetails()).containsEntry("id", senderId);
 
-      then(profileRepository).should().findByUserId(receiverId);
+      then(profileRepository).should().findByUserId(senderId);
       then(notificationRepository).shouldHaveNoInteractions();
-      then(redisPublisher).shouldHaveNoInteractions();
+      then(eventPublisher).shouldHaveNoInteractions();
+    }
+  }
+
+  @Nested
+  @DisplayName("날씨 알림 테스트")
+  class SendWeatherForecastNotificationTests {
+
+    @Test
+    @DisplayName("성공 - 날씨 알림을 정상적으로 전송한다")
+    void sendWeatherForecastNotification_Success_ShouldSendNotification() {
+      // given
+      String title = "기온 변화 알림";
+      String content = "기존 동일 예보 대비 7f℃ 변했습니다.";
+      given(notificationRepository.save(any(Notification.class))).willReturn(notification);
+      given(notificationMapper.toDto(any(Notification.class))).willReturn(notificationDto);
+
+      // when
+      sendNotificationService.sendWeatherForecastNotification(receiver, title, content);
+
+      // then
+      then(notificationRepository).should().save(any(Notification.class));
+      then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
     }
   }
 }
