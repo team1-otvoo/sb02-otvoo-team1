@@ -14,7 +14,10 @@ import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedClothes;
+import com.team1.otvoo.feed.event.FeedCreatedEvent;
+import com.team1.otvoo.feed.event.FeedDeletedEvent;
 import com.team1.otvoo.feed.event.FeedEvent;
+import com.team1.otvoo.feed.event.FeedUpdatedEvent;
 import com.team1.otvoo.feed.mapper.FeedMapper;
 import com.team1.otvoo.feed.repository.FeedClothesRepository;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
@@ -23,7 +26,9 @@ import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.repository.ProfileRepository;
 import com.team1.otvoo.user.repository.UserRepository;
+import com.team1.otvoo.user.resolver.ProfileImageUrlResolver;
 import com.team1.otvoo.weather.entity.WeatherForecast;
 import com.team1.otvoo.weather.repository.WeatherForecastRepository;
 import java.util.Collections;
@@ -51,10 +56,12 @@ public class FeedServiceImpl implements FeedService {
   private final FeedRepository feedRepository;
   private final FeedLikeRepository feedLikeRepository;
   private final FeedClothesRepository feedClothesRepository;
+  private final ProfileRepository profileRepository;
   private final FeedMapper feedMapper;
   private final ClothesMapper clothesMapper;
   private final ApplicationEventPublisher eventPublisher;
   private final S3ImageStorage s3ImageStorage;
+  private final ProfileImageUrlResolver profileImageUrlResolver;
 
   @Transactional
   @Override
@@ -78,9 +85,11 @@ public class FeedServiceImpl implements FeedService {
     createdFeed.updateFeedClothes(feedClothesList);
     Feed savedFeed = feedRepository.save(createdFeed);
 
-    eventPublisher.publishEvent(new FeedEvent(savedFeed));
 
-    return feedMapper.toDto(createdFeed, authorDto,false);
+    FeedDto feedDto =  feedMapper.toDto(createdFeed, authorDto,false);
+    eventPublisher.publishEvent(new FeedEvent(savedFeed));
+    eventPublisher.publishEvent(new FeedCreatedEvent(feedDto));
+    return feedDto;
   }
 
   @Transactional
@@ -91,11 +100,14 @@ public class FeedServiceImpl implements FeedService {
     AuthorDto authorDto = userRepository.projectionAuthorDtoById(user.getId());
 
     feed.updateFeed(request.content());
-
     feedRepository.save(feed);
 
-    return feedMapper.toDto(feed, authorDto,
+    FeedDto feedDto = feedMapper.toDto(feed, authorDto,
         feedLikeRepository.existsFeedLikeByFeed_IdAndLikedBy_Id(id, user.getId()));
+
+    eventPublisher.publishEvent(new FeedUpdatedEvent(feedDto));
+
+    return feedDto;
   }
 
   @Transactional(readOnly = true)
@@ -139,6 +151,10 @@ public class FeedServiceImpl implements FeedService {
 
     // FeedDto에 OotdDto 리스트 세팅
     for (FeedDto feedDto : feeds) {
+      UUID profileId = profileRepository.findByUserId(feedDto.getAuthor().getUserId()).orElseThrow(
+          () -> new RestException(ErrorCode.PROFILE_NOT_FOUND,
+              Map.of("userId", feedDto.getAuthor().getUserId()))).getId();
+      feedDto.getAuthor().setProfileImageUrl(profileImageUrlResolver.resolve(profileId));
       feedDto.setOotds(ootdMap.getOrDefault(feedDto.getId(), Collections.emptyList()));
     }
 
@@ -151,6 +167,7 @@ public class FeedServiceImpl implements FeedService {
     Feed feed = findFeed(id);
 
     feedRepository.delete(feed);
+    eventPublisher.publishEvent(new FeedDeletedEvent(id));
   }
 
   private Feed findFeed(UUID id) {

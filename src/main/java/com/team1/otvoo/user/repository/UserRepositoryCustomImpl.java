@@ -4,6 +4,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -46,7 +47,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             AuthorDto.class,
             user.id,
             profile.name,
-            profileImage.objectKey
+            Expressions.nullExpression(String.class)
         ))
         .from(user)
         .leftJoin(profile).on(profile.user.eq(user))

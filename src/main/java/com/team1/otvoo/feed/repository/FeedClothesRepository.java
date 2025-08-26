@@ -15,4 +15,10 @@ public interface FeedClothesRepository extends JpaRepository<FeedClothes, UUID> 
       "left join fetch def.values " +
       "where fc.feed.id in :feedIds")
   List<FeedClothes> findAllByFeedIdInWithClothesAndSelectedValues(@Param("feedIds") List<UUID> feedIds);
+
+  @Query("select fc from FeedClothes fc "
+      + "where fc.clothes.id in :clothesIds")
+  List<FeedClothes> findAllByClothesId(@Param("clothesIds") List<UUID> clothesIds);
+
+  List<FeedClothes> findByClothes_Id(UUID clothesId);
 }

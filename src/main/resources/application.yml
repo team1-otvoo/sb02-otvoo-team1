@@ -12,6 +12,8 @@ spring:
     redis:
       port: 6379
       host: localhost
+  elasticsearch:
+    uris: http://3.38.186.207:9200
 
   jpa:
     hibernate:
@@ -42,6 +44,8 @@ spring:
   batch:
     jdbc:
       initialize-schema: always
+    job:
+      enabled: false
 
   mail:
     host: smtp.gmail.com

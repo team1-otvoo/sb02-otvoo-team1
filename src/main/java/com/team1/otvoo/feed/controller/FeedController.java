@@ -5,6 +5,7 @@ import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedDtoCursorResponse;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.dto.FeedUpdateRequest;
+import com.team1.otvoo.feed.elasticsearch.service.FeedElasticSearchService;
 import com.team1.otvoo.feed.mapper.FeedPageResponseMapper;
 import com.team1.otvoo.feed.service.FeedService;
 import com.team1.otvoo.weather.entity.PrecipitationType;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/feeds")
 public class FeedController {
   private final FeedService feedService;
+  private final FeedElasticSearchService feedElasticSearchService;
   private final FeedPageResponseMapper pageResponseMapper;
 
   @PostMapping
@@ -40,7 +42,7 @@ public class FeedController {
 
     FeedDto feedDto = feedService.create(request);
 
-    log.info("피드 생성 완료 - authorId: {}, feedId: {}", feedDto.getAuthor().name(), feedDto.getId());
+    log.info("피드 생성 완료 - authorId: {}, feedId: {}", feedDto.getAuthor().getName(), feedDto.getId());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)
@@ -71,7 +73,8 @@ public class FeedController {
         .sortDirection(sortDirection)
         .build();
 
-    Slice<FeedDto> feedDtoList = feedService.getFeedsWithCursor(searchCondition);
+    // Slice<FeedDto> feedDtoList = feedService.getFeedsWithCursor(searchCondition);
+    Slice<FeedDto> feedDtoList = feedElasticSearchService.getFeedsWithCursor(searchCondition);
 
     return ResponseEntity.ok()
         .body(pageResponseMapper.toPageResponse(feedDtoList, searchCondition));

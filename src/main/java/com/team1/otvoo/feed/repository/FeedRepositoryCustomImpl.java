@@ -7,9 +7,11 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.team1.otvoo.clothes.entity.QClothes;
 import com.team1.otvoo.feed.dto.FeedDto;
 import com.team1.otvoo.feed.dto.FeedSearchCondition;
 import com.team1.otvoo.feed.entity.QFeed;
+import com.team1.otvoo.feed.entity.QFeedClothes;
 import com.team1.otvoo.feed.entity.QFeedLike;
 import com.team1.otvoo.user.dto.AuthorDto;
 import com.team1.otvoo.user.entity.QProfile;
@@ -39,6 +41,8 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
   QFeed feed = QFeed.feed;
+  QFeedClothes feedClothes = QFeedClothes.feedClothes;
+  QClothes clothes = QClothes.clothes;
   QUser user = QUser.user;
   QProfile profile = QProfile.profile;
   QProfileImage profileImage = QProfileImage.profileImage;
@@ -83,7 +87,7 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
                 AuthorDto.class,
                 user.id,
                 profile.name,
-                profileImage.objectKey
+                Expressions.nullExpression(String.class)
             ),
             Projections.constructor(
                 WeatherSummaryDto.class,
@@ -130,6 +134,58 @@ public class FeedRepositoryCustomImpl implements FeedRepositoryCustom {
     }
 
     return new SliceImpl<>(results, condition.toPageable(), hasNext);
+  }
+
+  @Override
+  public List<FeedDto> projectionFeedDtoByClothesId(UUID clothesId) {
+    return queryFactory
+        .select(Projections.constructor(
+            FeedDto.class,
+            feed.id,
+            feed.createdAt,
+            feed.updatedAt,
+            Projections.constructor(
+                AuthorDto.class,
+                user.id,
+                profile.name,
+                Expressions.nullExpression(String.class)
+            ),
+            Projections.constructor(
+                WeatherSummaryDto.class,
+                weather.id,
+                weather.skyStatus,
+                Projections.constructor(
+                    PrecipitationDto.class,
+                    precipitation.type,
+                    precipitation.amount,
+                    precipitation.probability
+                ),
+                Projections.constructor(
+                    TemperatureDto.class,
+                    temperature.current,
+                    temperature.comparedToDayBefore,
+                    temperature.min,
+                    temperature.max
+                )
+            ),
+            Expressions.constant(Collections.emptyList()),
+            feed.content,
+            feed.likeCount,
+            feed.commentCount,
+            Expressions.asBoolean(false) // likedByMe는 항상 false
+        ))
+        .from(feed)
+        .join(feed.feedClothes, feedClothes)
+        .join(feedClothes.clothes, clothes)
+        .join(feed.user, user)
+        .leftJoin(profile).on(profile.user.id.eq(user.id))
+        .leftJoin(profileImage).on(profileImage.profile.id.eq(profile.id))
+        .join(feed.weather, weather)
+        .leftJoin(precipitation).on(precipitation.forecast.eq(weather))
+        .leftJoin(temperature).on(temperature.forecast.eq(weather))
+        .where(clothes.id.eq(clothesId))
+        .distinct()
+        .fetch();
   }
 
   private BooleanExpression keywordLike(String keywordLike) {

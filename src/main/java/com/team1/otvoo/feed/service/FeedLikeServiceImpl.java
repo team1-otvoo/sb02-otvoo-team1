@@ -5,6 +5,7 @@ import com.team1.otvoo.exception.RestException;
 import com.team1.otvoo.feed.entity.Feed;
 import com.team1.otvoo.feed.entity.FeedLike;
 import com.team1.otvoo.feed.event.FeedLikeEvent;
+import com.team1.otvoo.feed.event.FeedUnlikeEvent;
 import com.team1.otvoo.feed.repository.FeedLikeRepository;
 import com.team1.otvoo.feed.repository.FeedRepository;
 import com.team1.otvoo.security.CustomUserDetails;
@@ -51,6 +52,7 @@ public class FeedLikeServiceImpl implements FeedLikeService {
 
     feedLikeRepository.deleteByFeed_IdAndLikedBy_Id(feed.getId(), user.getId());
     feedRepository.decrementLikerCount(feed.getId());
+    eventPublisher.publishEvent(new FeedUnlikeEvent(feedId));
   }
 
   private Feed findFeed(UUID id) {

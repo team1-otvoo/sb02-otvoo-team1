@@ -20,6 +20,7 @@ import com.team1.otvoo.user.dto.UserSlice;
 import com.team1.otvoo.user.entity.Profile;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.entity.User;
+import com.team1.otvoo.user.event.ProfileUpdatedEvent;
 import com.team1.otvoo.user.event.UserRoleEvent;
 import com.team1.otvoo.user.mapper.ProfileMapper;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
@@ -227,6 +228,8 @@ public class UserServiceImpl implements UserService {
     String profileImageUrl = profileImageService.replaceProfileImageAndGetUrl(profile, profileImageFile);
 
     ProfileDto dto = profileMapper.toProfileDto(userId, profile, profileImageUrl);
+
+    eventPublisher.publishEvent(new ProfileUpdatedEvent(userId, profileUpdateRequest.name()));
 
     return dto;
   }
