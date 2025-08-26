@@ -50,9 +50,11 @@ public class FeedLikeServiceImpl implements FeedLikeService {
     User user = ((CustomUserDetails) SecurityContextHolder.getContext().getAuthentication()
         .getPrincipal()).getUser();
 
-    feedLikeRepository.deleteByFeed_IdAndLikedBy_Id(feed.getId(), user.getId());
-    feedRepository.decrementLikerCount(feed.getId());
-    eventPublisher.publishEvent(new FeedUnlikeEvent(feedId));
+    if(feed.getLikeCount() >= 1) {
+      feedLikeRepository.deleteByFeed_IdAndLikedBy_Id(feed.getId(), user.getId());
+      feedRepository.decrementLikerCount(feed.getId());
+      eventPublisher.publishEvent(new FeedUnlikeEvent(feedId));
+    }
   }
 
   private Feed findFeed(UUID id) {

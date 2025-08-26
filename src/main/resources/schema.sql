@@ -237,7 +237,8 @@ CREATE TABLE feeds
     user_id       UUID,
     forecast_id   UUID,
     content       TEXT,
-    like_count    BIGINT      NOT NULL DEFAULT 0,
+    like_count    BIGINT      NOT NULL DEFAULT 0
+                  CONSTRAINT chk_like_count_non_negative CHECK (like_count >= 0),
     comment_count BIGINT      NOT NULL DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ,
