@@ -2,7 +2,6 @@ package com.team1.otvoo.user.resolver;
 
 import com.team1.otvoo.config.props.DefaultProfileImageProperties;
 import com.team1.otvoo.storage.S3ImageStorage;
-import com.team1.otvoo.user.entity.ProfileImage;
 import com.team1.otvoo.user.repository.ProfileImageRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;

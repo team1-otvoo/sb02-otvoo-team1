@@ -29,7 +29,6 @@ import com.team1.otvoo.user.dto.UserLockUpdateRequest;
 import com.team1.otvoo.user.entity.Gender;
 import com.team1.otvoo.user.entity.Role;
 import com.team1.otvoo.user.service.UserService;
-import com.team1.otvoo.weather.entity.WeatherLocation;
 import jakarta.annotation.Resource;
 import java.time.Instant;
 import java.time.LocalDate;

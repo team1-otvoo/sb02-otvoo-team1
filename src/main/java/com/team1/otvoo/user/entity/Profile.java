@@ -1,6 +1,5 @@
 package com.team1.otvoo.user.entity;
 
-import com.team1.otvoo.user.dto.Location;
 import com.team1.otvoo.user.dto.ProfileUpdateRequest;
 import com.team1.otvoo.weather.entity.WeatherLocation;
 import jakarta.persistence.CascadeType;

@@ -3,7 +3,6 @@ package com.team1.otvoo.sqs;
 import com.team1.otvoo.sqs.dto.ImageDeleteData;
 import com.team1.otvoo.sqs.dto.ImageResizeData;
 import com.team1.otvoo.sqs.dto.SqsMessageDto;
-import com.team1.otvoo.sqs.dto.TaskType;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
