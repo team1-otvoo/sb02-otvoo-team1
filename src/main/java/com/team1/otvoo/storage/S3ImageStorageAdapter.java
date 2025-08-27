@@ -48,7 +48,7 @@ public class S3ImageStorageAdapter implements S3ImageStorage {
       s3Client.putObject(request, RequestBody.fromInputStream(in, length));
       log.info("S3 업로드 성공:{}/{}", props.getBucket(), key);
 
-      return s3Client.utilities().getUrl(b -> b.bucket(props.getBucket()).key(key)).toString();
+      return key;
     } catch (S3Exception e) {
       log.error("S3 업로드 실패: bucket={}, key={}, code={}, msg={}",
           props.getBucket(), key,
@@ -85,6 +85,50 @@ public class S3ImageStorageAdapter implements S3ImageStorage {
           props.getBucket(), key, e.getMessage(), e);
       throw new RestException(ErrorCode.INTERNAL_SERVER_ERROR,
           Map.of("message", "S3 객체 삭제 중 알 수 없는 오류: " + key));
+    }
+  }
+
+  @Override
+  public String getPresignedUrl(String key) {
+    try {
+      long ttlSec = props.getPresignedExpirationSeconds();
+
+      GetObjectRequest.Builder getReqBuilder = GetObjectRequest.builder()
+          .bucket(props.getBucket())
+          .key(key);
+
+      GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
+          .signatureDuration(Duration.ofSeconds(ttlSec))
+          .getObjectRequest(getReqBuilder.build())
+          .build();
+
+      PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presignReq);
+      String url = presigned.url().toString();
+
+      log.info("Presigned GET URL 생성: bucket={}, key={}, ttlSec={}",
+          props.getBucket(), key, ttlSec);
+
+      return url;
+
+    } catch (S3Exception e) {
+      log.error("Presigned URL 생성 실패: bucket={}, key={}, code={}, msg={}",
+          props.getBucket(), key,
+          e.awsErrorDetails() != null ? e.awsErrorDetails().errorCode() : "N/A",
+          e.awsErrorDetails() != null ? e.awsErrorDetails().errorMessage() : e.getMessage(), e);
+
+      throw new RestException(
+          ErrorCode.IO_EXCEPTION,
+          Map.of("message", "S3 Presigned URL 생성 실패: " + key)
+      );
+
+    } catch (Exception e) {
+      log.error("Presigned URL 생성 중 알 수 없는 오류: bucket={}, key={}, msg={}",
+          props.getBucket(), key, e.getMessage(), e);
+
+      throw new RestException(
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          Map.of("message", "S3 Presigned URL 생성 중 알 수 없는 오류: " + key)
+      );
     }
   }
 

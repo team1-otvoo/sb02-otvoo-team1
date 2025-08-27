@@ -66,23 +66,20 @@ class S3ImageStorageAdapterTest {
     }
 
     @Test
-    @DisplayName("이미지 업로드 성공 시 S3 URL을 반환한다")
-    void should_returnS3Url_when_uploadSuccess() throws MalformedURLException {
+    // ✅ 테스트 이름도 의도에 맞게 수정하면 더 좋습니다.
+    @DisplayName("이미지 업로드 성공 시 객체 key를 반환한다")
+    void should_returnObjectKey_when_uploadSuccess() { // throws MalformedURLException 제거
       // given
       given(s3Props.getBucket()).willReturn(BUCKET_NAME);
 
-      String expectedUrl = String.format("https://%s.s3.ap-northeast-2.amazonaws.com/%s", BUCKET_NAME, KEY);
-      S3Utilities mockUtilities = mock(S3Utilities.class);
-      given(s3Client.utilities()).willReturn(mockUtilities);
-
-      given(mockUtilities.getUrl(any(Consumer.class))).willReturn(new URL(expectedUrl));
-
       // when
-      String actualUrl = s3ImageStorageAdapter.upload(KEY, inputStream, content.length, CONTENT_TYPE);
+      String actualKey = s3ImageStorageAdapter.upload(KEY, inputStream, content.length, CONTENT_TYPE);
 
       // then
-      assertThat(actualUrl).isEqualTo(expectedUrl);
+      assertThat(actualKey).isEqualTo(KEY);
+
       verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+
     }
 
     @Test
@@ -101,7 +98,7 @@ class S3ImageStorageAdapterTest {
     @DisplayName("S3 작업 중 예외 발생 시 RestException을 던진다")
     void should_throwRestException_when_s3ExceptionOccurs() {
       // given
-      // 1. UnnecessaryStubbingException 해결: 이 테스트에서도 bucket 이름이 필요하므로 작성합니다.
+      // 1. UnnecessaryStubbingException 해결: 이 테스트에서도 bucket 이름이 필요
       given(s3Props.getBucket()).willReturn(BUCKET_NAME);
 
       given(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
