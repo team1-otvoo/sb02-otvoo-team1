@@ -55,6 +55,8 @@ spring:
     redis:
       port: ${REDIS_PORT_PROD}
       host: ${REDIS_HOST_PROD}
+      ssl:
+        enabled: true
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS}
 
@@ -62,9 +64,6 @@ spring:
     hibernate:
       ddl-auto: none   # 운영에서는 스키마 검증만
     show-sql: false        # SQL 로그 비활성화
-
-  profiles:
-    active: prod
 
   config:
     import: optional:file:.env[.properties]
@@ -143,6 +142,7 @@ aws:
 
   sqs:
     queue-name: otvoo_sqs_queue
+    region: ${AWS_REGION}
 
 sse:
   timeout: 1800000
