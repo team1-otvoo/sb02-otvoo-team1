@@ -4,6 +4,7 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team1.otvoo.follow.dto.FollowCursorDto;
+import com.team1.otvoo.follow.dto.FollowDto;
 import com.team1.otvoo.follow.entity.QFollow;
 import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.QProfile;
@@ -25,6 +26,41 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
   private enum SearchType {
     FOLLOWING,
     FOLLOWER
+  }
+
+  @Override
+  public FollowDto findFollowDtoById(UUID followId) {
+    QFollow follow = QFollow.follow;
+    QUser followee = new QUser("followee");
+    QUser follower = new QUser("follower");
+    QProfile followeeProfile = new QProfile("followeeProfile");
+    QProfile followerProfile = new QProfile("followerProfile");
+    QProfileImage followeeImage = new QProfileImage("followeeImage");
+    QProfileImage followerImage = new QProfileImage("followerImage");
+
+    return queryFactory
+        .select(Projections.constructor(FollowDto.class,
+            follow.id,
+            Projections.constructor(UserSummary.class,
+                followee.id,
+                followeeProfile.name,
+                followeeImage.objectKey
+            ),
+            Projections.constructor(UserSummary.class,
+                follower.id,
+                followerProfile.name,
+                followerImage.objectKey
+            )
+        ))
+        .from(follow)
+        .join(follow.followee, followee)
+        .join(followeeProfile).on(followeeProfile.user.eq(followee))
+        .leftJoin(followeeImage).on(followeeImage.profile.eq(followeeProfile))
+        .join(follow.follower, follower)
+        .join(followerProfile).on(followerProfile.user.eq(follower))
+        .leftJoin(followerImage).on(followerImage.profile.eq(followerProfile))
+        .where(follow.id.eq(followId))
+        .fetchOne();
   }
 
   @Override

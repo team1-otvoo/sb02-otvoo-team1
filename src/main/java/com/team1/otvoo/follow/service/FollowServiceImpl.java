@@ -9,8 +9,9 @@ import com.team1.otvoo.follow.dto.FollowListResponse;
 import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.event.FollowEvent;
-import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
+import com.team1.otvoo.storage.S3ImageStorageAdapter;
+import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import java.time.Instant;
@@ -33,8 +34,8 @@ public class FollowServiceImpl implements FollowService {
 
   private final FollowRepository followRepository;
   private final UserRepository userRepository;
-  private final FollowMapper followMapper;
   private final ApplicationEventPublisher eventPublisher;
+  private final S3ImageStorageAdapter s3ImageStorageAdapter;
 
   @Transactional
   @Override
@@ -50,7 +51,6 @@ public class FollowServiceImpl implements FollowService {
       throw new RestException(ErrorCode.CONFLICT, Map.of("followeeId", followeeId, "followerId", followerId));
     }
 
-    // findAllById(List<UUID>) 고려
     User followee = userRepository.findById(followeeId)
         .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", followeeId)));
     User follower = userRepository.findById(followerId)
@@ -59,6 +59,7 @@ public class FollowServiceImpl implements FollowService {
     Follow follow = new Follow(followee, follower);
     Follow createdFollow = followRepository.save(follow);
 
+    // Todo: 동시성 문제 해결
     followee.increaseFollowerCount();
     follower.increaseFollowingCount();
 
@@ -66,7 +67,16 @@ public class FollowServiceImpl implements FollowService {
 
     eventPublisher.publishEvent(new FollowEvent(follower, followee));
 
-    return followMapper.toDto(createdFollow);
+    FollowDto tempDto = followRepository.findFollowDtoById(createdFollow.getId());
+
+    UserSummary resolvedFollowee = resolveUserSummaryUrl(tempDto.followee());
+    UserSummary resolvedFollower = resolveUserSummaryUrl(tempDto.follower());
+
+    return new FollowDto(
+        tempDto.id(),
+        resolvedFollowee,
+        resolvedFollower
+    );
   }
 
   @Transactional(readOnly = true)
@@ -139,8 +149,12 @@ public class FollowServiceImpl implements FollowService {
     String nextCursor = last.createdAt().toString();
     UUID nextIdAfter = last.id();
 
-    List<FollowDto> data = followingList.stream()
-        .map(fc -> new FollowDto(fc.id(), fc.followee(), fc.follower()))
+    List<FollowDto> data = followingList.parallelStream()
+        .map(fc -> {
+          UserSummary resolvedFollowee = resolveUserSummaryUrl(fc.followee());
+          UserSummary resolvedFollower = resolveUserSummaryUrl(fc.follower());
+          return new FollowDto(fc.id(), resolvedFollowee, resolvedFollower);
+        })
         .toList();
 
     return new FollowListResponse(
@@ -189,8 +203,12 @@ public class FollowServiceImpl implements FollowService {
     String nextCursor = last.createdAt().toString();
     UUID nextIdAfter = last.id();
 
-    List<FollowDto> data = followerList.stream()
-        .map(fc -> new FollowDto(fc.id(), fc.followee(), fc.follower()))
+    List<FollowDto> data = followerList.parallelStream()
+        .map(fc -> {
+          UserSummary resolvedFollowee = resolveUserSummaryUrl(fc.followee());
+          UserSummary resolvedFollower = resolveUserSummaryUrl(fc.follower());
+          return new FollowDto(fc.id(), resolvedFollowee, resolvedFollower);
+        })
         .toList();
 
     return new FollowListResponse(
@@ -205,7 +223,6 @@ public class FollowServiceImpl implements FollowService {
   @Transactional
   @Override
   public void delete(UUID followId) {
-    // 삭제 대상 유저가 없는 경우?
     Follow follow = followRepository.findById(followId)
         .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", followId)));
 
@@ -216,5 +233,10 @@ public class FollowServiceImpl implements FollowService {
     follower.decreaseFollowingCount();
 
     followRepository.delete(follow);
+  }
+
+  private UserSummary resolveUserSummaryUrl(UserSummary summary) {
+    String imageUrl = s3ImageStorageAdapter.getPresignedUrl(summary.profileImageUrl());
+    return new UserSummary(summary.userId(), summary.name(), imageUrl);
   }
 }
