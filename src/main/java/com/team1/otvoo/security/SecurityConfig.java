@@ -44,7 +44,7 @@ public class SecurityConfig {
             .csrfTokenRepository(tokenRepository())
             .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**", "/", "/index.html", "/vite.svg", "/assets/**", "/ws/**").permitAll()
+            .requestMatchers("/api/auth/**", "/", "/index.html", "/vite.svg", "/assets/**", "/ws/**", "/actuator/**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/users").permitAll()                    // 회원가입만 공개
             .requestMatchers(HttpMethod.GET, "/api/users").hasAuthority("ROLE_ADMIN")               // 목록 조회 ADMIN
             .requestMatchers(HttpMethod.PATCH, "/api/users/*/lock").hasAuthority("ROLE_ADMIN")          // 잠금 변경 ADMIN
