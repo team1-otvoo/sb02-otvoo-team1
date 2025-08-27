@@ -1,7 +1,5 @@
 package com.team1.otvoo.sqs;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team1.otvoo.sqs.dto.SqsMessageDto;
 import com.team1.otvoo.sqs.dto.TaskType;
 import com.team1.otvoo.sqs.task.TaskHandler;

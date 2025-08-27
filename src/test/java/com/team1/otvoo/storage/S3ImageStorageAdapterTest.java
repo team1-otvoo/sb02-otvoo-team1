@@ -4,6 +4,7 @@ import com.team1.otvoo.config.props.S3Props;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
 import java.io.IOException;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -68,16 +69,13 @@ class S3ImageStorageAdapterTest {
     @DisplayName("이미지 업로드 성공 시 S3 URL을 반환한다")
     void should_returnS3Url_when_uploadSuccess() throws MalformedURLException {
       // given
-      // 1. UnnecessaryStubbingException 해결: 이 테스트에서만 사용되므로 여기에 직접 작성합니다.
       given(s3Props.getBucket()).willReturn(BUCKET_NAME);
 
       String expectedUrl = String.format("https://%s.s3.ap-northeast-2.amazonaws.com/%s", BUCKET_NAME, KEY);
       S3Utilities mockUtilities = mock(S3Utilities.class);
-
       given(s3Client.utilities()).willReturn(mockUtilities);
 
-      // 2. PotentialStubbingProblem 해결: null 대신 any()를 사용합니다.
-      given(mockUtilities.getUrl(any(GetUrlRequest.class))).willReturn(new URL(expectedUrl));
+      given(mockUtilities.getUrl(any(Consumer.class))).willReturn(new URL(expectedUrl));
 
       // when
       String actualUrl = s3ImageStorageAdapter.upload(KEY, inputStream, content.length, CONTENT_TYPE);

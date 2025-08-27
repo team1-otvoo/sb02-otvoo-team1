@@ -10,6 +10,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring", uses = WeatherMapper.class)
 public interface ProfileMapper {
 
+  @Mapping(target = ".", source = "profile")
   @Mapping(source = "userId", target = "userId")
   @Mapping(source = "profile.birth", target = "birthDate")
   @Mapping(source = "profile.location", target = "location")

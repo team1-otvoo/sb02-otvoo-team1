@@ -81,9 +81,9 @@ class UserMapperTest {
     AuthorDto dto = userMapper.toAuthorDto(user, "작성자", "http://img/author.jpg");
 
     // then
-    assertThat(dto.userId()).isEqualTo(user.getId());
-    assertThat(dto.name()).isEqualTo("작성자");
-    assertThat(dto.profileImageUrl()).isEqualTo("http://img/author.jpg");
+    assertThat(dto.getUserId()).isEqualTo(user.getId());
+    assertThat(dto.getName()).isEqualTo("작성자");
+    assertThat(dto.getProfileImageUrl()).isEqualTo("http://img/author.jpg");
   }
 
   @Test
