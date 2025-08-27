@@ -1,15 +1,10 @@
 package com.team1.otvoo.sqs;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.team1.otvoo.sqs.dto.ImageDeleteData;
-import com.team1.otvoo.sqs.dto.ImageResizeData;
 import com.team1.otvoo.sqs.dto.SqsMessageDto;
-import com.team1.otvoo.sqs.dto.TaskType;
-import io.awspring.cloud.sqs.operations.SqsOperations;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,19 +57,6 @@ class MessageSenderServiceTest {
       // sqsTemplate.send(to -> to.queue().payload()) 형태로 호출될 때의 payload를 검증하는 방법
       ArgumentCaptor<SqsMessageDto> payloadCaptor = ArgumentCaptor.forClass(SqsMessageDto.class);
       verify(sqsTemplate).send(any(Consumer.class)); // send 호출 자체를 검증하고, 세부 내용은 아래에서 확인
-
-      // NOTE: SqsTemplate의 fluent API는 직접적인 payload 캡처가 까다롭습니다.
-      // 대신, send()가 호출되었는지만 검증하는 것이 현실적인 단위 테스트일 수 있습니다.
-      // 더 정밀한 테스트가 필요하다면 통합 테스트를 고려하는 것이 좋습니다.
-      // 하지만 학습을 위해, 만약 send(queue, payload) 형태였다면 아래와 같이 검증합니다.
-            /*
-            verify(sqsTemplate).send(eq(QUEUE_NAME), messageDtoCaptor.capture());
-            SqsMessageDto capturedDto = messageDtoCaptor.getValue();
-            assertThat(capturedDto.data().getType()).isEqualTo(TaskType.IMAGE_DELETE);
-            assertThat(capturedDto.data()).isInstanceOf(ImageDeleteData.class);
-            ImageDeleteData capturedData = (ImageDeleteData) capturedDto.data();
-            assertThat(capturedData.getObjectKey()).isEqualTo(objectKey);
-            */
     }
   }
 
@@ -97,17 +79,6 @@ class MessageSenderServiceTest {
       // 마찬가지로 send()가 호출되었는지 여부만 검증하는 것이 간단하고 효과적입니다.
       verify(sqsTemplate, times(1)).send(any(Consumer.class));
 
-            /*
-            // 만약 send(queue, payload) 형태였다면 아래와 같이 검증합니다.
-            verify(sqsTemplate).send(eq(QUEUE_NAME), messageDtoCaptor.capture());
-            SqsMessageDto capturedDto = messageDtoCaptor.getValue();
-            assertThat(capturedDto.data().getType()).isEqualTo(TaskType.IMAGE_RESIZE);
-            assertThat(capturedDto.data()).isInstanceOf(ImageResizeData.class);
-            ImageResizeData capturedData = (ImageResizeData) capturedDto.data();
-            assertThat(capturedData.getObjectKey()).isEqualTo(objectKey);
-            assertThat(capturedData.getWidth()).isEqualTo(width);
-            assertThat(capturedData.getHeight()).isEqualTo(height);
-            */
     }
   }
 }
