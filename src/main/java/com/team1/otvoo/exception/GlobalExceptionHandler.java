@@ -1,5 +1,7 @@
 package com.team1.otvoo.exception;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -79,5 +81,25 @@ public class GlobalExceptionHandler {
         Map.of("reason", e.getClass().getSimpleName())
     );
     return ResponseEntity.status(ErrorCode.INVALID_MULTIPART_REQUEST.getStatus()).body(body);
+  }
+
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException e) {
+    log.warn("요청 파라미터 제약조건 위반: {}", e.getMessage());
+
+    Map<String, Object> errors = e.getConstraintViolations()
+        .stream()
+        .collect(Collectors.toMap(
+            v -> v.getPropertyPath().toString(),
+            ConstraintViolation::getMessage,
+            (m1, m2) -> m1
+        ));
+
+    ErrorResponse body = new ErrorResponse(
+        ErrorCode.VALIDATION_ERROR.toString(),
+        ErrorCode.VALIDATION_ERROR.getMessage(),
+        errors
+    );
+    return ResponseEntity.badRequest().body(body);
   }
 }
