@@ -2,6 +2,7 @@ package com.team1.otvoo.notification.repository;
 
 import static com.team1.otvoo.notification.entity.QNotification.notification;
 import static com.team1.otvoo.notification.entity.QNotificationReadStatus.notificationReadStatus;
+import static com.team1.otvoo.user.entity.QUser.user;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -21,6 +22,17 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
 
   @Override
   public List<Notification> findUnreadNotificationsWithCursor(UUID receiverId, Instant cursor, UUID idAfter, int limit) {
+    Instant userCreatedAt = queryFactory
+        .select(user.createdAt)
+        .from(user)
+        .where(user.id.eq(receiverId))
+        .fetchOne();
+
+    if (userCreatedAt == null) {
+      // 안전하게 처리: 해당 유저가 없으면 빈 리스트 반환
+      return List.of();
+    }
+
     return queryFactory
         .selectFrom(notification)
         .leftJoin(notification.receiver).fetchJoin()
@@ -34,6 +46,7 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
                 .or(
                     notification.receiver.id.isNull()
                         .and(notificationReadStatus.id.isNull())
+                        .and(notification.createdAt.goe(userCreatedAt)) // 가입 이후 broadcast 필터링
                 ),
             cursorCondition(notification, cursor, idAfter) // 커서 조건
         )
@@ -44,6 +57,16 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
 
   @Override
   public long countUnreadNotifications(UUID receiverId) {
+    Instant userCreatedAt = queryFactory
+        .select(user.createdAt)
+        .from(user)
+        .where(user.id.eq(receiverId))
+        .fetchOne();
+
+    if (userCreatedAt == null) {
+      return 0L;
+    }
+
     Long count = queryFactory
         .select(notification.count())
         .from(notification)
@@ -57,6 +80,7 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
                 .or(
                     notification.receiver.id.isNull()
                         .and(notificationReadStatus.id.isNull())
+                        .and(notification.createdAt.goe(userCreatedAt))
                 )
         )
         .fetchOne();
