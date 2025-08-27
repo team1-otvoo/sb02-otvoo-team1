@@ -5,8 +5,6 @@ import com.team1.otvoo.recommendation.client.OpenAiClient;
 import com.team1.otvoo.recommendation.dto.VisionAttributeResponseDto;
 import com.team1.otvoo.recommendation.entity.ClothesAiAttributes;
 import com.team1.otvoo.recommendation.repository.ClothesAiAttributesRepository;
-import java.util.Optional;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,11 +32,5 @@ public class ClothesAiAttributeService {
       return clothesAiAttributesRepository.save(entity);
     }
     return null;
-  }
-
-  // 속성 조회 -> 추천 로직 등에서 사용
-  @Transactional(readOnly = true)
-  public Optional<ClothesAiAttributes> getAttributes(UUID clothesId) {
-    return clothesAiAttributesRepository.findByClothesId(clothesId);
   }
 }
