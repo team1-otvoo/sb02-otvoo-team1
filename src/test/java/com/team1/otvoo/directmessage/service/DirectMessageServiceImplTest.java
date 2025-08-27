@@ -8,7 +8,7 @@ import com.team1.otvoo.directmessage.event.DirectMessageEvent;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepository;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepositoryCustom;
 import com.team1.otvoo.exception.RestException;
-import com.team1.otvoo.follow.event.FollowEvent;
+import com.team1.otvoo.storage.S3ImageStorageAdapter;
 import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -47,6 +47,9 @@ class DirectMessageServiceImplTest {
 
   @Mock
   private ApplicationEventPublisher eventPublisher;
+
+  @Mock
+  private S3ImageStorageAdapter s3ImageStorageAdapter;
 
   @InjectMocks
   private DirectMessageServiceImpl directMessageService;
@@ -157,21 +160,25 @@ class DirectMessageServiceImplTest {
     UUID dmId = UUID.randomUUID();
     Instant createdAt = now;
 
-    DirectMessageDto dmDto = new DirectMessageDto(
+    // 원본 DTO: S3 key 사용
+    DirectMessageDto rawDto = new DirectMessageDto(
         dmId,
         createdAt,
-        new UserSummary(senderId, null, null),
-        new UserSummary(receiverId, null, null),
+        new UserSummary(senderId, "Sender", "senderKey"),
+        new UserSummary(receiverId, "Receiver", "receiverKey"),
         "테스트 메시지"
     );
 
-    List<DirectMessageDto> dmDtoList = List.of(dmDto);
+    List<DirectMessageDto> rawList = List.of(rawDto);
 
     when(userRepository.findById(senderId)).thenReturn(Optional.of(sender));
     when(userRepository.findById(receiverId)).thenReturn(Optional.of(receiver));
     when(directMessageRepositoryCustom.findDirectMessagesBetweenUsersWithCursor(senderId, receiverId, null, null, limit + 1))
-        .thenReturn(dmDtoList);
+        .thenReturn(rawList);
     when(directMessageRepositoryCustom.countDirectMessagesBetweenUsers(senderId, receiverId)).thenReturn(1L);
+
+    when(s3ImageStorageAdapter.getPresignedUrl("senderKey")).thenReturn("presignedSenderUrl");
+    when(s3ImageStorageAdapter.getPresignedUrl("receiverKey")).thenReturn("presignedReceiverUrl");
 
     // when
     DirectMessageDtoCursorResponse response = directMessageService.getDirectMessagesBetweenUsers(senderId, receiverId, cursorStr, idAfterStr, limit);
@@ -180,7 +187,11 @@ class DirectMessageServiceImplTest {
     assertNotNull(response);
     assertEquals(1, response.data().size());
     assertFalse(response.hasNext());
-    assertEquals(dmId, response.data().get(0).id());
+
+    DirectMessageDto firstMessage = response.data().get(0);
+    assertEquals(dmId, firstMessage.id());
+    assertEquals("presignedSenderUrl", firstMessage.sender().profileImageUrl());
+    assertEquals("presignedReceiverUrl", firstMessage.receiver().profileImageUrl());
 
     verify(userRepository).findById(senderId);
     verify(userRepository).findById(receiverId);
