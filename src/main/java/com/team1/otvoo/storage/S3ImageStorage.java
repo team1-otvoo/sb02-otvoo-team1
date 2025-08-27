@@ -9,6 +9,7 @@ public interface S3ImageStorage {
 
   void delete(String key);
 
+  String getPresignedUrl(String key);
   String getPresignedUrl(String key, String contentType);
 
   byte[] download(String key) throws IOException;
