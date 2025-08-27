@@ -8,6 +8,8 @@ import com.team1.otvoo.directmessage.event.DirectMessageEvent;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepositoryCustom;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.storage.S3ImageStorageAdapter;
+import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
 import com.team1.otvoo.directmessage.repository.DirectMessageRepository;
@@ -21,6 +23,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +34,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
   private final DirectMessageRepository directMessageRepository;
   private final DirectMessageRepositoryCustom directMessageRepositoryCustom;
   private final ApplicationEventPublisher eventPublisher;
+  private final S3ImageStorageAdapter s3ImageStorageAdapter;
 
   @Override
   @Transactional
@@ -113,6 +117,10 @@ public class DirectMessageServiceImpl implements DirectMessageService {
       messages = messages.subList(0, limit);
     }
 
+    List<DirectMessageDto> converted = messages.stream()
+        .map(this::convertWithPresignedUrls)
+        .toList();
+
     String nextCursor = null;
     UUID nextIdAfter = null;
     if (hasNext) {
@@ -125,13 +133,35 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         messages.size(), hasNext, nextCursor, nextIdAfter);
 
     return new DirectMessageDtoCursorResponse(
-        messages,
+        converted,
         nextCursor,
         nextIdAfter,
         hasNext,
         (int) totalCount,
         "createdAt",
         "DESCENDING"
+    );
+  }
+
+  private DirectMessageDto convertWithPresignedUrls(DirectMessageDto raw) {
+    UserSummary sender = new UserSummary(
+        raw.sender().userId(),
+        raw.sender().name(),
+        raw.sender().profileImageUrl() != null ? s3ImageStorageAdapter.getPresignedUrl(raw.sender().profileImageUrl()) : null
+    );
+
+    UserSummary receiver = new UserSummary(
+        raw.receiver().userId(),
+        raw.receiver().name(),
+        raw.receiver().profileImageUrl() != null ? s3ImageStorageAdapter.getPresignedUrl(raw.receiver().profileImageUrl()) : null
+    );
+
+    return new DirectMessageDto(
+        raw.id(),
+        raw.createdAt(),
+        sender,
+        receiver,
+        raw.content()
     );
   }
 }
