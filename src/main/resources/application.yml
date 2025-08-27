@@ -53,6 +53,8 @@ spring:
     redis:
       port: ${REDIS_PORT}
       host: ${REDIS_HOST}
+      ssl:
+        enabled: true
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS}
 
