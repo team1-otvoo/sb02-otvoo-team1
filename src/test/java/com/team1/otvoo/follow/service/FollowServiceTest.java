@@ -3,6 +3,7 @@ package com.team1.otvoo.follow.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
@@ -21,6 +22,7 @@ import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.event.FollowEvent;
 import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
+import com.team1.otvoo.storage.S3ImageStorageAdapter;
 import com.team1.otvoo.user.dto.UserSummary;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -40,10 +42,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class FollowServiceTest {
 
   @InjectMocks
@@ -60,6 +65,9 @@ public class FollowServiceTest {
 
   @Mock
   private ApplicationEventPublisher eventPublisher;
+
+  @Mock
+  private S3ImageStorageAdapter s3ImageStorageAdapter;
 
   private UUID followeeId;
   private UUID followerId;
@@ -94,6 +102,9 @@ public class FollowServiceTest {
         new UserSummary(followeeId, "followeeName", "http://image.com/followee.jpg"),
         new UserSummary(followerId, "followerName", "http://image.com/follower.jpg")
     );
+
+    given(s3ImageStorageAdapter.getPresignedUrl(anyString()))
+        .willAnswer(invocation -> invocation.getArgument(0));
   }
 
   @Nested
@@ -110,7 +121,7 @@ public class FollowServiceTest {
       given(userRepository.findById(followeeId)).willReturn(Optional.of(followee));
       given(userRepository.findById(followerId)).willReturn(Optional.of(follower));
       given(followRepository.save(any(Follow.class))).willReturn(follow);
-      given(followMapper.toDto(follow)).willReturn(followDto);
+      given(followRepository.findFollowDtoById(followId)).willReturn(followDto);
 
       // when
       FollowDto result = followService.create(request);
@@ -126,7 +137,7 @@ public class FollowServiceTest {
       then(userRepository).should().findById(followeeId);
       then(userRepository).should().findById(followerId);
       then(followRepository).should().save(any(Follow.class));
-      then(followMapper).should().toDto(follow);
+      then(followRepository).should().findFollowDtoById(followId);
 
       ArgumentCaptor<FollowEvent> eventCaptor = ArgumentCaptor.forClass(FollowEvent.class);
       then(eventPublisher).should().publishEvent(eventCaptor.capture());
