@@ -25,6 +25,7 @@ import com.team1.otvoo.clothes.dto.SortDirection;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDto;
 import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeWithDefDto;
 import com.team1.otvoo.clothes.entity.ClothesType;
+import com.team1.otvoo.clothes.extraction.service.ClothesExtractService;
 import com.team1.otvoo.clothes.service.ClothesService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
@@ -64,6 +65,8 @@ class ClothesControllerTest {
 
   @MockitoBean
   private ClothesService clothesService;
+  @MockitoBean
+  private ClothesExtractService clothesExtractService;
 
   private static final Instant CREATED_AT = Instant.parse("2025-01-01T00:00:00Z");
 
@@ -243,7 +246,7 @@ class ClothesControllerTest {
         List.of(),
         CREATED_AT
     );
-    when(clothesService.update(eq(clothesId), any(), any()))
+    when(clothesService.update(any(), eq(clothesId), any(), any()))
         .thenReturn(responseDto);
 
     // when & then
@@ -261,7 +264,7 @@ class ClothesControllerTest {
         .andExpect(jsonPath("$.type").value(ClothesType.OUTER.name()))
         .andExpect(jsonPath("$.attributes", hasSize(0))
         );
-    verify(clothesService).update(eq(clothesId), eq(request), isNull());
+    verify(clothesService).update(any(), eq(clothesId), eq(request), isNull());
   }
 
   @Test
@@ -284,7 +287,7 @@ class ClothesControllerTest {
         clothesId, ownerId, "업데이트 티셔츠", "https://img/new",
         ClothesType.OUTER, List.of(), CREATED_AT
     );
-    when(clothesService.update(eq(clothesId), Mockito.any(), Mockito.any()))
+    when(clothesService.update(any(), eq(clothesId), Mockito.any(), Mockito.any()))
         .thenReturn(responseDto);
 
     mockMvc.perform(multipart("/api/clothes/{clothesId}", clothesId)
@@ -299,6 +302,7 @@ class ClothesControllerTest {
         .andExpect(jsonPath("$.imageUrl").value("https://img/new"));
 
     verify(clothesService).update(
+        any(),
         eq(clothesId),
         any(ClothesUpdateRequest.class),
         argThat(
@@ -327,7 +331,7 @@ class ClothesControllerTest {
         objectMapper.writeValueAsBytes(request)
     );
 
-    when(clothesService.update(eq(clothesId), any(), any()))
+    when(clothesService.update(any(), eq(clothesId), any(), any()))
         .thenThrow(new RestException(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE));
 
     // when & then
@@ -351,7 +355,7 @@ class ClothesControllerTest {
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNoContent());
 
-    verify(clothesService).delete(clothesId);
+    verify(clothesService).delete(any(), eq(clothesId));
   }
 
   @Test
@@ -360,11 +364,49 @@ class ClothesControllerTest {
     // given
     UUID clothesId = UUID.randomUUID();
     doThrow(new RestException(ErrorCode.CLOTHES_NOT_FOUND))
-        .when(clothesService).delete(clothesId);
+        .when(clothesService).delete(any(), eq(clothesId));
 
     // when & then
     mockMvc.perform(delete("/api/clothes/{clothesId}", clothesId)
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  @DisplayName("의상 추출 성공")
+  void extractClothes_Success() throws Exception {
+    String url = "http://shop.example/item/123";
+
+    ClothesDto responseDto = new ClothesDto(
+        null,
+        null,
+        "코트",
+        "https://img.example/coat.jpg",
+        ClothesType.OUTER,
+        List.of(new ClothesAttributeWithDefDto(
+            UUID.randomUUID(), "색상", List.of("블랙", "그레이"), "블랙"
+        )),
+        CREATED_AT
+    );
+    when(clothesExtractService.extract(url)).thenReturn(responseDto);
+
+    mockMvc.perform(get("/api/clothes/extractions")
+            .param("url", url)
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("코트"))
+        .andExpect(jsonPath("$.type").value(ClothesType.OUTER.name()))
+        .andExpect(jsonPath("$.imageUrl").value("https://img.example/coat.jpg"));
+
+    verify(clothesExtractService).extract(url);
+  }
+
+  @Test
+  @DisplayName("의상 추출 실패_url 공백")
+  void extractClothes_Fail_BlankUrl() throws Exception {
+    mockMvc.perform(get("/api/clothes/extractions")
+            .param("url", " ")
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isBadRequest());
   }
 }
