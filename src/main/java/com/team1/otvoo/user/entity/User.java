@@ -68,26 +68,6 @@ public class User{
     this.password = password;
   }
 
-  public void increaseFollowerCount(){
-    followerCount++;
-  }
-
-  public void decreaseFollowerCount(){
-    if (this.followerCount > 0) {
-      this.followerCount--;
-    }
-  }
-
-  public void increaseFollowingCount(){
-    followingCount++;
-  }
-
-  public void decreaseFollowingCount(){
-    if (this.followingCount > 0) {
-      this.followingCount--;
-    }
-  }
-
   public void updateRole(Role newRole) {
     if (this.role != newRole) {
       this.role = newRole;
