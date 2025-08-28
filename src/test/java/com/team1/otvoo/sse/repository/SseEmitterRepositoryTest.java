@@ -1,5 +1,6 @@
 package com.team1.otvoo.sse.repository;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 import com.team1.otvoo.sse.model.SseEmitterWrapper;
@@ -11,9 +12,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 class SseEmitterRepositoryTest {
@@ -23,6 +26,7 @@ class SseEmitterRepositoryTest {
   @BeforeEach
   void setUp() {
     repository = new SseEmitterRepository();
+    ReflectionTestUtils.setField(repository, "maxConnections", 10000);
   }
 
   @Test
@@ -196,6 +200,29 @@ class SseEmitterRepositoryTest {
     boolean completed = latch.await(10, TimeUnit.SECONDS);
     assertThat(completed).isTrue();
     executor.shutdown();
+  }
+
+  @Test
+  @DisplayName("최대 연결 수를 초과하여 Emitter 저장 시 예외 발생")
+  void save_throwsExceptionWhenMaxConnectionsExceeded() {
+    // given
+    ReflectionTestUtils.setField(repository, "maxConnections", 1); // 최대 연결 수를 1로 제한
+
+    UUID user1 = UUID.randomUUID();
+    SseEmitterWrapper wrapper1 = SseEmitterWrapper.wrap(new SseEmitter());
+    repository.save(user1, wrapper1); // 1개 연결
+
+    // when & then
+    UUID user2 = UUID.randomUUID();
+    SseEmitterWrapper wrapper2 = SseEmitterWrapper.wrap(new SseEmitter());
+
+    assertThatThrownBy(() -> repository.save(user2, wrapper2))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("최대 연결 수를 초과했습니다.");
+
+    // 롤백이 잘 되었는지 확인 (전체 연결 수는 여전히 1이어야 함)
+    AtomicInteger connectionCount = (AtomicInteger) ReflectionTestUtils.getField(repository, "connectionCount");
+    assertThat(connectionCount.get()).isEqualTo(1);
   }
 
 }

@@ -9,7 +9,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
 
 import com.team1.otvoo.sse.model.SseMessage;
 import java.util.Arrays;
@@ -49,11 +48,11 @@ class SseEventRepositoryTest {
 
   private static final String EVENT_STREAM_KEY = "sse:events";
   private static final String EVENT_DATA_KEY_PREFIX = "sse:event_data:";
-  private static final long EVENT_TTL_SECONDS = 300L;
+  private static final long EVENT_TTL_DAYS = 7L;
 
   @BeforeEach
   void setUp() {
-    ReflectionTestUtils.setField(repository, "eventTilSeconds", EVENT_TTL_SECONDS);
+    ReflectionTestUtils.setField(repository, "EVENT_TTL_DAYS", EVENT_TTL_DAYS);
     lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     lenient().when(redisTemplate.opsForZSet()).thenReturn(zSetOperations);
   }
@@ -76,7 +75,7 @@ class SseEventRepositoryTest {
 
     // then
     then(zSetOperations).should().add(eq(EVENT_STREAM_KEY), eq(eventId.toString()), anyDouble());
-    then(valueOperations).should().set(eq(EVENT_DATA_KEY_PREFIX + eventId), eq(message), eq(EVENT_TTL_SECONDS), eq(TimeUnit.SECONDS));
+    then(valueOperations).should().set(eq(EVENT_DATA_KEY_PREFIX + eventId), eq(message), eq(EVENT_TTL_DAYS), eq(TimeUnit.DAYS));
   }
 
   @Test
