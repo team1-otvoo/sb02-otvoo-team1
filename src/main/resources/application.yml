@@ -17,7 +17,7 @@ spring:
 
   security:
     cookie:
-      secure: ${SPRING_SECURITY_COOKIE_SECURE:}
+      secure: ${SPRING_SECURITY_COOKIE_SECURE}
     oauth2:
       client:
         registration:
