@@ -150,6 +150,6 @@ sse:
   max-connections: 50000   # 운영 트래픽 대비 확장
 
 stream:
-  index-ttl-days: 7
+  index-ttl-days: 8
   max-stream-length: 100000
-  retention-days: 8
+  retention-days: 7
