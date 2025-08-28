@@ -12,6 +12,8 @@ spring:
     name: otvoo
 
   security:
+    cookie:
+      secure: ${SPRING_SECURITY_COOKIE_SECURE_PROD}
     oauth2:
       client:
         registration:

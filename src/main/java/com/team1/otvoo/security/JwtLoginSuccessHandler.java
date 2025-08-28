@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,9 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
   private final JwtTokenProvider jwtTokenProvider;
   private final AccessTokenStore accessTokenStore;
+
+  @Value("${spring.security.cookie.secure}")
+  private boolean cookieSecure;
 
   @Override
   public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -40,7 +44,7 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
     refreshCookie.setHttpOnly(true);
-    refreshCookie.setSecure(false);
+    refreshCookie.setSecure(cookieSecure);
     refreshCookie.setPath("/");
     refreshCookie.setMaxAge((int) jwtTokenProvider.getRefreshTokenValidityInSeconds());
     response.addCookie(refreshCookie);
