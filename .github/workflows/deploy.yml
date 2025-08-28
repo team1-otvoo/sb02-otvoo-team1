@@ -87,7 +87,7 @@ jobs:
 
       # (변경) v8 액션으로 deploy, image/container-name 파라미터 삭제, 대신 렌더링된 task-definition 사용
       - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v8        # v8 버전 사용 (변경)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task-def.outputs.task-definition }}  # render 스텝에서 생성된 task-def 사용
           service: ${{ vars.ECS_SERVICE }}
