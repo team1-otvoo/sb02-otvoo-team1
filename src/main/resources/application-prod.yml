@@ -1,6 +1,13 @@
 server:
   tomcat:
     max-swallow-size: 10MB
+  servlet:
+    session:
+      cookie:
+        name: JSESSIONID
+        secure: true
+        same-site: None
+        path: /
 
 spring:
   servlet:
