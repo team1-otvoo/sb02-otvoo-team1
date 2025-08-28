@@ -8,11 +8,13 @@ import com.team1.otvoo.clothes.repository.ClothesImageRepository;
 import com.team1.otvoo.recommendation.dto.RecommendationDto;
 import com.team1.otvoo.recommendation.entity.Recommendation;
 import com.team1.otvoo.recommendation.repository.RecommendationRepository;
+import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.storage.S3ImageStorage;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,11 +34,12 @@ public class RecommendationServiceImpl implements RecommendationService {
 
   @Override
   public RecommendationDto get(UUID weatherId) {
-    Recommendation recommendation = recommendationRepository.findByWeather_Id(weatherId).orElse(null);
+    UUID userId = ((CustomUserDetails)(SecurityContextHolder.getContext().getAuthentication().getPrincipal())).getUser().getId();
+    Recommendation recommendation = recommendationRepository.findByWeather_IdAndUser_Id(weatherId, userId).orElse(null);
     RecommendationDto recommendationDto = null;
 
-    // 추천 정보가 없다면 새로 생성
-    if(recommendation == null) {
+    // 추천 정보가 없거나 추천 정보에 옷이 없다면 새로 생성
+    if(recommendation == null || recommendation.getClothes().isEmpty()) {
       recommendationDto = clothesAiRecommendService.filterAndRecommendClothes(weatherId);
     } else {
       // 있다면 기존에 있는 추천 정보 사용
