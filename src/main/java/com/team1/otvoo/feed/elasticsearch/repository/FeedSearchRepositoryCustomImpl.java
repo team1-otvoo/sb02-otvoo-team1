@@ -61,6 +61,13 @@ public class FeedSearchRepositoryCustomImpl implements FeedSearchRepositoryCusto
           .value(searchCondition.precipitationTypeEqual().name())));
     }
 
+    // authorIdEquals 필터
+    if (searchCondition.authorIdEqual() != null) {
+      boolQuery.filter(
+          f -> f.term(t -> t.field("author.userId")
+              .value(searchCondition.authorIdEqual().toString())));
+    }
+
     // 정렬
     String sortBy = (searchCondition.sortBy() != null) ? searchCondition.sortBy() : "createdAt";
     SortOrder order = "asc".equalsIgnoreCase(searchCondition.sortDirection())
