@@ -37,7 +37,6 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set up JDK 17
@@ -53,13 +52,12 @@ jobs:
 
       - name: Build and push Docker image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: otvoo
+          ECR_REPOSITORY_URI: ${{ vars.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ steps.vars.outputs.sha_short }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest 
+          docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG -t $ECR_REPOSITORY_URI:latest .
+          docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+          docker push $ECR_REPOSITORY_URI:latest
 
   # 2. ECS에 배포
   deploy-backend:
@@ -78,12 +76,12 @@ jobs:
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1   # v1 (안정된 버전 사용)
         with:
-          task-definition: ${{ secrets.ECS_TASK_DEFINITION }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
-          wait-for-service-stability: true
-          image: ${{ steps.login-ecr.outputs.registry }}/otvoo:${{ needs.build-and-push-image.outputs.sha_short }}
-          container-name: ${{ secrets.ECS_CONTAINER_NAME }}
+          task-definition: ${{ vars.ECS_TASK_DEFINITION }} # task-definition-family-name:revision
+          service: ${{ vars.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          wait-for-service-stability: true # 새 버전이 안정적으로 실행될 때까지 대기
+          image: ${{ vars.ECR_REPOSITORY_URI }}:${{ needs.build-and-push-image.outputs.sha_short }}
+          container-name: ${{ vars.ECS_CONTAINER_NAME }}
 
       - name: Deployment Complete
         run: echo "Backend deployment completed successfully!"
