@@ -53,10 +53,8 @@ spring:
     redis:
       port: ${REDIS_PORT}
       host: ${REDIS_HOST}
-      ssl:
-        enabled: true
   elasticsearch:
-    uris: ${ELASTICSEARCH_URIS}
+    uris: ${ELASTICSEARCH_URIS_LOCAL}
 
   jpa:
     hibernate:
@@ -148,6 +146,6 @@ sse:
   max-connections: 10000
 
 stream:
-  index-ttl-days: 7
+  index-ttl-days: 8
   max-stream-length: 100000
-  retention-days: 8
+  retention-days: 7
