@@ -133,6 +133,10 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+tasks.named('bootJar') {
+    exclude("static/**")
+}
+
 // Querydsl QClass 파일 생성 위치 지정
 def generatedDir = 'build/generated/querydsl'
 tasks.withType(JavaCompile) {
