@@ -15,20 +15,10 @@ jobs:
     steps:
       - run: echo "PR merged into main. Starting CD pipeline."
 
-  # 1. 수동 승인 단계 (옵션)
-  wait-for-approval:
-    name: Wait for Approval
-    runs-on: ubuntu-latest
-    environment: production
-    needs: check-merge
-    steps:
-      - run: echo "Deployment to production approved. Starting build and deploy process."
-
-  # 2. 도커 이미지 빌드 및 ECR에 푸시
+  # 1. 도커 이미지 빌드 및 ECR에 푸시
   build-and-push-image:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: wait-for-approval
     outputs:
       sha_short: ${{ steps.vars.outputs.sha_short }}
 
@@ -70,7 +60,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest 
 
-  # 3. ECS에 배포
+  # 2. ECS에 배포
   deploy-backend:
     name: Deploy Backend to ECS
     runs-on: ubuntu-latest
