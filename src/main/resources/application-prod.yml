@@ -57,6 +57,9 @@ spring:
       host: ${REDIS_HOST_PROD}
       ssl:
         enabled: true
+    session:
+      store-type: redis
+
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS}
 
