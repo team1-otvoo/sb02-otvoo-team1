@@ -148,11 +148,14 @@ public class FollowRepositoryCustomImpl implements FollowRepositoryCustom {
 
   // 커서 조건
   private BooleanExpression cursorCondition(QFollow follow, Instant cursor, UUID idAfter) {
-    if (cursor == null || idAfter == null) {
+    if (cursor == null) {
       return null;
     }
+    if (idAfter == null){
+      return follow.createdAt.lt(cursor);
+    }
     return follow.createdAt.lt(cursor)
-        .or(follow.createdAt.eq(cursor).and(follow.id.lt(idAfter))); // idAfter 어떻게 할지
+        .or(follow.createdAt.eq(cursor).and(follow.id.lt(idAfter))); // UUIDv7를 사용해야 정렬 가능
   }
 }
 
