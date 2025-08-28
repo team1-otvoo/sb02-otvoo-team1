@@ -69,7 +69,9 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     eventPublisher.publishEvent(new DirectMessageEvent(savedDirectMessage));
 
-    return directMessageRepositoryCustom.findByIdWithUserSummaries(directMessage.getId());
+    DirectMessageDto rawDto = directMessageRepositoryCustom.findByIdWithUserSummaries(directMessage.getId());
+
+    return convertWithPresignedUrls(rawDto);
   }
 
   @Override
