@@ -21,6 +21,7 @@ import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -43,9 +44,19 @@ public class ProfileImageServiceImpl implements ProfileImageService {
 
   private final ApplicationEventPublisher eventPublisher; // 이벤트 발행기 주입
 
+  @Value("${spring.image.resize.height}")
+  private Integer resizeHeight;
+
+  @Value("${spring.image.resize.width}")
+  private Integer resizeWidth;
+
+
   @Override
   @Transactional
   public String replaceProfileImageAndGetUrl(Profile profile, @Nullable MultipartFile file) {
+
+
+
     UUID profileId = profile.getId();
 
     if (file == null || file.isEmpty()) {
@@ -76,7 +87,7 @@ public class ProfileImageServiceImpl implements ProfileImageService {
 
       // 4. 모든 작업 성공 후 메시지 전송 이벤트 발행 (이벤트로 처리한 이유는 트랜잭션 롤백시 sqs 에 message 전송도 롤백되어야 하기 때문
       eventPublisher.publishEvent(
-          new ProfileImageUploadedEvent(metaData.objectKey(), metaData.width(), metaData.height())
+          new ProfileImageUploadedEvent(metaData.objectKey(), resizeHeight, resizeWidth)
       );
 
       // 5. Presigned URL 반환
