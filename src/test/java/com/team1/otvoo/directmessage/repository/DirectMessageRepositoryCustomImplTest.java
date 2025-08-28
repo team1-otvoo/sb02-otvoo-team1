@@ -1,16 +1,17 @@
 package com.team1.otvoo.directmessage.repository;
 
+import com.team1.otvoo.common.AbstractPostgresTest;
+import com.team1.otvoo.config.QueryDslConfig;
 import com.team1.otvoo.directmessage.dto.DirectMessageDto;
 import com.team1.otvoo.directmessage.entity.DirectMessage;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,10 +19,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ActiveProfiles("test")
-@SpringBootTest
-@Transactional
-class DirectMessageRepositoryCustomImplTest {
+@DataJpaTest
+@Import({DirectMessageRepositoryCustomImpl.class, QueryDslConfig.class})
+class DirectMessageRepositoryCustomImplTest  extends AbstractPostgresTest {
 
   @Autowired
   private DirectMessageRepositoryCustom directMessageRepositoryCustom;
