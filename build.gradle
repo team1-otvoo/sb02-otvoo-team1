@@ -1,0 +1,160 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+ext {
+    set('springAiVersion', "1.0.0-M2")
+}
+
+group = 'com.team1.otvoo'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+}
+
+// 사용할 Spring Cloud AWS 버전을 최상단에 변수로 선언
+ext {
+    springCloudAwsVersion = '3.1.1'
+}
+
+dependencyManagement {
+    imports {
+        // Spring Cloud AWS BOM 추가
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}"
+    }
+}
+
+dependencies {
+    // Spring Boot Core
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    // Oauth2
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // Elasticsearch
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+    // WebSocket & SSE
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.security:spring-security-messaging'
+
+    // Jwt
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Jsoup
+    implementation 'org.jsoup:jsoup:1.17.2'
+
+    // ai
+    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
+
+    // Database
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310' // Java 8 날짜/시간 지원
+
+    // Email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // Swagger (SpringDoc)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Mapstruct
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+
+    // QueryDSL
+    implementation 'io.github.openfeign.querydsl:querydsl-jpa:6.11'
+    annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:6.11:jpa'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    // Batch
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+
+    // AWS S3
+    // implementation 'software.amazon.awssdk:s3:2.31.7'
+
+    // Image 처리
+    implementation 'net.coobird:thumbnailator:0.4.17'
+    implementation 'org.apache.tika:tika-core:3.2.2'
+
+    //
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // Spring Cloud AWS SQS 스타터 추가
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+
+    // S3를 계속 사용하려면 S3 스타터도 추가합니다.
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'com.h2database:h2'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.batch:spring-batch-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('bootJar') {
+    exclude("static/**")
+}
+
+// Querydsl QClass 파일 생성 위치 지정
+def generatedDir = 'build/generated/querydsl'
+tasks.withType(JavaCompile) {
+    options.getGeneratedSourceOutputDirectory().set(file(generatedDir))
+}
+
+// java source set에 querydsl QClass 위치 추가
+sourceSets {
+    main.java.srcDirs += [generatedDir]
+}
+
+// gradle clean 시 QClass 디렉토리 삭제
+clean {
+    delete file(generatedDir)
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
+}

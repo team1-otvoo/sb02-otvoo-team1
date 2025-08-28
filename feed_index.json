@@ -1,0 +1,141 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "tokenizer": {
+        "nori_user_dict": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed",
+          "user_dictionary_rules": []
+        },
+        "ngram_tokenizer": {
+          "type": "ngram",
+          "min_gram": 1,
+          "max_gram": 2,
+          "token_chars": ["letter", "digit"]
+        }
+      },
+      "filter": {
+        "my_nori_part_of_speech": {
+          "type": "nori_part_of_speech",
+          "stoptags": [
+            "E", "IC", "J", "MAG", "MAJ", "MM",
+            "SP", "SSC", "SSO", "SC", "SE",
+            "XPN", "XSA", "XSN", "XSV",
+            "UNA", "NA", "VSV"
+          ]
+        }
+      },
+      "analyzer": {
+        "korean_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_user_dict",
+          "filter": [
+            "my_nori_part_of_speech",
+            "lowercase"
+          ]
+        },
+        "korean_search_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_tokenizer",
+          "filter": [
+            "my_nori_part_of_speech",
+            "lowercase"
+          ]
+        },
+        "keyword_analyzer": {
+          "type": "keyword"
+        },
+        "korean_ngram_analyzer": {
+          "type": "custom",
+          "tokenizer": "ngram_tokenizer",
+          "filter": [
+            "lowercase"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "feedId": {
+        "type": "keyword"
+      },
+      "createdAt": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "updatedAt": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
+      },
+      "author": {
+        "properties": {
+          "userId": { "type": "keyword" },
+          "name": { "type": "keyword" },
+          "profileImageUrl": { "type": "keyword" }
+        }
+      },
+      "likeCount": {
+        "type": "long"
+      },
+      "weather": {
+        "properties": {
+          "weatherId": { "type": "keyword" },
+          "skyStatus": { "type": "keyword" },
+          "precipitation": {
+            "properties": {
+              "type": { "type": "keyword" },
+              "amount": { "type": "double" },
+              "probability": { "type": "double" }
+            }
+          },
+          "temperature": {
+            "properties": {
+              "current": { "type": "double" },
+              "comparedToDayBefore": { "type": "double" },
+              "min": { "type": "double" },
+              "max": { "type": "double" }
+            }
+          }
+        }
+      },
+      "ootds": {
+        "type": "object",
+        "properties": {
+          "clothesId": { "type": "keyword" },
+          "name": { "type": "keyword" },
+          "imageKey": { "type": "keyword" },
+          "contentType": { "type": "keyword" },
+          "type": { "type": "keyword" },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "definitionId": { "type": "keyword" },
+              "definitionName": { "type": "keyword" },
+              "selectableValues": { "type": "keyword" },
+              "value": { "type": "keyword" }
+            }
+          }
+        }
+      },
+      "content": {
+        "type": "text",
+        "analyzer": "korean_analyzer",
+        "search_analyzer": "korean_analyzer",
+        "fields": {
+          "ngram": {
+            "type": "text",
+            "analyzer": "korean_ngram_analyzer",
+            "search_analyzer": "korean_analyzer"
+          },
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      }
+    }
+  }
+}

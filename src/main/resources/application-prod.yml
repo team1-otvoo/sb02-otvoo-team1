@@ -1,0 +1,167 @@
+server:
+  tomcat:
+    max-swallow-size: 10MB
+  servlet:
+    session:
+      cookie:
+        name: JSESSIONID
+        secure: true
+        same-site: None
+        path: /
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+  application:
+    name: otvoo
+
+  security:
+    cookie:
+      secure: ${SPRING_SECURITY_COOKIE_SECURE_PROD}
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID_PROD}
+            client-secret: ${GOOGLE_CLIENT_SECRET_PROD}
+            scope:
+              - email
+              - profile
+            redirect-uri: ${GOOGLE_REDIRECT_URI_PROD}
+            client-name: Google
+            authorization-grant-type: authorization_code
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID_PROD}
+            scope:
+              - profile_nickname
+            redirect-uri: ${KAKAO_REDIRECT_URI_PROD}
+            client-name: Kakao
+            authorization-grant-type: authorization_code
+            provider: kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST_PROD}:${POSTGRES_PORT_PROD}/${POSTGRES_DB_PROD}
+    username: ${POSTGRES_USERNAME_PROD}
+    password: ${POSTGRES_PASSWORD_PROD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      port: ${REDIS_PORT_PROD}
+      host: ${REDIS_HOST_PROD}
+      ssl:
+        enabled: true
+    session:
+      store-type: redis
+
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS}
+
+  jpa:
+    hibernate:
+      ddl-auto: none   # 운영에서는 스키마 검증만
+    show-sql: false        # SQL 로그 비활성화
+
+  config:
+    import: optional:file:.env[.properties]
+
+  sql:
+    init:
+      mode: never
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          maxCompletionTokens: 1000
+
+  batch:
+    jdbc:
+      initialize-schema: never
+    job:
+      enabled: false        # 운영도 수동/스케줄 실행만
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+logging:
+  level:
+    root: info
+    org.springframework.web: warn
+    org.hibernate.SQL: warn
+
+weather:
+  api:
+    base-url: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst
+    service-key: ${WEATHER_API_KEY}
+  batch:
+    base-time: "2300"
+
+kakao:
+  local:
+    api:
+      base-url: https://dapi.kakao.com/v2/local/geo/coord2regioncode.json
+      service-key: ${KAKAO_REST_API_KEY}
+
+profile:
+  default-image:
+    url: https://your-s3-bucket.s3.region.amazonaws.com/default/profile.png
+    filename: default-profile.png
+    content-type: image/png
+    size: 12345
+    width: 300
+    height: 300
+
+admin:
+  name: ${ADMIN_NAME}
+  email: ${ADMIN_EMAIL}
+  password: ${ADMIN_PASSWORD}
+
+aws:
+  s3:
+    bucket: ${S3_BUCKET}
+    region: ${S3_REGION}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    presigned-expiration-seconds: ${S3_PRESIGNED_TTL}
+
+  sqs:
+    queue-name: otvoo_sqs_queue
+    region: ${AWS_REGION}
+
+sse:
+  timeout: 1800000
+  event-ttl-days: 7
+  max-connections: 50000   # 운영 트래픽 대비 확장
+
+stream:
+  index-ttl-days: 8
+  max-stream-length: 100000
+  retention-days: 7

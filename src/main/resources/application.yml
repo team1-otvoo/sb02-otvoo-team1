@@ -1,0 +1,158 @@
+server:
+  tomcat:
+    # 이 값을 -1로 설정하면 크기 제한 없이 모두 처리 후 응답을 보냅니다.
+    # spring.servlet.multipart.max-request-size 와 동일한 값으로 설정해도 좋습니다.
+    max-swallow-size: 10MB
+
+spring:
+  servlet:
+    multipart:
+      # 파일 하나당 최대 크기를 10MB로 변경
+      max-file-size: 10MB
+      # 전체 요청의 최대 크기를 50MB로 변경 (여러 파일 업로드 고려)
+      max-request-size: 50MB
+
+  application:
+    name: otvoo
+
+  security:
+    cookie:
+      secure: ${SPRING_SECURITY_COOKIE_SECURE}
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+            client-name: Google
+            authorization-grant-type: authorization_code
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            scope:
+              - profile_nickname
+            redirect-uri: ${KAKAO_REDIRECT_URI}
+            client-name: Kakao
+            authorization-grant-type: authorization_code
+            provider: kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      port: ${REDIS_PORT}
+      host: ${REDIS_HOST}
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS_LOCAL}
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+
+  profiles:
+    active: dev
+
+  config:
+    import: optional:file:.env[.properties]
+
+  sql:
+    init:
+      mode: never
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          maxCompletionTokens: 1000
+
+  batch:
+    jdbc:
+      initialize-schema: never
+    job:
+      enabled: false
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  image:
+    resize:
+      height: 300
+      width: 300
+
+logging:
+  level:
+    root: info
+
+weather:
+  api:
+    base-url: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst
+    service-key: ${WEATHER_API_KEY}
+  batch:
+    base-time: "2300"
+
+kakao:
+  local:
+    api:
+      base-url: https://dapi.kakao.com/v2/local/geo/coord2regioncode.json
+      service-key: ${KAKAO_REST_API_KEY}
+
+profile:
+  default-image:
+    url: https://your-s3-bucket.s3.region.amazonaws.com/default/profile.png
+    filename: default-profile.png
+    content-type: image/png
+    size: 12345  # 바이트 단위
+    width: 300
+    height: 300
+
+admin:
+  name: ${ADMIN_NAME}
+  email: ${ADMIN_EMAIL}
+  password: ${ADMIN_PASSWORD}
+
+aws:
+  s3:
+    bucket: ${S3_BUCKET}
+    region: ${S3_REGION}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    presigned-expiration-seconds: ${S3_PRESIGNED_TTL}
+
+  sqs:
+    queue-name: otvoo_sqs_queue   # 실제 sqs queue 이름
+
+sse:
+  timeout: 1800000
+  event-ttl-days: 7
+  max-connections: 10000
+
+stream:
+  index-ttl-days: 8
+  max-stream-length: 100000
+  retention-days: 7
