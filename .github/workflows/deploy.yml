@@ -8,14 +8,12 @@ on:
       - closed
 
 jobs:
-  # 0. PR 머지 확인 (dev → main merge)
   check-merge:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - run: echo "PR merged into main. Starting CD pipeline."
 
-  # 1. 도커 이미지 빌드 및 ECR에 푸시
   build-and-push-image:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
@@ -73,15 +71,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1   # v1 (안정된 버전 사용)
+      - name: Download current ECS task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ vars.ECS_TASK_DEFINITION }} --output json --query taskDefinition > task-def.json
+
+      # -----------------------------------------------------
+      # (변경) 신규 task-definition 파일에 이미지 태그 반영
+      - name: Render new ECS Task Definition                  # 신규 스텝 추가
+        id: render-task-def                                   # 추후 deploy에 연결 용이하게 id 지정
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ vars.ECS_TASK_DEFINITION }} # task-definition-family-name:revision
+          task-definition: task-def.json              # 기존 task-definition 경로 또는 json
+          container-name: ${{ vars.ECS_CONTAINER_NAME }}                   # 컨테이너 이름 (task def 내 명칭)
+          image: ${{ vars.ECR_REPOSITORY_URI }}:${{ needs.build-and-push-image.outputs.sha_short }} # 새 이미지 태그
+
+      # (변경) v8 액션으로 deploy, image/container-name 파라미터 삭제, 대신 렌더링된 task-definition 사용
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v8        # v8 버전 사용 (변경)
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}  # render 스텝에서 생성된 task-def 사용
           service: ${{ vars.ECS_SERVICE }}
           cluster: ${{ vars.ECS_CLUSTER }}
-          wait-for-service-stability: true # 새 버전이 안정적으로 실행될 때까지 대기
-          image: ${{ vars.ECR_REPOSITORY_URI }}:${{ needs.build-and-push-image.outputs.sha_short }}
-          container-name: ${{ vars.ECS_CONTAINER_NAME }}
+          wait-for-service-stability: true
 
       - name: Deployment Complete
         run: echo "Backend deployment completed successfully!"
