@@ -22,7 +22,7 @@ import org.springframework.stereotype.Repository;
 public class SseEventRepository {
 
   @Value("${sse.event-ttl-days}")
-  private long eventTtlDays;
+  private long EVENT_TTL_DAYS;
 
   private final RedisTemplate<String, Object> redisTemplate;
 
@@ -38,7 +38,7 @@ public class SseEventRepository {
     redisTemplate.opsForZSet().add(EVENT_STREAM_KEY, eventId, score);
 
     String eventDataKey = EVENT_DATA_KEY_PREFIX + eventId;
-    redisTemplate.opsForValue().set(eventDataKey, sseMessage, eventTtlDays, TimeUnit.DAYS);
+    redisTemplate.opsForValue().set(eventDataKey, sseMessage, EVENT_TTL_DAYS, TimeUnit.DAYS);
 
     // 로그
     Object storedMessage = redisTemplate.opsForValue().get(eventDataKey);
