@@ -18,6 +18,9 @@ import com.team1.otvoo.clothes.dto.clothesAttributeDef.ClothesAttributeDefUpdate
 import com.team1.otvoo.clothes.service.ClothesAttributeDefService;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.CustomUserDetailsService;
+import com.team1.otvoo.security.JwtAuthenticationFilter;
+import com.team1.otvoo.security.JwtTokenProvider;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +43,13 @@ class ClothesAttributeDefControllerTest {
 
   @Autowired
   private ObjectMapper objectMapper;
+
+  @MockitoBean
+  private JwtTokenProvider jwtTokenProvider;
+  @MockitoBean
+  private CustomUserDetailsService customUserDetailsService;
+  @MockitoBean
+  private JwtAuthenticationFilter jwtAuthenticationFilter;
 
   @MockitoBean
   private ClothesAttributeDefService clothesAttributeDefService;
@@ -194,4 +204,3 @@ class ClothesAttributeDefControllerTest {
         .andExpect(status().isNotFound());
   }
 }
-

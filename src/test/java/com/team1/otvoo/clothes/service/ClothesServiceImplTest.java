@@ -16,6 +16,9 @@ import com.team1.otvoo.clothes.entity.ClothesAttributeValue;
 import com.team1.otvoo.clothes.entity.ClothesImage;
 import com.team1.otvoo.clothes.entity.ClothesSelectedValue;
 import com.team1.otvoo.clothes.entity.ClothesType;
+import com.team1.otvoo.clothes.event.ClothesCreatedEvent;
+import com.team1.otvoo.clothes.event.ClothesDeletedEvent;
+import com.team1.otvoo.clothes.event.ClothesUpdatedEvent;
 import com.team1.otvoo.clothes.mapper.ClothesMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.clothes.repository.ClothesAttributeValueRepository;
@@ -23,6 +26,7 @@ import com.team1.otvoo.clothes.repository.ClothesImageRepository;
 import com.team1.otvoo.clothes.repository.ClothesRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
+import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.user.repository.UserRepository;
@@ -37,6 +41,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -59,6 +64,8 @@ class ClothesServiceImplTest {
   private ClothesImageRepository clothesImageRepository;
   @Mock
   private S3ImageStorage s3ImageStorage;
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks
   private ClothesServiceImpl clothesServiceImpl;
@@ -75,6 +82,7 @@ class ClothesServiceImplTest {
   private ClothesAttributeValue thinVal, normalVal, thickVal;
 
   private Instant CREATED_AT;
+  private CustomUserDetails userDetails;
 
   @BeforeEach
   void setUp() {
@@ -107,6 +115,7 @@ class ClothesServiceImplTest {
 
     CREATED_AT = Instant.parse("2025-01-01T00:00:00Z");
 
+    userDetails = mock(CustomUserDetails.class);
   }
 
   @Test
@@ -188,6 +197,7 @@ class ClothesServiceImplTest {
     then(clothesImageService).should().create(saved, imageFile);
     then(s3ImageStorage).should().getPresignedUrl(stored.getImageKey(), stored.getContentType());
     then(clothesMapper).should().toDto(saved, "https://example.com");
+    then(eventPublisher).should().publishEvent(any(ClothesCreatedEvent.class));
   }
 
   @Test
@@ -484,10 +494,11 @@ class ClothesServiceImplTest {
         ),
         CREATED_AT
     );
+    given(userDetails.getUser()).willReturn(owner);
     given(clothesMapper.toDto(any(Clothes.class), isNull())).willReturn(expected);
 
     // when
-    ClothesDto result = clothesServiceImpl.update(clothesId, request, null);
+    ClothesDto result = clothesServiceImpl.update(userDetails, clothesId, request, null);
 
     // then
     assertThat(result).isNotNull();
@@ -505,6 +516,7 @@ class ClothesServiceImplTest {
     then(clothesRepository).should().findById(clothesId);
     then(clothesRepository).should().save(any(Clothes.class));
     then(clothesMapper).should().toDto(any(Clothes.class), isNull());
+    then(eventPublisher).should().publishEvent(any(ClothesUpdatedEvent.class));
   }
 
   @Test
@@ -572,10 +584,11 @@ class ClothesServiceImplTest {
         ),
         CREATED_AT
     );
+    given(userDetails.getUser()).willReturn(owner);
     given(clothesMapper.toDto(eq(clothes), eq("https://example.com/new"))).willReturn(expected);
 
     // when
-    ClothesDto result = clothesServiceImpl.update(clothesId, request, imageFile);
+    ClothesDto result = clothesServiceImpl.update(userDetails, clothesId, request, imageFile);
 
     // then
     assertThat(result.imageUrl()).isEqualTo("https://example.com/new");
@@ -585,6 +598,7 @@ class ClothesServiceImplTest {
     then(clothesImageService).should().create(eq(clothes), eq(imageFile));
     then(s3ImageStorage).should()
         .getPresignedUrl(eq(stored.getImageKey()), eq(stored.getContentType()));
+    then(eventPublisher).should().publishEvent(any(ClothesUpdatedEvent.class));
     then(clothesMapper).should().toDto(eq(clothes), eq("https://example.com/new"));
   }
 
@@ -609,16 +623,40 @@ class ClothesServiceImplTest {
         )
     );
 
+    given(userDetails.getUser()).willReturn(owner);
     given(clothesRepository.findById(clothesId)).willReturn(Optional.of(clothes));
 
     // when & then
-    assertThatThrownBy(() -> clothesServiceImpl.update(clothesId, request, null))
+    assertThatThrownBy(() -> clothesServiceImpl.update(userDetails, clothesId, request, null))
         .isInstanceOf(RestException.class)
         .hasMessage(ErrorCode.ATTRIBUTE_DEFINITION_DUPLICATE.getMessage());
 
     then(clothesRepository).should().findById(clothesId);
     then(clothesRepository).should(never()).save(any());
     then(clothesMapper).shouldHaveNoInteractions();
+  }
+
+  @Test
+  @DisplayName("의상 수정 실패_수정 권한 없음")
+  void updateClothes_Fail_Unauthorized() {
+    //given
+    UUID otherUserId = UUID.randomUUID();
+    User other = User.builder().email("other@test.com").password("password").build();
+    ReflectionTestUtils.setField(other, "id", otherUserId);
+
+    Clothes clothes = new Clothes(other, "의상 1", ClothesType.TOP, List.of());
+    UUID clothesId = UUID.randomUUID();
+    ReflectionTestUtils.setField(clothes, "id", clothesId);
+
+    given(userDetails.getUser()).willReturn(owner);
+    given(clothesRepository.findById(clothesId)).willReturn(Optional.of(clothes));
+
+    ClothesUpdateRequest request = new ClothesUpdateRequest("x", ClothesType.TOP, List.of());
+
+    // when & then
+    assertThatThrownBy(() -> clothesServiceImpl.update(userDetails, clothesId, request, null))
+        .isInstanceOf(RestException.class)
+        .hasMessage(ErrorCode.CLOTHES_UNAUTHORIZED.getMessage());
   }
 
   @Test
@@ -639,11 +677,12 @@ class ClothesServiceImplTest {
         clothes
     );
 
+    given(userDetails.getUser()).willReturn(owner);
     given(clothesRepository.findById(clothesId)).willReturn(Optional.of(clothes));
     given(clothesImageRepository.findByClothes_Id(clothesId)).willReturn(Optional.of(image));
 
     // when
-    assertThatCode(() -> clothesServiceImpl.delete(clothesId))
+    assertThatCode(() -> clothesServiceImpl.delete(userDetails, clothesId))
         .doesNotThrowAnyException();
 
     // then
@@ -651,6 +690,7 @@ class ClothesServiceImplTest {
     then(clothesImageRepository).should().findByClothes_Id(clothesId);
     then(clothesImageService).should().delete(image);
     then(clothesRepository).should().delete(clothes);
+    then(eventPublisher).should().publishEvent(any(ClothesDeletedEvent.class));
 
   }
 
@@ -662,7 +702,7 @@ class ClothesServiceImplTest {
     given(clothesRepository.findById(clothesId)).willReturn(Optional.empty());
 
     // when & then
-    assertThatThrownBy(() -> clothesServiceImpl.delete(clothesId))
+    assertThatThrownBy(() -> clothesServiceImpl.delete(userDetails, clothesId))
         .isInstanceOf(RestException.class)
         .hasMessage(ErrorCode.CLOTHES_NOT_FOUND.getMessage());
 
@@ -670,4 +710,3 @@ class ClothesServiceImplTest {
     then(clothesRepository).should(never()).delete(any());
   }
 }
-

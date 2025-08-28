@@ -17,7 +17,6 @@ import com.team1.otvoo.clothes.mapper.ClothesAttributeDefMapper;
 import com.team1.otvoo.clothes.repository.ClothesAttributeDefRepository;
 import com.team1.otvoo.exception.ErrorCode;
 import com.team1.otvoo.exception.RestException;
-import com.team1.otvoo.follow.event.FollowEvent;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -306,7 +305,7 @@ class ClothesAttributeDefServiceImplTest {
     // when & then
     assertThatThrownBy(() -> clothesAttributeDefService.delete(nonExistentId))
         .isInstanceOf(RestException.class)
-        .hasMessage(ErrorCode.NOT_FOUND.getMessage());
+        .hasMessage(ErrorCode.ATTRIBUTE_DEFINITION_NOT_FOUND.getMessage());
 
     verify(clothesAttributeDefRepository).findById(nonExistentId);
     verify(clothesAttributeDefRepository, never()).delete(any());
