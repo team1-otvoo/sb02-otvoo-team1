@@ -17,6 +17,7 @@ import com.team1.otvoo.recommendation.dto.RecommendationDto;
 import com.team1.otvoo.recommendation.entity.Recommendation;
 import com.team1.otvoo.recommendation.entity.RecommendationClothes;
 import com.team1.otvoo.recommendation.repository.RecommendationRepository;
+import com.team1.otvoo.security.CustomUserDetails;
 import com.team1.otvoo.storage.S3ImageStorage;
 import com.team1.otvoo.user.entity.User;
 import com.team1.otvoo.weather.entity.SkyStatus;
@@ -31,6 +32,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,8 +58,17 @@ class RecommendationServiceImplTest {
   void get_shouldCallAiService_whenNoRecommendationExists() {
     // given
     UUID weatherId = UUID.randomUUID();
+    UUID userId = UUID.randomUUID();
+    User user = User.builder().build();
+    ReflectionTestUtils.setField(user, "id", userId);
+
+    CustomUserDetails principal = new CustomUserDetails(user);
+    SecurityContextHolder.getContext().setAuthentication(
+        new UsernamePasswordAuthenticationToken(principal, null)
+    );
+
     RecommendationDto expected = new RecommendationDto(weatherId, UUID.randomUUID(), List.of());
-    given(recommendationRepository.findByWeather_Id(weatherId)).willReturn(Optional.empty());
+    given(recommendationRepository.findByWeather_IdAndUser_Id(weatherId, userId)).willReturn(Optional.empty());
     given(clothesAiRecommendService.filterAndRecommendClothes(weatherId)).willReturn(expected);
 
     // when
@@ -65,7 +77,7 @@ class RecommendationServiceImplTest {
     // then
     assertThat(result).isEqualTo(expected);
     then(clothesAiRecommendService).should(times(1)).filterAndRecommendClothes(weatherId);
-    then(recommendationRepository).should(times(1)).findByWeather_Id(weatherId);
+    then(recommendationRepository).should(times(1)).findByWeather_IdAndUser_Id(weatherId, userId);
   }
 
   @Test
@@ -75,6 +87,14 @@ class RecommendationServiceImplTest {
     UUID weatherId = UUID.randomUUID();
     UUID userId = UUID.randomUUID();
 
+    User user = User.builder().build();
+    ReflectionTestUtils.setField(user, "id", userId);
+
+    CustomUserDetails principal = new CustomUserDetails(user);
+    SecurityContextHolder.getContext().setAuthentication(
+        new UsernamePasswordAuthenticationToken(principal, null)
+    );
+
     Clothes clothes = new Clothes();
     ReflectionTestUtils.setField(clothes, "id", UUID.randomUUID());
 
@@ -82,14 +102,12 @@ class RecommendationServiceImplTest {
 
     WeatherForecast weather = new WeatherForecast(Instant.now(), Instant.now(), SkyStatus.CLEAR);
     ReflectionTestUtils.setField(weather, "id", weatherId);
-
-    User user = User.builder().build();
-    ReflectionTestUtils.setField(user, "id", userId);
+    ;
 
     Recommendation recommendation = new Recommendation(user,weather);
     recommendation.addClothes(rc);
 
-    given(recommendationRepository.findByWeather_Id(weatherId)).willReturn(Optional.of(recommendation));
+    given(recommendationRepository.findByWeather_IdAndUser_Id(weatherId, userId)).willReturn(Optional.of(recommendation));
 
     ClothesImage image = new ClothesImage("key", "file", "image/png", 5L, 5, 5, clothes);
     given(clothesImageRepository.findByClothes_Id(clothes.getId())).willReturn(Optional.of(image));
@@ -106,7 +124,7 @@ class RecommendationServiceImplTest {
     assertThat(result.clothes().size()).isEqualTo(1);
 
     then(clothesAiRecommendService).should(never()).filterAndRecommendClothes(any());
-    then(recommendationRepository).should(times(1)).findByWeather_Id(weatherId);
+    then(recommendationRepository).should(times(1)).findByWeather_IdAndUser_Id(weatherId, userId);
     then(clothesImageRepository).should(times(1)).findByClothes_Id(clothes.getId());
     then(s3ImageStorage).should(times(1)).getPresignedUrl("key", "image/png");
     then(clothesMapper).should(times(1)).toOotdDto(clothes, "http://presigned-url");
