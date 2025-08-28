@@ -236,7 +236,10 @@ public class FollowServiceImpl implements FollowService {
   }
 
   private UserSummary resolveUserSummaryUrl(UserSummary summary) {
-    String imageUrl = s3ImageStorageAdapter.getPresignedUrl(summary.profileImageUrl());
+    String imageUrl = Optional.ofNullable(summary.profileImageUrl())
+        .map(s3ImageStorageAdapter::getPresignedUrl)
+        .orElse(null);
+
     return new UserSummary(summary.userId(), summary.name(), imageUrl);
   }
 }
