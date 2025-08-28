@@ -45,7 +45,7 @@ public class OAuth2JwtLoginSuccessHandler implements AuthenticationSuccessHandle
 
     Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
     refreshCookie.setHttpOnly(true);
-    refreshCookie.setSecure(false);
+    refreshCookie.setSecure(true);
     refreshCookie.setPath("/");
     refreshCookie.setMaxAge((int) jwtTokenProvider.getRefreshTokenValidityInSeconds());
     response.addCookie(refreshCookie);
