@@ -90,10 +90,13 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
 
   // 커서 조건
   private BooleanExpression cursorCondition(QNotification notification, Instant cursor, UUID idAfter) {
-    if (cursor == null || idAfter == null) {
+    if (cursor == null) {
       return null;
     }
+    if (idAfter == null){
+      return notification.createdAt.lt(cursor);
+    }
     return notification.createdAt.lt(cursor)
-        .or(notification.createdAt.eq(cursor).and(notification.id.lt(idAfter))); // idAfter 어떻게 할지
+        .or(notification.createdAt.eq(cursor).and(notification.id.lt(idAfter))); // UUIDv7를 사용해야 정렬 가능
   }
 }

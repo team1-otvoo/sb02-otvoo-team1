@@ -20,7 +20,6 @@ import com.team1.otvoo.follow.dto.FollowListResponse;
 import com.team1.otvoo.follow.dto.FollowSummaryDto;
 import com.team1.otvoo.follow.entity.Follow;
 import com.team1.otvoo.follow.event.FollowEvent;
-import com.team1.otvoo.follow.mapper.FollowMapper;
 import com.team1.otvoo.follow.repository.FollowRepository;
 import com.team1.otvoo.storage.S3ImageStorageAdapter;
 import com.team1.otvoo.user.dto.UserSummary;
@@ -59,9 +58,6 @@ public class FollowServiceTest {
 
   @Mock
   private UserRepository userRepository;
-
-  @Mock
-  private FollowMapper followMapper;
 
   @Mock
   private ApplicationEventPublisher eventPublisher;
@@ -130,8 +126,8 @@ public class FollowServiceTest {
       assertThat(result.followee().userId()).isEqualTo(request.followeeId());
       assertThat(result.follower().userId()).isEqualTo(request.followerId());
 
-      then(followee).should().increaseFollowerCount();
-      then(follower).should().increaseFollowingCount();
+      then(userRepository).should().incrementFollowerCount(followeeId);
+      then(userRepository).should().incrementFollowingCount(followerId);
 
       then(followRepository).should().existsByFolloweeIdAndFollowerId(followeeId, followerId);
       then(userRepository).should().findById(followeeId);
@@ -164,7 +160,6 @@ public class FollowServiceTest {
 
       then(followRepository).shouldHaveNoInteractions();
       then(userRepository).shouldHaveNoInteractions();
-      then(followMapper).should(never()).toDto(follow);
 
       then(eventPublisher).shouldHaveNoInteractions();
     }
@@ -187,7 +182,6 @@ public class FollowServiceTest {
 
       then(followRepository).should().existsByFolloweeIdAndFollowerId(followeeId, followerId);
       then(userRepository).shouldHaveNoInteractions();
-      then(followMapper).should(never()).toDto(follow);
 
       then(eventPublisher).shouldHaveNoInteractions();
     }
@@ -211,7 +205,6 @@ public class FollowServiceTest {
       then(userRepository).should().findById(followeeId);
       then(userRepository).should(never()).findById(followerId);
       then(followRepository).should(never()).save(any(Follow.class));
-      then(followMapper).should(never()).toDto(follow);
 
       then(eventPublisher).shouldHaveNoInteractions();
     }
@@ -232,8 +225,8 @@ public class FollowServiceTest {
       followService.delete(followId);
 
       // then
-      then(followee).should().decreaseFollowerCount();
-      then(follower).should().decreaseFollowingCount();
+      then(userRepository).should().decrementFollowerCount(followeeId);
+      then(userRepository).should().decrementFollowingCount(followerId);
 
       then(followRepository).should().findById(followId);
       then(followRepository).should().delete(follow);
@@ -356,7 +349,8 @@ public class FollowServiceTest {
 
       given(followRepository.findFollowingsWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
           .willReturn(mockFollowCursorDtos);
-      given(followRepository.countByFollowerId(followerId)).willReturn(100L);
+      given(userRepository.findById(followerId)).willReturn(Optional.of(follower));
+      given(follower.getFollowingCount()).willReturn(100L);
 
       // when
       FollowListResponse response = followService.getFollowingList(followerId, null, null, limit, null);
@@ -378,7 +372,7 @@ public class FollowServiceTest {
       assertThat(firstDto.follower()).isEqualTo(firstCursorDto.follower());
 
       then(followRepository).should().findFollowingsWithCursor(eq(followerId), isNull(), isNull(), eq(limit + 1), isNull());
-      then(followRepository).should().countByFollowerId(eq(followerId));
+      then(userRepository).should().findById(eq(followerId));
     }
 
     @Test
@@ -393,7 +387,8 @@ public class FollowServiceTest {
 
       given(followRepository.findFollowingsWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
           .willReturn(mockFollowCursorDtos);
-      given(followRepository.countByFollowerId(followerId)).willReturn((long) resultSize);
+      given(userRepository.findById(followerId)).willReturn(Optional.of(follower));
+      given(follower.getFollowingCount()).willReturn((long) resultSize);
 
       // when
       FollowListResponse response = followService.getFollowingList(followerId, null, null, limit, null);
@@ -409,7 +404,7 @@ public class FollowServiceTest {
       assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.id());
 
       then(followRepository).should().findFollowingsWithCursor(eq(followerId), isNull(), isNull(), eq(limit + 1), isNull());
-      then(followRepository).should().countByFollowerId(eq(followerId));
+      then(userRepository).should().findById(eq(followerId));
     }
 
     @Test
@@ -432,7 +427,7 @@ public class FollowServiceTest {
       assertThat(response.nextIdAfter()).isNull();
 
       then(followRepository).should().findFollowingsWithCursor(eq(followerId), isNull(), isNull(), eq(limit + 1), isNull());
-      then(followRepository).should(never()).countByFollowerId(eq(followerId));
+      then(userRepository).should(never()).findById(eq(followerId));
     }
 
     @Test
@@ -449,7 +444,6 @@ public class FollowServiceTest {
       assertThat(exception.getMessage()).contains("Invalid cursor format");
 
       then(followRepository).shouldHaveNoInteractions();
-      then(followMapper).shouldHaveNoInteractions();
     }
 
   }
@@ -469,7 +463,8 @@ public class FollowServiceTest {
 
       given(followRepository.findFollowersWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
           .willReturn(mockFollowCursorDtos);
-      given(followRepository.countByFolloweeId(followeeId)).willReturn(100L);
+      given(userRepository.findById(followeeId)).willReturn(Optional.of(followee));
+      given(followee.getFollowerCount()).willReturn((100L));
 
       // when
       FollowListResponse response = followService.getFollowerList(followeeId, null, null, limit, null);
@@ -491,7 +486,7 @@ public class FollowServiceTest {
       assertThat(firstDto.follower()).isEqualTo(firstCursorDto.follower());
 
       then(followRepository).should().findFollowersWithCursor(eq(followeeId), isNull(), isNull(), eq(limit + 1), isNull());
-      then(followRepository).should().countByFolloweeId(eq(followeeId));
+      then(userRepository).should().findById(eq(followeeId));
     }
 
     @Test
@@ -506,7 +501,8 @@ public class FollowServiceTest {
 
       given(followRepository.findFollowersWithCursor(any(UUID.class), any(), any(), eq(limit + 1), any()))
           .willReturn(mockFollowCursorDtos);
-      given(followRepository.countByFolloweeId(followeeId)).willReturn((long) resultSize);
+      given(userRepository.findById(followeeId)).willReturn(Optional.of(followee));
+      given(followee.getFollowerCount()).willReturn(((long) resultSize));
 
       // when
       FollowListResponse response = followService.getFollowerList(followeeId, null, null, limit, null);
@@ -522,7 +518,7 @@ public class FollowServiceTest {
       assertThat(response.nextIdAfter()).isEqualTo(lastFollowInPage.id());
 
       then(followRepository).should().findFollowersWithCursor(eq(followeeId), isNull(), isNull(), eq(limit + 1), isNull());
-      then(followRepository).should().countByFolloweeId(eq(followeeId));
+      then(userRepository).should().findById(eq(followeeId));
     }
 
     @Test
@@ -545,7 +541,7 @@ public class FollowServiceTest {
       assertThat(response.nextIdAfter()).isNull();
 
       then(followRepository).should().findFollowersWithCursor(eq(followeeId), isNull(), isNull(), eq(limit + 1), isNull());
-      then(followRepository).should(never()).countByFolloweeId(eq(followeeId));
+      then(userRepository).should(never()).findById(eq(followeeId));
     }
 
     @Test

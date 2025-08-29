@@ -59,9 +59,8 @@ public class FollowServiceImpl implements FollowService {
     Follow follow = new Follow(followee, follower);
     Follow createdFollow = followRepository.save(follow);
 
-    // Todo: 동시성 문제 해결
-    followee.increaseFollowerCount();
-    follower.increaseFollowingCount();
+    userRepository.incrementFollowerCount(followeeId);
+    userRepository.incrementFollowingCount(followerId);
 
     log.info("팔로우 대상: {}, 팔로워: {}", followee.getFollowerCount(), follower.getFollowingCount());
 
@@ -143,13 +142,15 @@ public class FollowServiceImpl implements FollowService {
       );
     }
 
-    long totalCount = followRepository.countByFollowerId(followerId);
+    User follower = userRepository.findById(followerId)
+        .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", followerId)));
+    long totalCount = follower.getFollowingCount();
 
     FollowCursorDto last = followingList.get(followingList.size() - 1);
     String nextCursor = last.createdAt().toString();
     UUID nextIdAfter = last.id();
 
-    List<FollowDto> data = followingList.parallelStream()
+    List<FollowDto> data = followingList.stream()
         .map(fc -> {
           UserSummary resolvedFollowee = resolveUserSummaryUrl(fc.followee());
           UserSummary resolvedFollower = resolveUserSummaryUrl(fc.follower());
@@ -197,13 +198,15 @@ public class FollowServiceImpl implements FollowService {
       );
     }
 
-    long totalCount = followRepository.countByFolloweeId(followeeId);
+    User followee = userRepository.findById(followeeId)
+        .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", followeeId)));
+    long totalCount = followee.getFollowerCount();
 
     FollowCursorDto last = followerList.get(followerList.size() - 1);
     String nextCursor = last.createdAt().toString();
     UUID nextIdAfter = last.id();
 
-    List<FollowDto> data = followerList.parallelStream()
+    List<FollowDto> data = followerList.stream()
         .map(fc -> {
           UserSummary resolvedFollowee = resolveUserSummaryUrl(fc.followee());
           UserSummary resolvedFollower = resolveUserSummaryUrl(fc.follower());
@@ -226,11 +229,8 @@ public class FollowServiceImpl implements FollowService {
     Follow follow = followRepository.findById(followId)
         .orElseThrow(() -> new RestException(ErrorCode.NOT_FOUND, Map.of("id", followId)));
 
-    User followee = follow.getFollowee();
-    User follower = follow.getFollower();
-
-    followee.decreaseFollowerCount();
-    follower.decreaseFollowingCount();
+    userRepository.decrementFollowerCount(follow.getFollowee().getId());
+    userRepository.decrementFollowingCount(follow.getFollower().getId());
 
     followRepository.delete(follow);
   }
