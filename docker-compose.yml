@@ -1,0 +1,91 @@
+version: '3.8' # Docker Compose 파일 형식 버전을 지정합니다.
+
+services:
+  # 1. Spring Boot 애플리케이션 서비스
+  app:
+    build: . # 현재 디렉토리의 Dockerfile을 사용하여 이미지를 빌드합니다.
+    container_name: otvoo-app
+    depends_on: # 다른 서비스가 완전히 준비될 때까지 기다리도록 의존성을 설정합니다.
+      postgres:
+        condition: service_started # postgres는 시작만 되면 바로 연결 가능
+      redis:
+        condition: service_started # redis는 시작만 되면 바로 연결 가능
+      elasticsearch:
+        condition: service_healthy # elasticsearch는 'healthy' 상태가 될 때까지 기다림
+    ports:
+      - "8080:8080" # 로컬 PC의 8080 포트를 컨테이너의 8080 포트로 연결합니다.
+    environment:
+      # application.yml의 변수들을 .env 파일에서 가져와 주입합니다.
+      # DB/Redis/ES 호스트는 Docker 내부 네트워크의 서비스 이름을 사용합니다.
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SPRING_PROFILES_ACTIVE=dev
+      # application.yml의 ELASTICSEARCH_URIS_LOCAL 대신 이 값을 사용하도록 설정하는 것이 좋습니다.
+      # Docker 내부에서는 localhost가 아닌 서비스 이름(elasticsearch)으로 통신해야 합니다.
+      - ELASTICSEARCH_URIS_LOCAL=http://elasticsearch:9200
+    env_file:
+      - .env # .env 파일의 변수들을 컨테이너 환경 변수로 로드합니다.
+
+  # 2. PostgreSQL 데이터베이스 서비스
+  postgres:
+    image: postgres:15 # 공식 PostgreSQL 15 버전을 사용합니다.
+    container_name: otvoo-postgres
+    environment:
+      # .env 파일에서 DB 접속 정보를 가져와 컨테이너를 초기화합니다.
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432" # 로컬 PC에서 DB Tool로 접속할 수 있도록 포트를 개방합니다.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # 프로젝트 루트 기준의 실제 schema.sql 파일 위치를 적어줍니다.
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. Redis 서비스
+  redis:
+    image: redis:7 # 공식 Redis 7 버전을 사용합니다.
+    container_name: otvoo-redis
+    ports:
+      - "6379:6379" # 로컬 PC에서 Redis-cli 등으로 접속할 수 있도록 포트를 개방합니다.
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. Elasticsearch 서비스
+  elasticsearch:
+    image: elasticsearch:8.14.1 # 원하는 버전 사용
+    container_name: otvoo-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false # 로컬 개발용으로 보안 기능 비활성화
+      # 개발 환경에서 과도한 메모리 사용을 방지하기 위해 힙 사이즈를 512MB로 제한합니다.
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    # 'healthcheck'를 추가하여 Elasticsearch가 완전히 준비되었는지 확인합니다.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres-data:
+  redis-data:
+  elasticsearch-data: # 볼륨 정의 추가
