@@ -1,7 +1,5 @@
 # 옷장을 부탁해 (Otvoo)
-
 > 개인화 의상 및 아이템 추천 SaaS를 위한 백엔드 API 서버 프로젝트
-
 <br>
 
 ## 프로젝트 개요 (Overview)
@@ -20,7 +18,6 @@ RESTful API를 통해 클라이언트와 통신하며, 안정적이고 확장 �
     - 팔로우 및 DM (실시간 채팅, 웹소켓 기반)
     - 알림 시스템 (SSE 기반)
 - **개발 기간**: 2025.07.28 ~ 2025.08.30
-
 <br>
 
 ## 팀원 (Team Members)
@@ -79,7 +76,6 @@ RESTful API를 통해 클라이언트와 통신하며, 안정적이고 확장 �
     <td><img src="https://img.shields.io/badge/Jira-326CE5?style=for-the-badge&logo=jira&logoColor=white"> <img src="https://img.shields.io/badge/Github-222?style=for-the-badge&logo=githubr&logoColor=white"></td>
   </tr>
 </table>
-
 
 <br>
 
@@ -178,7 +174,6 @@ RESTful API를 통해 클라이언트와 통신하며, 안정적이고 확장 �
 
 5.  **실행 확인**
     - 애플리케이션이 정상적으로 실행되면 `http://localhost:8080` 으로 접속할 수 있습니다.
-
 <br>
 
 ## 프로젝트 구조 (Project Structure)
@@ -210,6 +205,23 @@ src
 
 <br>
 
+## 화면 구성
+
+| 로그인 화면 | 날씨 별 옷 추천 |
+|----------|------------|
+| <img width="1490" height="1306" alt="로그인화면" src="https://github.com/user-attachments/assets/16503abe-e2a2-4efb-ad3c-f0fefaf4ae7e" /> | <img width="1490" height="1306" alt="날씨별 옷추천" src="https://github.com/user-attachments/assets/73f0bb97-834e-4dcb-8649-f443bdd79880" /> |
+
+
+| 나만의 옷장 | 피드 |
+|------------|------------|
+| <img width="1490" height="1308" alt="나만의 옷장" src="https://github.com/user-attachments/assets/fbc2d950-7643-45f4-a2ea-38dad05f864e" /> | <img width="1490" height="1306" alt="피드" src="https://github.com/user-attachments/assets/66116c32-69c8-4a97-8f99-5f479333c3b3" /> |
+
+| 사용자 관리 | DM 화면 |
+|------------|------------|
+| <img width="1490" height="1308" alt="사용자관리" src="https://github.com/user-attachments/assets/7e4a07ac-6957-414c-9634-8c23c1a60ff3" /> | <img width="1490" height="1306" alt="DM 화면" src="https://github.com/user-attachments/assets/87e5b9e3-cc6c-467e-b5d1-69bf63e7bc74" /> |
+
+<br>
+
 ## 브랜치 전략 및 커밋 규칙
 
 ### 브랜치 전략 (Branch Strategy)
@@ -221,7 +233,7 @@ src
 - `refactor/[Jira키]-[이슈명]`: 코드 리팩토링 브랜치
 - `chore/[Jira키]-[이슈명]`: 빌드, 환경설정 관련 브랜치
 - `test/[Jira키]-[이슈명]`: 테스트 코드 추가/수정 브랜치
-- 모든 브랜치는 **Jira 티켓 키(KAN-XXX)를 포함**해야 합니다.
+- 모든 브랜치는 **Jira 티켓 키(KAN-XXX)를 포함**
 
 ### 커밋 메시지 컨벤션 (Commit Convention)
 - `[태그]: KAN-000 작업 요약` 형식으로 작성
@@ -235,8 +247,7 @@ src
     - `test`: 테스트 코드 추가/수정
     - `chore`: 빌드, 환경설정 등 유지보수
 - **커밋 단위**는 Task 기준 (기능 1개 ≒ 2~5커밋)
-- 모든 커밋은 Jira Task와 연결되어야 합니다.
-
+- 모든 커밋은 Jira Task와 연결
 <br>
 
 ## 관련 링크 (Links)
