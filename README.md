@@ -79,6 +79,10 @@ RESTful API를 통해 클라이언트와 통신하며, 안정적이고 확장 �
 
 <br>
 
+## 시스템 아키텍처 (System Architecture)
+<img width="1741" height="1001" alt="시스템아키텍쳐" src="https://github.com/user-attachments/assets/a65e4a8c-6509-41e0-b59c-d07747900b49" />
+
+
 ## 실행 환경 설정 (Getting Started)
 
 ### 사전 요구사항 (Prerequisites)
